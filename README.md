@@ -1,7 +1,5 @@
 <div align="center">
 
-<img src="https://img.icons8.com/fluency/96/polar-star.png" alt="Polaris" width="80" />
-
 # Polaris
 
 **A minimalist, full-stack blog engine built with Go.**
