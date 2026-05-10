@@ -1,0 +1,26 @@
+
+<div class="max-w-3xl mx-auto py-8">
+    <div class="mb-16">
+        <h1 class="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white mb-4 tracking-tight">标签</h1>
+        <p class="text-lg md:text-xl text-slate-600 dark:text-slate-400 font-medium">按标签寻找感兴趣的文章</p>
+    </div>
+
+    {{if .tags}}
+    <div class="flex flex-wrap gap-4">
+        {{range .tags}}
+        <a href="/tag/{{.Slug}}" class="group inline-flex items-center gap-3 px-5 py-3 bg-white dark:bg-[#18181B] sm:hover:-translate-y-0.5 border border-slate-200 dark:border-zinc-800 rounded-2xl hover:border-black dark:hover:border-white transition-all hover:shadow-lg shadow-sm">
+            <span class="font-bold text-slate-900 dark:text-white group-hover:underline decoration-2 underline-offset-4">#{{.Name}}</span>
+            <span class="text-xs font-mono font-medium px-2 py-0.5 bg-slate-100 dark:bg-black text-slate-500 rounded text-center min-w-[2rem]">{{.PostCount}}</span>
+        </a>
+        {{end}}
+    </div>
+    {{else}}
+    <div class="text-center py-20">
+        <div class="w-20 h-20 bg-slate-100 dark:bg-[#18181B] rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+        </div>
+        <p class="text-xl font-semibold text-slate-900 dark:text-white mb-2">暂无标签</p>
+        <p class="text-slate-500 dark:text-slate-400">目前还没有添加任何标签。</p>
+    </div>
+    {{end}}
+</div>

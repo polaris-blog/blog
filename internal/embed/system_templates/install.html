@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>安装向导 - Polaris</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { fontFamily: { sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'] } } }
+        }
+    </script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .step-enter { animation: fadeSlideIn 0.3s ease-out; }
+        @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .float-anim { animation: float 6s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+        .spin { animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-[#FAFAFA] dark:bg-[#09090B] min-h-screen flex items-center justify-center font-sans" x-data="installApp()">
+    <div class="w-full max-w-xl px-6">
+        <!-- Branding -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-14 h-14 bg-black dark:bg-white rounded-2xl mb-4 float-anim">
+                <svg class="w-7 h-7 text-white dark:text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                </svg>
+            </div>
+            <h1 class="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">Polaris</h1>
+            <p class="text-xs text-slate-400 mt-1 tracking-wide">安装向导</p>
+        </div>
+
+        <!-- Steps -->
+        <div class="flex items-center justify-center mb-8">
+            <template x-for="(s, i) in steps" :key="i">
+                <div class="flex items-center">
+                    <div class="flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold transition-all"
+                         :class="currentStep > i ? 'bg-green-500 text-white' : currentStep === i ? 'bg-black dark:bg-white text-white dark:text-black ring-4 ring-black/10 dark:ring-white/10' : 'bg-slate-100 dark:bg-zinc-800 text-slate-400'"
+                         x-text="currentStep > i ? '✓' : (i + 1)"></div>
+                    <span class="ml-2 text-xs font-medium mr-4" :class="currentStep >= i ? 'text-slate-800 dark:text-slate-200' : 'text-slate-300 dark:text-zinc-600'" x-text="s.label"></span>
+                    <template x-if="i < steps.length - 1">
+                        <div class="w-6 h-px mx-1 transition-colors" :class="currentStep > i ? 'bg-green-500' : 'bg-slate-200 dark:bg-zinc-800'"></div>
+                    </template>
+                </div>
+            </template>
+        </div>
+
+        <!-- Card -->
+        <div class="bg-white dark:bg-[#09090B] rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+            <div class="p-8 md:p-10">
+
+                <!-- Step 0: Database -->
+                <div x-show="currentStep === 0" x-transition class="step-enter">
+                    <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-1">数据库配置</h2>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">选择数据库类型并填写连接信息</p>
+
+                    <!-- Driver selector -->
+                    <div class="grid grid-cols-3 gap-3 mb-6">
+                        <button type="button" @click="dbDriver='sqlite'"
+                            class="p-4 rounded-xl border-2 text-center transition-all"
+                            :class="dbDriver === 'sqlite' ? 'border-black dark:border-white bg-slate-50 dark:bg-zinc-900' : 'border-slate-200 dark:border-zinc-800 hover:border-slate-300'">
+                            <div class="text-2xl mb-1">📄</div>
+                            <div class="text-sm font-bold text-slate-900 dark:text-white">SQLite</div>
+                            <div class="text-xs text-slate-400 mt-0.5">轻量无需配置</div>
+                        </button>
+                        <button type="button" @click="dbDriver='mysql'"
+                            class="p-4 rounded-xl border-2 text-center transition-all"
+                            :class="dbDriver === 'mysql' ? 'border-black dark:border-white bg-slate-50 dark:bg-zinc-900' : 'border-slate-200 dark:border-zinc-800 hover:border-slate-300'">
+                            <div class="text-2xl mb-1">🐬</div>
+                            <div class="text-sm font-bold text-slate-900 dark:text-white">MySQL</div>
+                            <div class="text-xs text-slate-400 mt-0.5">推荐生产使用</div>
+                        </button>
+                        <button type="button" @click="dbDriver='postgres'"
+                            class="p-4 rounded-xl border-2 text-center transition-all"
+                            :class="dbDriver === 'postgres' ? 'border-black dark:border-white bg-slate-50 dark:bg-zinc-900' : 'border-slate-200 dark:border-zinc-800 hover:border-slate-300'">
+                            <div class="text-2xl mb-1">🐘</div>
+                            <div class="text-sm font-bold text-slate-900 dark:text-white">PostgreSQL</div>
+                            <div class="text-xs text-slate-400 mt-0.5">高级功能支持</div>
+                        </button>
+                    </div>
+
+                    <!-- SQLite: no extra fields -->
+                    <div x-show="dbDriver === 'sqlite'" class="mb-6 p-4 bg-slate-50 dark:bg-zinc-900 rounded-xl">
+                        <p class="text-sm text-slate-600 dark:text-slate-400">使用 SQLite 无需额外配置，数据将存储在 <code class="text-xs bg-slate-200 dark:bg-zinc-700 px-1.5 py-0.5 rounded">polaris.db</code> 文件中。</p>
+                    </div>
+
+                    <!-- MySQL / PostgreSQL fields -->
+                    <div x-show="dbDriver !== 'sqlite'" class="space-y-4 mb-6">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">主机地址</label>
+                                <input type="text" x-model="dbHost"
+                                    class="w-full px-3 py-2.5 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:border-black dark:focus:border-white text-sm"
+                                    placeholder="localhost">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">端口</label>
+                                <input type="number" x-model="dbPort"
+                                    class="w-full px-3 py-2.5 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:border-black dark:focus:border-white text-sm"
+                                    placeholder="3306">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">用户名</label>
+                                <input type="text" x-model="dbUser"
+                                    class="w-full px-3 py-2.5 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:border-black dark:focus:border-white text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">密码</label>
+                                <input type="password" x-model="dbPassword"
+                                    class="w-full px-3 py-2.5 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:border-black dark:focus:border-white text-sm">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">数据库名</label>
+                            <input type="text" x-model="dbName"
+                                class="w-full px-3 py-2.5 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:border-black dark:focus:border-white text-sm"
+                                placeholder="polaris">
+                        </div>
+                    </div>
+
+                    <button type="button" @click="testDB()" :disabled="dbTesting"
+                        class="w-full py-2.5 px-4 border-2 border-slate-200 dark:border-zinc-800 rounded-xl font-bold text-sm hover:bg-slate-50 dark:hover:bg-zinc-900 transition disabled:opacity-50 mb-4">
+                        <span x-show="!dbTesting">测试连接</span>
+                        <span x-show="dbTesting" class="flex items-center justify-center gap-2"><span class="spin inline-block w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full"></span>测试中...</span>
+                    </button>
+
+                    <div x-show="dbMsg" x-text="dbMsg" :class="dbOK ? 'text-green-600' : 'text-red-500'"
+                        class="text-sm font-medium text-center mb-4"></div>
+
+                    <button type="button" @click="nextStep()" :disabled="!dbOK"
+                        class="w-full py-3 px-4 bg-black dark:bg-white text-white dark:text-black rounded-xl hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors font-bold text-sm disabled:opacity-40 disabled:cursor-not-allowed">
+                        下一步 →
+                    </button>
+                </div>
+
+                <!-- Step 1: Site Info -->
+                <div x-show="currentStep === 1" x-cloak x-transition class="step-enter">
+                    <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-1">站点信息</h2>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">基本站点配置，安装后可在后台随时修改</p>
+                    <form @submit.prevent="nextStep()" class="space-y-5">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">站点名称</label>
+                            <input type="text" x-model="siteTitle" required
+                                class="w-full px-4 py-2.5 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:border-black dark:focus:border-white text-sm"
+                                placeholder="我的博客">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">站点描述</label>
+                            <textarea x-model="siteDescription" rows="2"
+                                class="w-full px-4 py-2.5 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:border-black dark:focus:border-white text-sm resize-none"
+                                placeholder="一句话描述你的博客..."></textarea>
+                        </div>
+                        <div class="flex gap-3">
+                            <button type="button" @click="prevStep()"
+                                class="py-3 px-4 border border-slate-200 dark:border-zinc-800 font-bold text-slate-500 rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-900 transition-colors text-sm">
+                                ← 上一步
+                            </button>
+                            <button type="submit"
+                                class="flex-1 py-3 px-4 bg-black dark:bg-white text-white dark:text-black rounded-xl hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors font-bold text-sm">
+                                下一步 →
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Step 2: Admin -->
+                <div x-show="currentStep === 2" x-cloak x-transition class="step-enter">
+                    <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-1">创建管理员</h2>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">请设置管理员账户</p>
+                    <form @submit.prevent="submitInstall()" class="space-y-5">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">用户名</label>
+                            <input type="text" x-model="adminUsername" required minlength="3" maxlength="50"
+                                class="w-full px-4 py-2.5 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:border-black dark:focus:border-white text-sm"
+                                placeholder="admin">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">邮箱</label>
+                            <input type="email" x-model="adminEmail"
+                                class="w-full px-4 py-2.5 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:border-black dark:focus:border-white text-sm"
+                                placeholder="admin@example.com">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">密码</label>
+                            <input type="password" x-model="adminPassword" required minlength="8"
+                                class="w-full px-4 py-2.5 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:border-black dark:focus:border-white text-sm"
+                                placeholder="至少8位字符">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">确认密码</label>
+                            <input type="password" x-model="adminPasswordConfirm" required
+                                class="w-full px-4 py-2.5 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:border-black dark:focus:border-white text-sm"
+                                placeholder="再次输入密码">
+                            <p x-show="adminPasswordConfirm && adminPassword !== adminPasswordConfirm" class="text-xs text-red-500 mt-1">两次密码不一致</p>
+                        </div>
+                        <div class="flex gap-3">
+                            <button type="button" @click="prevStep()"
+                                class="py-3 px-4 border border-slate-200 dark:border-zinc-800 font-bold text-slate-500 rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-900 transition-colors text-sm">
+                                ← 上一步
+                            </button>
+                            <button type="submit" :disabled="installing || adminPassword !== adminPasswordConfirm"
+                                class="flex-1 py-3 px-4 bg-black dark:bg-white text-white dark:text-black rounded-xl hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed font-bold text-sm">
+                                <span x-show="!installing">开始安装</span>
+                                <span x-show="installing">安装中...</span>
+                            </button>
+                        </div>
+                        <div x-show="errorMsg" x-text="errorMsg" class="text-center text-sm text-red-500 font-medium"></div>
+                    </form>
+                </div>
+
+                <!-- Step 3: Done -->
+                <div x-show="currentStep === 3" x-cloak x-transition class="step-enter text-center">
+                    <div class="py-8">
+                        <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full mb-6">
+                            <svg class="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                            </svg>
+                        </div>
+                        <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-2">安装完成！</h2>
+                        <p class="text-sm text-slate-500 dark:text-slate-400 mb-2">Polaris 已成功安装</p>
+                        <p class="text-xs text-slate-400 dark:text-slate-500">配置已写入 <code class="bg-slate-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-xs">config.yaml</code></p>
+                    </div>
+                    <button @click="goToLogin()"
+                        class="w-full py-3 px-4 bg-black dark:bg-white text-white dark:text-black rounded-xl hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors font-bold text-sm">
+                        立即登录 →
+                    </button>
+                    <a href="/" class="block text-center mt-3 text-xs text-slate-400 hover:text-black dark:hover:text-white transition-colors">
+                        查看前台首页
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-6 text-xs text-slate-300 dark:text-zinc-600">Polaris Blog System</div>
+    </div>
+
+    <script>
+        function installApp() {
+            return {
+                currentStep: 0,
+                installing: false,
+                errorMsg: '',
+                // Database
+                dbDriver: 'sqlite',
+                dbHost: 'localhost',
+                dbPort: 3306,
+                dbUser: '',
+                dbPassword: '',
+                dbName: 'polaris',
+                dbTesting: false,
+                dbMsg: '',
+                dbOK: false,
+                // Site
+                siteTitle: '我的博客',
+                siteDescription: '',
+                // Admin
+                adminUsername: 'admin',
+                adminEmail: '',
+                adminPassword: '',
+                adminPasswordConfirm: '',
+                // Steps
+                steps: [
+                    { label: '数据库' },
+                    { label: '站点' },
+                    { label: '管理员' },
+                    { label: '完成' },
+                ],
+
+                init() {
+                    fetch('/api/install/check').then(r => r.json()).then(data => {
+                        if (data.installed) window.location.href = '/login';
+                    }).catch(() => {});
+                    // Default port by driver
+                    this.$watch('dbDriver', v => {
+                        if (v === 'mysql') this.dbPort = 3306;
+                        if (v === 'postgres') this.dbPort = 5432;
+                    });
+                },
+
+                nextStep() { this.errorMsg = ''; this.currentStep++; },
+                prevStep() { this.errorMsg = ''; this.currentStep--; },
+
+                async testDB() {
+                    this.dbTesting = true;
+                    this.dbMsg = '';
+                    this.dbOK = false;
+                    try {
+                        const res = await fetch('/api/install/test-db', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                driver: this.dbDriver,
+                                host: this.dbHost,
+                                port: this.dbPort,
+                                user: this.dbUser,
+                                password: this.dbPassword,
+                                dbname: this.dbName,
+                            })
+                        });
+                        const data = await res.json();
+                        this.dbMsg = data.message;
+                        this.dbOK = data.ok;
+                    } catch (e) {
+                        this.dbMsg = '网络错误';
+                        this.dbOK = false;
+                    } finally {
+                        this.dbTesting = false;
+                    }
+                },
+
+                async submitInstall() {
+                    if (this.adminPassword !== this.adminPasswordConfirm) { this.errorMsg = '两次密码不一致'; return; }
+                    if (this.adminPassword.length < 8) { this.errorMsg = '密码长度不能少于8位'; return; }
+
+                    this.installing = true;
+                    this.errorMsg = '';
+
+                    try {
+                        // 1. Save DB config + site settings + create admin
+                        const res = await fetch('/api/admin/init/setup', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                database: {
+                                    driver: this.dbDriver,
+                                    host: this.dbHost,
+                                    port: this.dbPort,
+                                    user: this.dbUser,
+                                    password: this.dbPassword,
+                                    dbname: this.dbName,
+                                },
+                                settings: {
+                                    site_title: this.siteTitle,
+                                    site_description: this.siteDescription,
+                                    site_url: window.location.origin,
+                                },
+                                admin: {
+                                    username: this.adminUsername,
+                                    email: this.adminEmail,
+                                    password: this.adminPassword,
+                                }
+                            })
+                        });
+                        const data = await res.json();
+                        if (!res.ok) {
+                            this.errorMsg = data.error || '安装失败';
+                            this.installing = false;
+                            return;
+                        }
+
+                        this.currentStep = 3;
+                    } catch (e) {
+                        this.errorMsg = '网络错误，请重试';
+                    } finally {
+                        this.installing = false;
+                    }
+                },
+
+                goToLogin() { window.location.href = '/login'; }
+            };
+        }
+    </script>
+</body>
+</html>

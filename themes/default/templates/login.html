@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - {{if .settings.site_title}}{{.settings.site_title}}{{else}}Polaris{{end}}</title>
+    <script>
+        // Dark Mode FOUC Prevention
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark')
+        } else {
+            document.documentElement.classList.remove('dark')
+        }
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-[#FAFAFA] dark:bg-[#09090B] min-h-screen flex items-center justify-center font-sans">
+    <div class="w-full max-w-md px-6">
+        <div class="bg-white dark:bg-[#09090B] rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm p-8 md:p-10">
+            <div class="text-center mb-10">
+                <h1 class="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">{{if .settings.site_title}}{{.settings.site_title}}{{else}}Polaris{{end}}</h1>
+                <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2 tracking-widest uppercase">博客管理后台</p>
+            </div>
+            
+            <form id="loginForm" class="space-y-6">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">用户名</label>
+                    <input type="text" id="username" required
+                        class="w-full px-4 py-3 bg-transparent border-b border-slate-200 dark:border-zinc-800 focus:outline-none focus:border-black dark:focus:border-white text-slate-900 dark:text-white transition-colors"
+                        placeholder="请输入用户名">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">密码</label>
+                    <input type="password" id="password" required
+                        class="w-full px-4 py-3 bg-transparent border-b border-slate-200 dark:border-zinc-800 focus:outline-none focus:border-black dark:focus:border-white text-slate-900 dark:text-white transition-colors"
+                        placeholder="请输入密码">
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" id="remember" class="h-4 w-4 text-black dark:text-white border-slate-300 dark:border-zinc-700 rounded bg-transparent focus:ring-black dark:focus:ring-white focus:ring-offset-0">
+                    <label for="remember" class="ml-2 text-sm font-medium text-slate-600 dark:text-slate-400">保持登录状态</label>
+                </div>
+                <button type="submit" 
+                    class="w-full py-3 px-4 bg-black dark:bg-white text-white dark:text-black rounded-xl hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors font-bold text-sm">
+                    登 录
+                </button>
+            </form>
+            
+            <div id="errorMsg" class="mt-4 text-red-500 font-medium text-sm text-center hidden"></div>
+            
+            <div class="mt-8 text-center border-t border-slate-200 dark:border-zinc-800 pt-6">
+                <a href="/" class="text-sm font-bold text-slate-400 dark:text-slate-500 hover:text-black dark:hover:text-white transition-colors">← 返回前台</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const remember = document.getElementById('remember').checked;
+            
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, remember })
+                });
+                const data = await res.json();
+                
+                if (res.ok) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    window.location.href = '/admin';
+                } else {
+                    document.getElementById('errorMsg').textContent = data.error || '登录失败';
+                    document.getElementById('errorMsg').classList.remove('hidden');
+                }
+            } catch (err) {
+                document.getElementById('errorMsg').textContent = '网络错误，请重试';
+                document.getElementById('errorMsg').classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

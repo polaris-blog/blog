@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  polaris:
+    build: .
+    container_name: polaris-blog
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./config.yaml:/app/config.yaml
+    environment:
+      - POLARIS_CONFIG=/app/config.yaml
+    restart: unless-stopped
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: mysql:8.0
+    container_name: polaris-db
+    environment:
+      MYSQL_ROOT_PASSWORD: polaris_root
+      MYSQL_DATABASE: polaris
+      MYSQL_USER: polaris
+      MYSQL_PASSWORD: polaris_password
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: polaris-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+  redis_data:

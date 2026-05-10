@@ -1,0 +1,32 @@
+server:
+  host: 0.0.0.0
+  port: 3000
+  read_timeout: 10s
+  write_timeout: 10s
+  shutdown_timeout: 5s
+
+database:
+  driver: mysql
+  host: db
+  port: 3306
+  user: polaris
+  password: polaris_password
+  dbname: polaris
+  sslmode: disable
+
+auth:
+  jwt_secret: your-production-secret-key-change-this
+  token_expiry: 168h
+  max_login_attempts: 5
+  lockout_duration: 15m
+
+cache:
+  enabled: true
+  type: redis
+  host: redis
+  port: 6379
+  expiry: 10m
+
+storage:
+  type: local
+  path: /app/uploads

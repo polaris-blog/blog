@@ -1,0 +1,43 @@
+<div class="max-w-3xl mx-auto py-8">
+    <div class="mb-16">
+        <h1 class="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white mb-4 tracking-tight">归档</h1>
+        <p class="text-lg text-slate-500 dark:text-slate-400 font-medium">时间线</p>
+    </div>
+
+    {{if .archives}}
+    <div class="space-y-16">
+        {{range $month, $posts := .archives}}
+        <section>
+            <div class="flex items-end gap-4 mb-8">
+                <h2 class="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">{{$month}}</h2>
+                <span class="text-slate-400 dark:text-slate-500 font-mono text-sm pb-1">{{len $posts}} 篇文章</span>
+            </div>
+            
+            <div class="border-t border-slate-200 dark:border-zinc-800">
+                {{range $posts}}
+                <a href="/post/{{.Slug}}" class="group flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-6 py-6 border-b border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-900/50 transition-colors px-2 -mx-2 rounded-lg">
+                    <span class="text-sm font-medium text-slate-400 dark:text-slate-500 font-mono w-24 shrink-0">
+                        {{if .PublishedAt}}{{.PublishedAt.Format "01-02"}}{{else}}{{.CreatedAt.Format "01-02"}}{{end}}
+                    </span>
+                    <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-200 group-hover:text-black dark:group-hover:text-white group-hover:underline decoration-2 underline-offset-4 flex-1">
+                        {{.Title}}
+                    </h3>
+                    <svg class="w-5 h-5 text-slate-300 dark:text-slate-600 group-hover:text-black dark:group-hover:text-white transform transition-transform group-hover:translate-x-1 shrink-0 hidden sm:block" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                    </svg>
+                </a>
+                {{end}}
+            </div>
+        </section>
+        {{end}}
+    </div>
+    {{else}}
+    <div class="text-center py-20">
+        <div class="w-20 h-20 bg-slate-100 dark:bg-[#18181B] rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+        </div>
+        <p class="text-xl font-semibold text-slate-900 dark:text-white mb-2">暂无归档</p>
+        <p class="text-slate-500 dark:text-slate-400">还没有产生任何归档数据。</p>
+    </div>
+    {{end}}
+</div>

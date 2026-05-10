@@ -1,0 +1,56 @@
+
+<div class="max-w-3xl mx-auto py-8">
+    <div class="mb-12 md:mb-16">
+        <h1 class="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white mb-4 tracking-tight">
+            <span class="text-slate-400 dark:text-slate-500 font-normal opacity-50">#</span>{{.tag.Name}}
+        </h1>
+        <p class="text-lg md:text-xl text-slate-600 dark:text-slate-400 font-medium">共 {{.tag.PostCount}} 篇文章</p>
+    </div>
+
+    {{if .posts}}
+    <div class="space-y-8 md:space-y-12">
+        {{range .posts}}
+        <article class="group bg-transparent md:bg-white md:dark:bg-[#18181B] md:p-6 md:rounded-2xl md:border md:border-transparent md:hover:border-slate-100 md:dark:hover:border-[#27272A] transition-all duration-300 md:hover:shadow-xl md:hover:-translate-y-1">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="text-sm font-medium text-slate-500 dark:text-slate-400 font-mono">
+                    {{if .PublishedAt}}{{.PublishedAt.Format "2006-01-02"}}{{else}}{{.CreatedAt.Format "2006-01-02"}}{{end}}
+                </span>
+                {{if .Category}}
+                <span class="text-slate-300 dark:text-slate-600">&slash;</span>
+                <a href="/category/{{.Category.Slug}}" class="text-sm font-medium text-slate-900 dark:text-white hover:underline decoration-2 underline-offset-4">
+                    {{.Category.Name}}
+                </a>
+                {{end}}
+            </div>
+            
+            <h2 class="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-4 tracking-tight group-hover:underline decoration-2 underline-offset-4 decoration-slate-300 dark:decoration-slate-700">
+                <a href="/post/{{.Slug}}" class="outline-none">{{.Title}}</a>
+            </h2>
+            
+            <p class="text-lg text-slate-600 dark:text-slate-400 mb-6 line-clamp-3 leading-relaxed">
+                {{if .Excerpt}}{{.Excerpt}}{{else}}{{truncate 150 (stripMarkdown .Content)}}...{{end}}
+            </p>
+            
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-5 text-sm font-medium text-slate-500 dark:text-slate-400">
+                    <span class="flex items-center gap-1.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                        {{.ViewCount}}
+                    </span>
+                </div>
+                <a href="/post/{{.Slug}}" class="inline-flex items-center gap-1 text-sm font-bold text-black dark:text-white group/link">
+                    阅读全文
+                    <svg class="w-4 h-4 transform transition-transform group-hover/link:translate-x-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                </a>
+            </div>
+        </article>
+        {{end}}
+    </div>
+    {{else}}
+    <div class="text-center py-20">
+        <p class="text-xl font-semibold text-slate-900 dark:text-white mb-2">暂无文章</p>
+        <p class="text-slate-500 dark:text-slate-400">目前该标签下没有发布任何文章。</p>
+    </div>
+    {{end}}
+</div>
+

@@ -1,0 +1,48 @@
+# Binary
+/server
+/polaris
+
+# Database
+*.db
+*.db-journal
+*.db-wal
+
+# Logs
+*.log
+
+# Environment
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Runtime
+uploads/
+tmp/
+
+# Plugins (user-installed, not tracked)
+plugins/*
+!plugins/.gitkeep
+
+# Themes (user-installed, not tracked)
+themes/*
+!themes/default/
+!themes/.gitkeep
+
+# CodeBuddy
+.codebuddy/
+
+# Docs
+Product-Spec-CHANGELOG.md
+Product-Spec.md
+UI-Prompts.md
+CODEBUDDY.md
+AGENTS.md

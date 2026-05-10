@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <title>{{.title}} - {{if .settings.site_title}}{{.settings.site_title}}{{else}}Polaris{{end}}</title>
+    <meta name="description" content="{{.settings.site_description}}">
+    <meta name="keywords" content="{{.settings.site_keywords}}">
+    <link rel="icon" href="{{.settings.site_favicon}}">
+    {{if .settings.site_icp}}
+    <meta name="icp" content="{{.settings.site_icp}}">
+    {{end}}
+
+    {{if .pluginHead}}{{.pluginHead}}{{end}}
+
+    <!-- Dark Mode FOUC Prevention -->
+    <script>
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark')
+        } else {
+            document.documentElement.classList.remove('dark')
+        }
+    </script>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" id="hljs-light">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" id="hljs-dark" disabled>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script>hljs.configure({ ignoreUnescapedHTML: true });</script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .sidebar-link.active {
+            background-color: theme('colors.slate.100');
+            color: theme('colors.black');
+            font-weight: 600;
+        }
+        html.dark .sidebar-link.active {
+            background-color: theme('colors.zinc.800');
+            color: theme('colors.white');
+        }
+        
+        .prose { max-width: 48rem; }
+        .prose h1, .prose h2, .prose h3, .prose h4 { color: currentColor; font-weight: 700; margin-top: 1.5em; margin-bottom: 0.5em; }
+        .prose h1 { font-size: 2rem; font-weight: 800; letter-spacing: -0.025em; }
+        .prose h2 { font-size: 1.375rem; letter-spacing: -0.025em; padding-bottom: 0.3em; border-bottom: 1px solid theme('colors.slate.200'); }
+        html.dark .prose h2 { border-bottom-color: theme('colors.zinc.700'); }
+        .prose p { margin-bottom: 1.25em; line-height: 1.8; color: theme('colors.slate.600'); }
+        html.dark .prose p { color: theme('colors.slate.400'); }
+        .prose a { text-decoration: underline; text-underline-offset: 4px; font-weight: 500; color: inherit; transition: opacity 0.2s; }
+        .prose a:hover { opacity: 0.7; }
+        .prose img { border-radius: 8px; margin: 1.5rem 0; width: 100%; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        html.dark .prose img { opacity: 0.9; }
+        .prose code { padding: 0.15em 0.35em; border-radius: 4px; background: theme('colors.slate.100'); font-size: 0.85em; color: theme('colors.slate.800'); }
+        html.dark .prose code { background: theme('colors.zinc.800'); color: theme('colors.slate.200'); }
+        .prose pre { padding: 1.25rem; border-radius: 8px; background: #1e293b; color: #e2e8f0; overflow-x: auto; margin: 1.25em 0; border: 1px solid #334155; }
+        .prose pre code { background: transparent; padding: 0; color: inherit; font-size: 0.875em; line-height: 1.6; }
+        .prose blockquote { border-left: 3px solid theme('colors.slate.300'); padding-left: 1rem; font-style: italic; opacity: 0.8; margin: 1.25em 0; }
+        html.dark .prose blockquote { border-left-color: theme('colors.zinc.600'); }
+        .prose ul, .prose ol { margin-top: 0.5em; margin-bottom: 1.25em; padding-left: 1.5em; }
+        .prose li { margin-bottom: 0.25em; }
+        .prose hr { border-color: theme('colors.slate.200'); margin: 2em 0; }
+        html.dark .prose hr { border-color: theme('colors.zinc.700'); }
+        .prose table { font-size: 0.9em; }
+        .prose th { font-weight: 600; }
+        html.dark .prose pre { background: #09090b; border-color: #27272a; }
+        
+        #sidebar-overlay.active { display: block; }
+    </style>
+</head>
+<body class="bg-[#FAFAFA] dark:bg-[#09090B] text-slate-900 dark:text-[#FAFAFA] font-sans antialiased selection:bg-slate-900 selection:text-white dark:selection:bg-white dark:selection:text-slate-900 min-h-screen flex flex-col">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-64 bg-[#FAFAFA] dark:bg-[#09090B] border-r border-slate-200 dark:border-[#18181B] flex flex-col fixed left-0 top-0 bottom-0 h-full z-50 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
+        <div class="p-6 border-b border-slate-200 dark:border-[#18181B]">
+            <a href="/" class="flex items-center gap-3 group">
+                {{if .settings.site_logo}}
+                <img src="{{.settings.site_logo}}" alt="Logo" class="h-8 w-auto grayscale group-hover:grayscale-0 transition-all opacity-90 group-hover:opacity-100">
+                {{else}}
+                <div class="w-8 h-8 bg-black dark:bg-white text-white dark:text-black flex items-center justify-center rounded-sm font-bold text-xl">
+                    P
+                </div>
+                {{end}}
+                <span class="text-xl font-bold tracking-tight">{{if .settings.site_title}}{{.settings.site_title}}{{else}}Polaris{{end}}</span>
+            </a>
+        </div>
+        
+        <nav class="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+            {{range .navigations}}
+            <a href="{{.URL}}" target="{{if .Target}}{{.Target}}{{else}}_self{{end}}" 
+                class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-md text-sm text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#18181B] transition-colors">
+                {{.Name}}
+            </a>
+            {{end}}
+        </nav>
+        
+        <div class="p-6 border-t border-slate-200 dark:border-[#18181B]">
+            <div class="flex items-center gap-3">
+                {{if .settings.author_avatar}}
+                <img src="{{.settings.author_avatar}}" alt="Avatar" class="w-10 h-10 rounded-full object-cover grayscale">
+                {{else}}
+                <div class="w-10 h-10 rounded-full bg-slate-200 dark:bg-zinc-800 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                </div>
+                {{end}}
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold truncate">{{if .settings.author_name}}{{.settings.author_name}}{{else}}作者{{end}}</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Mobile Overlay -->
+    <div id="sidebar-overlay" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden transition-opacity"></div>
+
+    <div class="flex-1 flex flex-col min-h-screen lg:ml-64">
+        <!-- Top Navbar -->
+        <header class="h-16 flex items-center justify-between px-6 sticky top-0 bg-[#FAFAFA]/80 dark:bg-[#09090B]/80 backdrop-blur-md border-b border-slate-200 dark:border-[#18181B] z-30">
+            <div class="flex items-center gap-4">
+                <button id="mobile-menu-btn" class="lg:hidden p-2 -ml-2 rounded-md text-slate-500 hover:text-black dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#18181B] transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </button>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <!-- Search Trigger -->
+                <button id="search-trigger" class="flex items-center gap-2 px-3 py-1.5 text-sm text-slate-500 hover:text-black dark:hover:text-white bg-slate-100 dark:bg-[#18181B] hover:bg-slate-200 dark:hover:bg-zinc-800 rounded-md transition-colors w-40 sm:w-64 justify-between group">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        <span>搜索...</span>
+                    </div>
+                    <kbd class="hidden sm:inline-block font-sans text-xs border border-slate-300 dark:border-zinc-700 rounded px-1.5 py-0.5 text-slate-400 group-hover:text-black dark:group-hover:text-white">⌘ K</kbd>
+                </button>
+                
+                <!-- Theme Toggle -->
+                <button id="theme-toggle" class="p-2 rounded-md text-slate-500 hover:text-black dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#18181B] transition-colors" aria-label="Toggle Dark Mode">
+                    <!-- Sun Icon (shows in dark mode) -->
+                    <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    <!-- Moon Icon (shows in light mode) -->
+                    <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <main class="flex-1 w-full max-w-5xl mx-auto p-6 md:p-10">
+            {{embed}}
+        </main>
+
+        <footer class="py-8 border-t border-slate-200 dark:border-[#18181B] mt-auto">
+            <div class="w-full max-w-5xl mx-auto px-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <p class="text-sm text-slate-500 dark:text-slate-400">
+                    &copy; 2026 {{if .settings.site_title}}{{.settings.site_title}}{{else}}Polaris{{end}}{{if .settings.site_icp}} &middot; {{.settings.site_icp}}{{end}}
+                </p>
+                <div class="flex items-center gap-4 text-slate-400">
+                    <a href="/rss" class="hover:text-black dark:hover:text-white transition-colors">RSS</a>
+                    <a href="/sitemap.xml" class="hover:text-black dark:hover:text-white transition-colors">Sitemap</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- Cmd+K Search Modal -->
+    <div id="search-modal" class="fixed inset-0 z-[100] hidden opacity-0 transition-opacity duration-200">
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-md" id="search-backdrop"></div>
+        <div class="flex items-start justify-center min-h-screen pt-[10vh] px-4">
+            <div class="relative w-full max-w-2xl bg-[#FAFAFA] dark:bg-[#09090B] border border-slate-200 dark:border-[#27272A] rounded-xl shadow-2xl overflow-hidden transform scale-95 transition-transform duration-200" id="search-container">
+                <form action="/search" method="get" class="flex items-center px-4 py-4 border-b border-slate-200 dark:border-[#27272A]">
+                    <svg class="w-6 h-6 text-slate-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <input type="text" id="search-input" name="q" placeholder="输入关键字搜索..." autocomplete="off" class="w-full bg-transparent border-none focus:ring-0 text-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none">
+                    <span class="text-xs font-semibold text-slate-400 border border-slate-200 dark:border-zinc-700 rounded px-2 py-1 ml-2">ESC</span>
+                </form>
+                <div class="px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400">
+                    输入关键字并按回车键
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Code highlighting
+        document.querySelectorAll('pre code').forEach((block) => {
+            hljs.highlightElement(block);
+        });
+
+        // Toggle Sidebar Mobile
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        
+        function toggleSidebar() {
+            if (sidebarOverlay.classList.contains('hidden')) {
+                sidebarOverlay.classList.remove('hidden');
+                setTimeout(() => sidebar.classList.remove('-translate-x-full'), 10);
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                setTimeout(() => sidebarOverlay.classList.add('hidden'), 300);
+            }
+        }
+        
+        mobileMenuBtn.addEventListener('click', toggleSidebar);
+        sidebarOverlay.addEventListener('click', toggleSidebar);
+
+        // Dark Mode Logic
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const darkIcon = document.getElementById('theme-toggle-dark-icon');
+        const lightIcon = document.getElementById('theme-toggle-light-icon');
+
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            lightIcon.classList.remove('hidden');
+            document.getElementById('hljs-light').disabled = true;
+            document.getElementById('hljs-dark').disabled = false;
+        } else {
+            darkIcon.classList.remove('hidden');
+            document.getElementById('hljs-light').disabled = false;
+            document.getElementById('hljs-dark').disabled = true;
+        }
+
+        themeToggleBtn.addEventListener('click', function() {
+            darkIcon.classList.toggle('hidden');
+            lightIcon.classList.toggle('hidden');
+
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.theme = 'light';
+                document.getElementById('hljs-light').disabled = false;
+                document.getElementById('hljs-dark').disabled = true;
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.theme = 'dark';
+                document.getElementById('hljs-light').disabled = true;
+                document.getElementById('hljs-dark').disabled = false;
+            }
+        });
+
+        // Cmd+K Search Modal Logic
+        const searchModal = document.getElementById('search-modal');
+        const searchContainer = document.getElementById('search-container');
+        const searchInput = document.getElementById('search-input');
+        const searchTrigger = document.getElementById('search-trigger');
+        const searchBackdrop = document.getElementById('search-backdrop');
+        
+        function openSearch() {
+            searchModal.classList.remove('hidden');
+            // Allow display block to render before changing opacity for transition
+            requestAnimationFrame(() => {
+                searchModal.classList.remove('opacity-0');
+                searchContainer.classList.remove('scale-95');
+            });
+            setTimeout(() => searchInput.focus(), 50);
+        }
+
+        function closeSearch() {
+            searchModal.classList.add('opacity-0');
+            searchContainer.classList.add('scale-95');
+            setTimeout(() => {
+                searchModal.classList.add('hidden');
+            }, 200);
+            searchInput.blur();
+        }
+
+        searchTrigger.addEventListener('click', openSearch);
+        searchBackdrop.addEventListener('click', closeSearch);
+
+        document.addEventListener('keydown', (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                openSearch();
+            }
+            if (e.key === 'Escape' && !searchModal.classList.contains('hidden')) {
+                e.preventDefault();
+                closeSearch();
+            }
+        });
+    </script>
+    {{if .settings.site_analytics}}{{.settings.site_analytics | safe}}{{end}}
+    {{if .pluginBody}}{{.pluginBody}}{{end}}
+</body>
+</html>

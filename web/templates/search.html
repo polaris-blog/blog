@@ -1,0 +1,76 @@
+
+<div class="max-w-3xl mx-auto py-8">
+    <div class="mb-12">
+        <h1 class="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white mb-4 tracking-tight">搜索结果</h1>
+        <p class="text-lg text-slate-500 dark:text-slate-400 font-medium">"<span class="text-black dark:text-white font-bold">{{.query}}</span>" 的搜索结果</p>
+    </div>
+
+    <!-- Search Input (if they want to search again) -->
+    <div class="mb-12">
+        <form action="/search" method="get" class="relative">
+            <svg class="absolute left-4 top-3.5 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <input type="text" name="q" value="{{.query}}" placeholder="重新搜索..." class="w-full pl-12 pr-4 py-3 bg-white dark:bg-[#18181B] border border-slate-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:border-black dark:focus:border-white focus:ring-1 focus:ring-black dark:focus:ring-white text-slate-900 dark:text-white transition-colors">
+        </form>
+    </div>
+
+    <div id="search-results-container" class="space-y-8 md:space-y-12">
+        <div id="search-loading" class="hidden text-center py-20">
+            <svg class="animate-spin h-8 w-8 text-black dark:text-white mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+        </div>
+        <div id="search-empty" class="hidden text-center py-20">
+            <div class="w-20 h-20 bg-slate-100 dark:bg-black rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </div>
+            <p class="text-xl font-semibold text-slate-900 dark:text-white mb-2">未找到相关结果</p>
+            <p class="text-slate-500 dark:text-slate-400">没有找到与您查询内容相关的文章。</p>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const query = '{{.query}}';
+    const container = document.getElementById('search-results-container');
+    const loading = document.getElementById('search-loading');
+    const empty = document.getElementById('search-empty');
+    if(!query) {
+        empty.classList.remove('hidden');
+        return;
+    }
+
+    loading.classList.remove('hidden');
+    
+    fetch('/api/search?q=' + encodeURIComponent(query))
+        .then(res => res.json())
+        .then(data => {
+            loading.classList.add('hidden');
+            const posts = data.posts || [];
+            if(posts.length === 0) {
+                empty.classList.remove('hidden');
+                return;
+            }
+            posts.forEach(post => {
+                const article = document.createElement('article');
+                article.className = "group bg-transparent md:bg-white md:dark:bg-[#18181B] md:p-6 md:rounded-2xl md:border md:border-transparent md:hover:border-slate-100 md:dark:hover:border-[#27272A] transition-all duration-300 md:hover:shadow-xl md:hover:-translate-y-1 mb-8";
+                
+                let categoryHtml = '';
+                if(post.category) {
+                    categoryHtml = `<a href="/category/${post.category.slug}" class="text-xs font-bold px-3 py-1 bg-black dark:bg-white text-white dark:text-black rounded-full hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors">${post.category.name}</a>`;
+                }
+                const dateHtml = `<span class="text-sm font-medium text-slate-500 dark:text-slate-400 font-mono">${new Date(post.created_at).toLocaleDateString()}</span>`;
+                const titleHtml = `<h2 class="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-4 tracking-tight group-hover:underline decoration-2"><a href="/post/${post.slug}" class="outline-none">${post.title}</a></h2>`;
+                const summaryHtml = `<p class="text-lg text-slate-600 dark:text-slate-400 mb-6 line-clamp-3 leading-relaxed">${post.excerpt || post.content?.substring(0, 150) || ''}</p>`;
+                const readHtml = `<div class="flex items-center justify-end"><a href="/post/${post.slug}" class="inline-flex items-center gap-1 text-sm font-bold text-black dark:text-white group/link">阅读全文 <svg class="w-4 h-4 transform transition-transform group-hover/link:translate-x-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></a></div>`;
+
+                article.innerHTML = `<div class="flex items-center gap-3 mb-4">${categoryHtml}${dateHtml}</div>${titleHtml}${summaryHtml}${readHtml}`;
+                container.appendChild(article);
+            });
+        })
+        .catch(e => {
+            console.error(e);
+            loading.classList.add('hidden');
+            empty.classList.remove('hidden');
+        });
+});
+</script>
+

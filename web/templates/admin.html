@@ -1,0 +1,1936 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台 - {{if .settings.site_title}}{{.settings.site_title}}{{else}}Polaris{{end}}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script>
+        // Dark Mode Initialization
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .sidebar-link.active { background-color: #f1f5f9; color: #0f172a; font-weight: 600; }
+        html.dark .sidebar-link.active { background-color: #27272a; color: #fafafa; font-weight: 600; }
+        .EasyMDEContainer { display: flex; flex-direction: column; height: 100%; }
+        .EasyMDEContainer .CodeMirror { flex: 1; min-height: 300px; border-radius: 0.5rem; }
+        .EasyMDEContainer .editor-toolbar { border-radius: 0.5rem 0.5rem 0 0; border-color: #e2e8f0; }
+        .EasyMDEContainer .CodeMirror { border-color: #e2e8f0; }
+        html.dark .EasyMDEContainer .CodeMirror { border-color: #27272a; background: #09090b; color: #fafafa; }
+        .EasyMDEContainer .editor-preview { background: #fff; padding: 1rem; }
+        html.dark .EasyMDEContainer .editor-preview { background: #09090b; padding: 1rem; color: #fafafa; }
+        .EasyMDEContainer .editor-preview h1 { font-size: 2rem; font-weight: 700; margin-bottom: 1rem; }
+        .EasyMDEContainer .editor-preview h2 { font-size: 1.5rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.75rem; }
+        .EasyMDEContainer .editor-preview h3 { font-size: 1.25rem; font-weight: 600; margin-top: 1rem; margin-bottom: 0.5rem; }
+        .EasyMDEContainer .editor-preview p { margin-bottom: 1rem; line-height: 1.75; }
+        .EasyMDEContainer .editor-preview ul, .EasyMDEContainer .editor-preview ol { margin-left: 1.5rem; margin-bottom: 1rem; }
+        .EasyMDEContainer .editor-preview code { background: #f1f5f9; padding: 0.125rem 0.375rem; border-radius: 0.25rem; }
+        html.dark .EasyMDEContainer .editor-preview code { background: #18181b; color: #e4e4e7; }
+        .EasyMDEContainer .editor-preview pre { background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; }
+        html.dark .EasyMDEContainer .editor-preview pre { background: #000000; color: #e2e8f0; border: 1px solid #27272a; }
+        .EasyMDEContainer .editor-preview pre code { background: transparent; padding: 0; }
+        .EasyMDEContainer .editor-preview blockquote { border-left: 4px solid #000000; padding-left: 1rem; margin: 1rem 0; color: #64748b; }
+        html.dark .EasyMDEContainer .editor-preview blockquote { border-color: #fafafa; color: #a1a1aa; }
+        .EasyMDEContainer .editor-preview img { max-width: 100%; border-radius: 0.5rem; }
+        
+        /* Dark Mode Toolbar Fixes */
+        html.dark .editor-toolbar { border-color: #27272a; opacity: 1; background: #09090b; }
+        html.dark .editor-toolbar button { color: #a1a1aa !important; }
+        html.dark .editor-toolbar button:hover, html.dark .editor-toolbar button.active { background: #27272a !important; color: #fafafa !important; border-color: #27272a; }
+        html.dark .editor-toolbar i.separator { border-left-color: #27272a; border-right-color: #27272a; }
+        html.dark .editor-statusbar { border-color: #27272a; color: #a1a1aa; }
+    </style>
+</head>
+<body class="bg-[#FAFAFA] dark:bg-[#09090B] font-sans antialiased text-slate-900 dark:text-[#FAFAFA]" x-data="app()" x-init="init()">
+    <div class="flex h-screen overflow-hidden">
+        <aside class="w-64 bg-[#FAFAFA] dark:bg-[#09090B] border-r border-slate-200 dark:border-[#18181B] flex flex-col" :class="{ 'hidden': !sidebarOpen }">
+            <div class="p-6 border-b border-slate-200 dark:border-[#18181B] flex items-center h-16">
+                <a href="/" class="flex items-center gap-2">
+                    <span class="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">{{if .settings.site_title}}{{.settings.site_title}}{{else}}Polaris{{end}}</span>
+                </a>
+            </div>
+            <nav class="flex-1 px-3 py-4 space-y-5 overflow-y-auto">
+                <div>
+                    <p class="px-3 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5">内容</p>
+                    <a href="#/dashboard" @click="currentPage = 'dashboard'" 
+                        class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#18181B] transition-colors text-sm"
+                        :class="{ 'active': currentPage === 'dashboard' }">
+                        <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                        仪表盘
+                    </a>
+                    <a href="#/posts" @click="currentPage = 'posts'"
+                        class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#18181B] transition-colors text-sm"
+                        :class="{ 'active': currentPage === 'posts' || currentPage === 'post-edit' }">
+                        <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        文章
+                    </a>
+                    <a href="#/pages" @click="currentPage = 'pages'"
+                        class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#18181B] transition-colors text-sm"
+                        :class="{ 'active': currentPage === 'pages' || currentPage === 'page-edit' }">
+                        <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                        页面
+                    </a>
+                    <a href="#/categories" @click="currentPage = 'categories'"
+                        class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#18181B] transition-colors text-sm"
+                        :class="{ 'active': currentPage === 'categories' }">
+                        <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                        分类标签
+                    </a>
+                    <a href="#/comments" @click="currentPage = 'comments'"
+                        class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#18181B] transition-colors text-sm"
+                        :class="{ 'active': currentPage === 'comments' }">
+                        <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                        评论
+                    </a>
+                    <a href="#/media" @click="currentPage = 'media'"
+                        class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#18181B] transition-colors text-sm"
+                        :class="{ 'active': currentPage === 'media' }">
+                        <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        媒体库
+                    </a>
+                </div>
+                <div>
+                    <p class="px-3 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5">外观</p>
+                    <a href="#/navigations" @click="currentPage = 'navigations'"
+                        class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#18181B] transition-colors text-sm"
+                        :class="{ 'active': currentPage === 'navigations' }">
+                        <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+                        导航菜单
+                    </a>
+                    <a href="#/themes" @click="currentPage = 'themes'"
+                        class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#18181B] transition-colors text-sm"
+                        :class="{ 'active': currentPage === 'themes' }">
+                        <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
+                        主题
+                    </a>
+                </div>
+                <div>
+                    <p class="px-3 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5">系统</p>
+                    <a href="#/plugins" @click="currentPage = 'plugins'"
+                        class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#18181B] transition-colors text-sm"
+                        :class="{ 'active': currentPage === 'plugins' }">
+                        <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"/></svg>
+                        插件
+                    </a>
+                    <a href="#/settings" @click="currentPage = 'settings'"
+                        class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#18181B] transition-colors text-sm"
+                        :class="{ 'active': currentPage === 'settings' }">
+                        <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        设置
+                    </a>
+                </div>
+            </nav>
+            <div class="px-4 py-6 border-t border-slate-200 dark:border-[#18181B]">
+                <a href="/" target="_blank" class="flex items-center justify-center gap-2 text-sm text-slate-500 dark:text-slate-400 hover:text-black dark:hover:text-white transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                    </svg>
+                    查看站点
+                </a>
+            </div>
+        </aside>
+
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <header class="bg-[#FAFAFA] dark:bg-[#09090B] border-b border-slate-200 dark:border-[#18181B] h-16 flex items-center justify-between px-6 z-10 sticky top-0">
+                <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden p-2 text-slate-500 dark:text-slate-400 hover:text-black dark:text-slate-400 dark:hover:text-white transition-colors rounded-md">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+                <h1 class="text-lg font-bold text-slate-900 dark:text-white tracking-tight" x-text="pageTitle"></h1>
+                <div class="flex items-center gap-4">
+                    <a href="#/posts/new" @click="postCoverImage = ''; currentPage = 'editor'; editingPost = null"
+                        class="px-4 py-2 font-bold bg-black dark:bg-white text-white dark:text-black rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors text-sm">
+                        + 新文章
+                    </a>
+                    
+                    <!-- Theme Toggle -->
+                    <button id="theme-toggle" class="p-2 rounded-md text-slate-500 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#18181B] transition-colors" aria-label="Toggle Dark Mode"
+                        onclick="
+                            document.documentElement.classList.toggle('dark'); 
+                            localStorage.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+                            // also toggle icon logic here visually if not using alpine
+                        ">
+                        <svg class="w-5 h-5 dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                        </svg>
+                        <svg class="w-5 h-5 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                    </button>
+                    
+                    <div class="relative" x-data="{ open: false }">
+                        <button @click="open = !open" class="flex items-center gap-2 ring-1 ring-slate-200 dark:ring-zinc-800 rounded-full transition-shadow hover:ring-black dark:hover:ring-white">
+                            <div class="w-8 h-8 bg-slate-100 dark:bg-[#18181B] rounded-full flex items-center justify-center text-slate-900 dark:text-white font-bold">
+                                <span x-text="user?.nickname?.charAt(0) || 'A'"></span>
+                            </div>
+                        </button>
+                        <div x-show="open" @click.away="open = false" x-cloak
+                            class="absolute right-0 mt-2 w-48 bg-white dark:bg-[#09090B] rounded-xl shadow-lg border border-slate-200 dark:border-zinc-800 py-2">
+                            <a href="#/profile" class="block px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-slate-50 dark:bg-[#18181B] dark:hover:bg-zinc-900 transition-colors">个人设置</a>
+                            <button @click="logout()" class="w-full text-left px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-slate-50 dark:bg-[#18181B] dark:hover:bg-zinc-900 transition-colors">退出登录</button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <main class="flex-1 overflow-auto p-6 md:p-8">
+                <template x-if="currentPage === 'dashboard'">
+                    <div x-init="loadDashboard()">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                            <div class="bg-white dark:bg-[#09090B] rounded-xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm hover:border-black dark:hover:border-white transition-colors">
+                                <p class="text-xs font-bold text-slate-400 dark:text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">文章总数</p>
+                                <p class="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight" x-text="stats.total_posts"></p>
+                            </div>
+                            <div class="bg-white dark:bg-[#09090B] rounded-xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm hover:border-black dark:hover:border-white transition-colors">
+                                <p class="text-xs font-bold text-slate-400 dark:text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">评论总数</p>
+                                <p class="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight" x-text="stats.total_comments"></p>
+                            </div>
+                            <div class="bg-white dark:bg-[#09090B] rounded-xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm hover:border-black dark:hover:border-white transition-colors">
+                                <p class="text-xs font-bold text-slate-400 dark:text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">总访问量</p>
+                                <p class="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight" x-text="stats.total_views"></p>
+                            </div>
+                            <div class="bg-white dark:bg-[#09090B] rounded-xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm hover:border-black dark:hover:border-white transition-colors">
+                                <p class="text-xs font-bold text-slate-400 dark:text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">待审核评论</p>
+                                <p class="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight" x-text="stats.pending_comments"></p>
+                            </div>
+                        </div>
+                        <div class="bg-white dark:bg-[#09090B] rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm p-8">
+                            <h3 class="font-bold text-slate-900 dark:text-white mb-6">快速操作</h3>
+                            <div class="flex flex-wrap gap-4">
+                                <a href="#/posts/new" @click="postCoverImage = ''; currentPage = 'editor'; editingPost = null"
+                                    class="px-5 py-2.5 bg-black dark:bg-white text-white dark:text-black font-bold rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors text-sm">写文章</a>
+                                <a href="#/comments" @click="currentPage = 'comments'; loadComments()"
+                                    class="px-5 py-2.5 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-300 font-bold rounded-lg hover:border-black dark:hover:border-white hover:text-black dark:hover:text-white transition-colors text-sm">审核评论</a>
+                                <a href="#/media" @click="currentPage = 'media'; loadMedia()"
+                                    class="px-5 py-2.5 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-300 font-bold rounded-lg hover:border-black dark:hover:border-white hover:text-black dark:hover:text-white transition-colors text-sm">上传媒体</a>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <template x-if="currentPage === 'posts'">
+                    <div x-init="loadPosts()">
+                        <div class="bg-white dark:bg-[#09090B] rounded-xl border border-slate-200 dark:border-zinc-800">
+                            <div class="p-4 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center">
+                                <input type="text" placeholder="搜索文章..." 
+                                    class="px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white w-64"
+                                    x-model="searchKeyword" @keyup.enter="loadPosts()">
+                                <select class="px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white" x-model="filterStatus" @change="loadPosts()">
+                                    <option value="">全部状态</option>
+                                    <option value="published">已发布</option>
+                                    <option value="draft">草稿</option>
+                                    <option value="scheduled">定时发布</option>
+                                </select>
+                            </div>
+                            <table class="w-full">
+                                <thead class="bg-slate-50 dark:bg-[#18181B]">
+                                    <tr>
+                                        <th class="text-left px-4 py-3 text-sm font-medium text-slate-500 dark:text-slate-400">标题</th>
+                                        <th class="text-left px-4 py-3 text-sm font-medium text-slate-500 dark:text-slate-400">分类</th>
+                                        <th class="text-left px-4 py-3 text-sm font-medium text-slate-500 dark:text-slate-400">状态</th>
+                                        <th class="text-left px-4 py-3 text-sm font-medium text-slate-500 dark:text-slate-400">日期</th>
+                                        <th class="text-left px-4 py-3 text-sm font-medium text-slate-500 dark:text-slate-400">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="post in posts" :key="post.id">
+                                        <tr class="border-t border-slate-100 dark:border-zinc-800/50 hover:bg-slate-50 dark:bg-[#18181B]">
+                                            <td class="px-4 py-3">
+                                                <a :href="'/post/' + post.slug" target="_blank" class="hover:text-slate-900 dark:hover:text-white" x-text="post.title"></a>
+                                            </td>
+                                            <td class="px-4 py-3 text-sm text-slate-500 dark:text-slate-400" x-text="post.category?.name || '-'"></td>
+                                            <td class="px-4 py-3">
+                                                <span class="text-xs px-2 py-1 rounded"
+                                                    :class="{
+                                                        'bg-green-100 text-green-700': post.status === 'published',
+                                                        'bg-yellow-100 text-yellow-700': post.status === 'draft',
+                                                        'bg-blue-100 text-blue-700': post.status === 'scheduled'
+                                                    }"
+                                                    x-text="post.status === 'published' ? '已发布' : post.status === 'draft' ? '草稿' : '定时'"></span>
+                                            </td>
+                                            <td class="px-4 py-3 text-sm text-slate-500 dark:text-slate-400" x-text="new Date(post.created_at).toLocaleDateString()"></td>
+                                            <td class="px-4 py-3">
+                                                <div class="flex gap-2">
+                                                    <button @click="editPost(post)" class="text-slate-900 dark:text-white font-bold hover:underline text-sm">编辑</button>
+                                                    <button @click="deletePost(post.id)" class="text-red-500 hover:underline text-sm">删除</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </template>
+
+                <template x-if="currentPage === 'editor'">
+                    <div class="h-full flex flex-col" x-init="initEditor()">
+                        <div class="flex-1 flex flex-col bg-white dark:bg-[#09090B] rounded-xl border border-slate-200 dark:border-zinc-800 overflow-hidden">
+                            <textarea id="markdown-editor" x-model="postContent" class="hidden"></textarea>
+                        </div>
+                        <div class="mt-4 bg-white dark:bg-[#09090B] rounded-xl border border-slate-200 dark:border-zinc-800 p-4">
+                            <div class="grid grid-cols-3 gap-4 mb-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">标题</label>
+                                    <input type="text" x-model="postTitle" class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white">
+                                </div>
+                                <div x-show="editorMode === 'post'">
+                                    <label class="block text-sm font-medium mb-1">分类</label>
+                                    <select x-model="postCategory" class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white">
+                                        <option value="">选择分类</option>
+                                        <template x-for="cat in categories" :key="cat.id">
+                                            <option :value="cat.id" x-text="cat.name"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div x-show="editorMode === 'post'">
+                                    <label class="block text-sm font-medium mb-1">标签</label>
+                                    <div class="relative">
+                                        <div class="min-h-[42px] w-full px-3 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white flex flex-wrap gap-2 items-center cursor-text"
+                                            @click="$refs.tagInput.focus()">
+                                            <template x-for="tag in selectedTags" :key="tag.id">
+                                                <span class="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-white font-medium text-sm rounded-full">
+                                                    <span x-text="tag.name"></span>
+                                                    <button @click.stop="removeTag(tag)" class="hover:text-red-500 transition">
+                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                                        </svg>
+                                                    </button>
+                                                </span>
+                                            </template>
+                                            <input type="text" x-ref="tagInput" x-model="tagSearch"
+                                                @input="searchTags()" @focus="showTagDropdown = true; searchTags()"
+                                                @keydown.enter.prevent="createOrSelectTag()"
+                                                @keydown.backspace="removeLastTag()"
+                                                placeholder="搜索或创建标签..."
+                                                class="flex-1 min-w-[120px] outline-none text-sm bg-transparent">
+                                        </div>
+                                        <div x-show="showTagDropdown && (filteredTags.length > 0 || tagSearch)"
+                                            @click.away="showTagDropdown = false"
+                                            class="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white-lg shadow-lg max-h-48 overflow-auto">
+                                            <template x-for="tag in filteredTags" :key="tag.id">
+                                                <div @click="selectTag(tag)"
+                                                    class="px-3 py-2 hover:bg-slate-100 dark:hover:bg-zinc-800 cursor-pointer flex items-center justify-between"
+                                                    :class="{ 'bg-slate-100 dark:bg-zinc-800 font-bold': selectedTags.some(t => t.id === tag.id) }">
+                                                    <span x-text="tag.name"></span>
+                                                    <svg x-show="selectedTags.some(t => t.id === tag.id)" class="w-4 h-4 text-slate-900 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                                    </svg>
+                                                </div>
+                                            </template>
+                                            <div x-show="tagSearch && !filteredTags.some(t => t.name.toLowerCase() === tagSearch.toLowerCase())"
+                                                @click="createTag()"
+                                                class="px-3 py-2 hover:bg-slate-50 dark:hover:bg-[#18181B] cursor-pointer text-slate-900 dark:text-white font-bold flex items-center gap-2">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                                </svg>
+                                                <span>创建 "<span x-text="tagSearch"></span>"</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div x-show="editorMode === 'page'">
+                                    <label class="block text-sm font-medium mb-1">Slug (URL路径)</label>
+                                    <input type="text" x-model="pageSlug" class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white" placeholder="留空自动生成">
+                                </div>
+                                <div x-show="editorMode === 'page'">
+                                    <label class="block text-sm font-medium mb-1">导航排序</label>
+                                    <input type="number" x-model="pageNavSort" class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white" placeholder="0">
+                                </div>
+                            </div>
+                            <div x-show="editorMode === 'post'" class="mb-4">
+                                <label class="block text-sm font-medium mb-1">封面图</label>
+                                <div class="flex gap-2">
+                                    <input type="text" x-model="postCoverImage" placeholder="图片URL或点击上传"
+                                        class="flex-1 px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white">
+                                    <label class="px-4 py-2 bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 rounded-lg cursor-pointer hover:bg-slate-200 dark:hover:bg-zinc-700 transition text-sm font-medium">
+                                        上传
+                                        <input type="file" class="hidden" accept="image/*" @change="uploadCoverImage($event)">
+                                    </label>
+                                </div>
+                                <div x-show="postCoverImage" class="mt-2 relative inline-block">
+                                    <img :src="postCoverImage" alt="封面图" class="w-48 h-28 object-cover rounded-lg border border-slate-200 dark:border-zinc-800">
+                                    <button type="button" @click="postCoverImage = ''" class="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600">&times;</button>
+                                </div>
+                            </div>
+                            <div x-show="editorMode === 'page'" class="mb-4">
+                                <label class="flex items-center gap-2">
+                                    <input type="checkbox" x-model="pageIsInNav" class="rounded">
+                                    <span class="text-sm">显示在导航栏</span>
+                                </label>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <div class="flex gap-2">
+                                    <button @click="saveDraft()" class="px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white transition">
+                                        保存草稿
+                                    </button>
+                                    <button @click="publish()" class="px-4 py-2 bg-black dark:bg-white text-white dark:text-black font-bold rounded-lg hover:opacity-80 hover:opacity-60 transition">
+                                        发布
+                                    </button>
+                                </div>
+                                <div class="text-sm text-slate-500 dark:text-slate-400">
+                                    字数: <span x-text="postContent.length"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <template x-if="currentPage === 'comments'">
+                    <div x-init="loadComments()">
+                        <div class="bg-white dark:bg-[#09090B] rounded-xl border border-slate-200 dark:border-zinc-800">
+                            <div class="p-4 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center">
+                                <select class="px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white" x-model="filterCommentStatus" @change="loadComments()">
+                                    <option value="">全部状态</option>
+                                    <option value="pending">待审核</option>
+                                    <option value="approved">已通过</option>
+                                    <option value="spam">垃圾评论</option>
+                                </select>
+                                <div class="flex gap-2">
+                                    <button @click="batchAction('approve')" class="px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white transition">批量通过</button>
+                                    <button @click="batchAction('spam')" class="px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white hover:border-black dark:hover:border-white focus:border-black dark:focus:border-white transition">批量标记垃圾</button>
+                                    <button @click="batchAction('delete')" class="px-4 py-2 border border-red-200 text-red-500 rounded hover:border-red-500 transition">批量删除</button>
+                                </div>
+                            </div>
+                            <div class="divide-y divide-slate-100">
+                                <template x-for="comment in comments" :key="comment.id">
+                                    <div class="p-4 hover:bg-slate-50 dark:bg-[#18181B]">
+                                        <div class="flex items-start gap-4">
+                                            <input type="checkbox" :value="comment.id" x-model="selectedComments" class="mt-1">
+                                            <div class="flex-1">
+                                                <div class="flex items-center gap-2 mb-2">
+                                                    <span class="font-medium" x-text="comment.author_name"></span>
+                                                    <span class="text-xs text-slate-400" x-text="comment.author_email"></span>
+                                                    <span class="text-xs px-2 py-0.5 rounded"
+                                                        :class="{
+                                                            'bg-yellow-100 text-yellow-700': comment.status === 'pending',
+                                                            'bg-green-100 text-green-700': comment.status === 'approved',
+                                                            'bg-red-100 text-red-700': comment.status === 'spam'
+                                                        }"
+                                                        x-text="comment.status === 'pending' ? '待审核' : comment.status === 'approved' ? '已通过' : '垃圾'"></span>
+                                                </div>
+                                                <p class="text-slate-600 dark:text-slate-300 mb-2" x-text="comment.content"></p>
+                                                <div class="flex items-center gap-4 text-sm">
+                                                    <span class="text-slate-400" x-text="new Date(comment.created_at).toLocaleString()"></span>
+                                                    <a :href="'/post/' + comment.post?.slug" target="_blank" class="text-slate-900 dark:text-white font-bold hover:underline" x-text="comment.post?.title"></a>
+                                                </div>
+                                            </div>
+                                            <div class="flex gap-2">
+                                                <button @click="approveComment(comment.id)" x-show="comment.status !== 'approved'" 
+                                                    class="text-green-500 hover:underline text-sm">通过</button>
+                                                <button @click="spamComment(comment.id)" x-show="comment.status !== 'spam'" 
+                                                    class="text-red-500 hover:underline text-sm">垃圾</button>
+                                                <button @click="deleteComment(comment.id)" class="text-slate-400 hover:text-red-500 text-sm">删除</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <template x-if="currentPage === 'categories'">
+                    <div x-init="loadCategories(); loadTags()" class="grid grid-cols-2 gap-6">
+                        <div class="bg-white dark:bg-[#09090B] rounded-xl border border-slate-200 dark:border-zinc-800">
+                            <div class="p-4 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center">
+                                <h3 class="font-semibold">分类管理</h3>
+                                <button @click="showCategoryModal = true; editingCategory = null" 
+                                    class="px-4 py-2 bg-black dark:bg-white text-white dark:text-black font-bold rounded-lg hover:opacity-80 text-sm">+ 添加分类</button>
+                            </div>
+                            <div class="divide-y divide-slate-100">
+                                <template x-for="cat in categories" :key="cat.id">
+                                    <div class="p-4 flex justify-between items-center hover:bg-slate-50 dark:bg-[#18181B]">
+                                        <div>
+                                            <span class="font-medium" x-text="cat.name"></span>
+                                            <span class="text-sm text-slate-400 ml-2" x-text="cat.post_count + ' 篇文章'"></span>
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <button @click="editingCategory = cat; showCategoryModal = true" class="text-slate-900 dark:text-white font-bold hover:underline text-sm hover:underline">编辑</button>
+                                            <button @click="deleteCategory(cat.id)" class="text-red-500 text-sm hover:underline">删除</button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                        <div class="bg-white dark:bg-[#09090B] rounded-xl border border-slate-200 dark:border-zinc-800">
+                            <div class="p-4 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center">
+                                <h3 class="font-semibold">标签管理</h3>
+                                <button @click="showTagModal = true; editingTag = null" 
+                                    class="px-4 py-2 bg-black dark:bg-white text-white dark:text-black font-bold rounded-lg hover:opacity-80 text-sm">+ 添加标签</button>
+                            </div>
+                            <div class="p-4 flex flex-wrap gap-2">
+                                <template x-for="tag in tags" :key="tag.id">
+                                    <div class="group relative">
+                                        <span class="px-3 py-1 bg-slate-100 rounded text-sm" x-text="tag.name"></span>
+                                        <div class="hidden group-hover:flex absolute -top-2 -right-2 gap-1">
+                                            <button @click="editingTag = tag; showTagModal = true" class="w-5 h-5 bg-black dark:bg-white text-white dark:text-black font-bold rounded-full hover:opacity-80 text-xs">✎</button>
+                                            <button @click="deleteTag(tag.id)" class="w-5 h-5 bg-red-500 text-white rounded-full text-xs">×</button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <template x-if="currentPage === 'media'">
+                    <div x-init="loadMedia()">
+                        <div class="mb-4 flex justify-between items-center">
+                            <div class="flex gap-2">
+                                <button @click="filterMediaType = 'image'" 
+                                    :class="filterMediaType === 'image' ? 'bg-black dark:bg-white text-white dark:text-black font-bold border border-black dark:border-white' : 'border border-slate-200'"
+                                    class="px-4 py-2 rounded">图片</button>
+                                <button @click="filterMediaType = 'file'" 
+                                    :class="filterMediaType === 'file' ? 'bg-black dark:bg-white text-white dark:text-black font-bold border border-black dark:border-white' : 'border border-slate-200'"
+                                    class="px-4 py-2 rounded">文件</button>
+                                <button @click="filterMediaType = ''" 
+                                    :class="filterMediaType === '' ? 'bg-black dark:bg-white text-white dark:text-black font-bold border border-black dark:border-white' : 'border border-slate-200'"
+                                    class="px-4 py-2 rounded">全部</button>
+                            </div>
+                            <label class="px-4 py-2 bg-black dark:bg-white text-white dark:text-black font-bold rounded-lg hover:opacity-80 cursor-pointer hover:opacity-60 transition">
+                                上传文件
+                                <input type="file" class="hidden" @change="uploadFile($event)">
+                            </label>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                            <template x-for="item in media" :key="item.id">
+                                <div class="bg-white dark:bg-[#09090B] rounded-xl border border-slate-200 dark:border-zinc-800 overflow-hidden group">
+                                    <div class="aspect-square bg-slate-100 flex items-center justify-center">
+                                        <template x-if="item.type === 'image'">
+                                            <img :src="item.url" :alt="item.name" class="w-full h-full object-cover">
+                                        </template>
+                                        <template x-if="item.type !== 'image'">
+                                            <svg class="w-12 h-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                            </svg>
+                                        </template>
+                                    </div>
+                                    <div class="p-2">
+                                        <p class="text-sm truncate" x-text="item.name"></p>
+                                        <div class="flex justify-between items-center mt-1">
+                                            <span class="text-xs text-slate-400" x-text="formatSize(item.size)"></span>
+                                            <div class="flex gap-2">
+                                                <button @click="copyToClipboard(item.url)" class="text-xs text-slate-500 hover:text-black dark:hover:text-white font-medium" x-text="copiedMediaUrl === item.url ? '已复制' : '复制'"></button>
+                                                <button @click="deleteMedia(item.id)" class="text-red-500 text-xs hover:underline">删除</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+
+                <template x-if="currentPage === 'themes'">
+                    <div x-data="{ themeMsg: '' }" x-init="loadThemes()">
+                        <div x-show="themeMsg" x-text="themeMsg" x-transition
+                            class="mb-4 px-4 py-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-lg text-sm font-medium border border-green-200 dark:border-green-800"></div>
+                        <div class="mb-4">
+                            <label class="px-4 py-2 bg-black dark:bg-white text-white dark:text-black font-bold rounded-lg hover:opacity-80 cursor-pointer hover:opacity-60 transition">
+                                上传主题
+                                <input type="file" accept=".zip" class="hidden" @change="uploadTheme($event)">
+                            </label>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                            <template x-for="theme in themes" :key="theme.id">
+                                <div class="bg-white dark:bg-[#09090B] rounded-xl border border-slate-200 dark:border-zinc-800 overflow-hidden"
+                                    :class="{ 'ring-2 ring-black dark:ring-white': theme.is_active }">
+                                    <div class="aspect-video bg-slate-100 dark:bg-zinc-800 flex items-center justify-center">
+                                        <span class="text-2xl font-bold text-slate-300 dark:text-zinc-600" x-text="theme.name.charAt(0)"></span>
+                                    </div>
+                                    <div class="p-4">
+                                        <div class="flex justify-between items-start mb-2">
+                                            <h4 class="font-medium" x-text="theme.name"></h4>
+                                            <div class="flex items-center gap-1">
+                                                <span x-show="theme.is_active" class="text-xs px-2 py-0.5 bg-black dark:bg-white text-white dark:text-black font-bold rounded-lg">当前</span>
+                                                <span x-show="theme.slug === 'default'" class="text-xs px-2 py-0.5 bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-slate-400 rounded-lg font-medium">内置</span>
+                                            </div>
+                                        </div>
+                                        <p class="text-sm text-slate-500 dark:text-slate-400 mb-2" x-text="theme.description"></p>
+                                        <p class="text-xs text-slate-400 mb-3" x-text="'v' + theme.version + ' by ' + theme.author"></p>
+                                        <div class="flex gap-2">
+                                            <button @click="openThemeConfig(theme.id)"
+                                                class="px-3 py-1 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white text-sm hover:border-black dark:hover:border-white">
+                                                <svg class="w-3.5 h-3.5 inline-block -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                                配置
+                                            </button>
+                                            <button @click="activateTheme(theme.id); themeMsg = '主题已激活，切换已即时生效'" x-show="!theme.is_active" 
+                                                class="flex-1 px-3 py-1 bg-black dark:bg-white text-white dark:text-black font-bold rounded-lg hover:opacity-80 text-sm hover:opacity-60">激活</button>
+                                            <button @click="deleteTheme(theme.id)" x-show="!theme.is_active && theme.slug !== 'default'" 
+                                                class="px-3 py-1 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white text-sm hover:border-red-500 text-red-500">删除</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+
+                <template x-if="currentPage === 'plugins'">
+                    <div x-data="{ pluginMsg: '' }" x-init="loadPlugins()">
+                        <div x-show="pluginMsg" x-text="pluginMsg" x-transition
+                            class="mb-4 px-4 py-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-lg text-sm font-medium border border-green-200 dark:border-green-800"></div>
+                        <div class="mb-4">
+                            <label class="px-4 py-2 bg-black dark:bg-white text-white dark:text-black font-bold rounded-lg hover:opacity-80 cursor-pointer hover:opacity-60 transition">
+                                上传插件
+                                <input type="file" accept=".zip" class="hidden" @change="uploadPlugin($event)">
+                            </label>
+                            <span class="ml-2 text-xs text-slate-400">插件包需包含 plugin.json 配置文件</span>
+                        </div>
+                        <div x-show="plugins.length === 0" class="text-center py-12 text-slate-400">
+                            <p>暂无已安装的插件</p>
+                        </div>
+                        <div class="bg-white dark:bg-[#09090B] rounded-xl border border-slate-200 dark:border-zinc-800">
+                            <div class="divide-y divide-slate-100 dark:divide-zinc-800">
+                                <template x-for="plugin in plugins" :key="plugin.id">
+                                    <div class="p-4 flex justify-between items-center hover:bg-slate-50 dark:bg-[#18181B] transition-colors">
+                                        <div class="flex items-center gap-4 flex-1 min-w-0">
+                                            <div class="w-12 h-12 bg-slate-100 dark:bg-zinc-800 rounded-xl flex items-center justify-center shrink-0">
+                                                <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"/></svg>
+                                            </div>
+                                            <div class="min-w-0">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="font-medium truncate" x-text="plugin.name"></span>
+                                                    <span class="text-xs text-slate-400 shrink-0" x-text="'v' + plugin.version"></span>
+                                                    <span x-show="plugin.is_active" class="text-xs px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-bold rounded">运行中</span>
+                                                </div>
+                                                <p class="text-sm text-slate-500 dark:text-slate-400 truncate" x-text="plugin.description"></p>
+                                                <div class="flex flex-wrap gap-1 mt-1.5">
+                                                    <template x-for="perm in JSON.parse(plugin.permissions || '[]')" :key="perm">
+                                                        <span class="text-xs px-1.5 py-0.5 bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-slate-400 rounded font-medium" x-text="perm"></span>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-3 ml-4 shrink-0">
+                                            <button @click="openPluginConfig(plugin.id)" title="配置"
+                                                class="p-2 rounded-lg border border-slate-200 dark:border-zinc-800 hover:border-black dark:hover:border-white transition-colors">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                            </button>
+                                            <label class="relative inline-flex items-center cursor-pointer">
+                                                <input type="checkbox" :checked="plugin.is_active" @change="togglePlugin(plugin)" class="sr-only peer">
+                                                <div class="w-11 h-6 bg-slate-200 dark:bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-900 dark:peer-checked:bg-white"></div>
+                                            </label>
+                                            <button @click="deletePlugin(plugin.id)" x-show="!plugin.is_active" class="text-red-500 text-sm hover:underline">删除</button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <template x-if="currentPage === 'settings'">
+                    <div x-init="loadSettings()">
+                        <div class="space-y-6">
+                            <div class="bg-white dark:bg-[#09090B] rounded-xl border border-slate-200 dark:border-zinc-800 p-6">
+                                <h3 class="font-semibold mb-4">基本信息</h3>
+                                <div class="space-y-4">
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">网站名称</label>
+                                            <input type="text" x-model="settings.site_title" class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">网站副标题</label>
+                                            <input type="text" x-model="settings.site_subtitle" class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white" placeholder="记录思考，分享成长">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">网站描述</label>
+                                        <textarea x-model="settings.site_description" rows="3" class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white"></textarea>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">关键词</label>
+                                        <input type="text" x-model="settings.site_keywords" class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white" placeholder="多个关键词用逗号分隔">
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">网站URL</label>
+                                            <input type="url" x-model="settings.site_url" class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white" placeholder="https://example.com">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">ICP备案号</label>
+                                            <input type="text" x-model="settings.site_icp" class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white" placeholder="京ICP备xxxxxxxx号">
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">网站Logo</label>
+                                            <div class="flex gap-2">
+                                                <input type="text" x-model="settings.site_logo" placeholder="Logo URL" class="flex-1 px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white">
+                                                <button type="button" @click="uploadSettingImage('site_logo')" class="px-3 py-2 bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-700 transition text-sm font-medium">上传</button>
+                                            </div>
+                                            <div x-show="settings.site_logo" class="mt-1.5">
+                                                <img :src="settings.site_logo" alt="Logo" class="h-8 w-auto">
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">Favicon</label>
+                                            <div class="flex gap-2">
+                                                <input type="text" x-model="settings.site_favicon" placeholder="Favicon URL" class="flex-1 px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white">
+                                                <button type="button" @click="uploadSettingImage('site_favicon')" class="px-3 py-2 bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-700 transition text-sm font-medium">上传</button>
+                                            </div>
+                                            <div x-show="settings.site_favicon" class="mt-1.5">
+                                                <img :src="settings.site_favicon" alt="Favicon" class="h-6 w-auto">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="pt-4 border-t border-slate-200">
+                                        <button @click="saveSettings()" class="px-6 py-2 bg-black dark:bg-white text-white dark:text-black font-bold rounded-lg hover:opacity-80 hover:opacity-60 transition">保存设置</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white dark:bg-[#09090B] rounded-xl border border-slate-200 dark:border-zinc-800 p-6">
+                                <h3 class="font-semibold mb-4">作者信息</h3>
+                                <div class="space-y-4">
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">作者名称</label>
+                                            <input type="text" x-model="settings.author_name" class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white" placeholder="显示在侧边栏">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium mb-1">联系邮箱</label>
+                                            <input type="email" x-model="settings.author_email" class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white" placeholder="your@email.com">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">作者头像</label>
+                                        <div class="flex gap-2">
+                                            <input type="text" x-model="settings.author_avatar" class="flex-1 px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white" placeholder="头像URL">
+                                            <label class="px-4 py-2 bg-slate-100 text-slate-700 rounded cursor-pointer hover:bg-slate-200 transition">
+                                                上传
+                                                <input type="file" class="hidden" accept="image/*" @change="uploadAuthorAvatar($event)">
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">作者描述</label>
+                                        <textarea x-model="settings.author_description" rows="3" class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white" placeholder="简短的个人介绍，显示在侧边栏"></textarea>
+                                    </div>
+                                    <div class="pt-4 border-t border-slate-200">
+                                        <button @click="saveSettings()" class="px-6 py-2 bg-black dark:bg-white text-white dark:text-black font-bold rounded-lg hover:opacity-80 hover:opacity-60 transition">保存设置</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white dark:bg-[#09090B] rounded-xl border border-slate-200 dark:border-zinc-800 p-6">
+                                <h3 class="font-semibold mb-4">页脚设置</h3>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">页脚内容</label>
+                                        <textarea x-model="settings.site_footer" rows="2" class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white"></textarea>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">统计代码</label>
+                                        <textarea x-model="settings.site_analytics" rows="4" class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white font-mono text-sm" placeholder="第三方统计代码"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <template x-if="currentPage === 'pages'">
+                    <div x-init="loadPages()">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-lg font-semibold">页面管理</h2>
+                            <button @click="newPage()"
+                                class="px-4 py-2 bg-black dark:bg-white text-white dark:text-black font-bold rounded-lg hover:opacity-80 hover:opacity-60 transition">
+                                + 新建页面
+                            </button>
+                        </div>
+                        <div class="bg-white dark:bg-[#09090B] rounded-xl border border-slate-200 dark:border-zinc-800">
+                            <table class="w-full">
+                                <thead class="bg-slate-50 dark:bg-[#18181B] border-b border-slate-200">
+                                    <tr>
+                                        <th class="text-left px-4 py-3 text-sm font-medium text-slate-600 dark:text-slate-300">标题</th>
+                                        <th class="text-left px-4 py-3 text-sm font-medium text-slate-600 dark:text-slate-300">Slug</th>
+                                        <th class="text-left px-4 py-3 text-sm font-medium text-slate-600 dark:text-slate-300">状态</th>
+                                        <th class="text-left px-4 py-3 text-sm font-medium text-slate-600 dark:text-slate-300">导航显示</th>
+                                        <th class="text-right px-4 py-3 text-sm font-medium text-slate-600 dark:text-slate-300">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="page in pages" :key="page.id">
+                                        <tr class="border-b border-slate-100 dark:border-zinc-800/50 hover:bg-slate-50 dark:bg-[#18181B]">
+                                            <td class="px-4 py-3">
+                                                <span class="font-medium" x-text="page.title"></span>
+                                            </td>
+                                            <td class="px-4 py-3 text-slate-500 dark:text-slate-400" x-text="page.slug"></td>
+                                            <td class="px-4 py-3">
+                                                <span class="px-2 py-1 text-xs rounded-full" 
+                                                    :class="page.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600 dark:text-slate-300'"
+                                                    x-text="page.status === 'published' ? '已发布' : '草稿'"></span>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <span x-show="page.is_in_nav" class="text-green-600">是</span>
+                                                <span x-show="!page.is_in_nav" class="text-slate-400">否</span>
+                                            </td>
+                                            <td class="px-4 py-3 text-right">
+                                                <button @click="editPage(page)" class="text-slate-900 dark:text-white font-bold hover:underline mr-3">编辑</button>
+                                                <button x-show="page.status === 'draft'" @click="publishPage(page.id)" class="text-green-600 hover:underline mr-3">发布</button>
+                                                <a :href="'/page/' + page.slug" target="_blank" x-show="page.status === 'published'" class="text-slate-500 dark:text-slate-400 hover:underline mr-3">查看</a>
+                                                <button @click="deletePage(page.id)" class="text-red-500 hover:underline">删除</button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </template>
+
+                <template x-if="currentPage === 'navigations'">
+                    <div x-init="loadNavigations()">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-lg font-semibold">导航菜单</h2>
+                            <button @click="showNavModal = true; editingNav = null; navForm = {name:'',url:'',icon:'',target:'_self',sort_order:0,parent_id:null,is_active:true}"
+                                class="px-4 py-2 bg-black dark:bg-white text-white dark:text-black font-bold rounded-lg hover:opacity-80 hover:opacity-60 transition">
+                                + 添加导航
+                            </button>
+                        </div>
+                        <div class="bg-white dark:bg-[#09090B] rounded-xl border border-slate-200 dark:border-zinc-800">
+                            <table class="w-full">
+                                <thead class="bg-slate-50 dark:bg-[#18181B] border-b border-slate-200">
+                                    <tr>
+                                        <th class="text-left px-4 py-3 text-sm font-medium text-slate-600 dark:text-slate-300">名称</th>
+                                        <th class="text-left px-4 py-3 text-sm font-medium text-slate-600 dark:text-slate-300">链接</th>
+                                        <th class="text-left px-4 py-3 text-sm font-medium text-slate-600 dark:text-slate-300">排序</th>
+                                        <th class="text-left px-4 py-3 text-sm font-medium text-slate-600 dark:text-slate-300">状态</th>
+                                        <th class="text-right px-4 py-3 text-sm font-medium text-slate-600 dark:text-slate-300">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="nav in navigations" :key="nav.id">
+                                        <tr class="border-b border-slate-100 dark:border-zinc-800/50 hover:bg-slate-50 dark:bg-[#18181B]">
+                                            <td class="px-4 py-3">
+                                                <span class="font-medium" x-text="nav.name"></span>
+                                                <span x-show="nav.is_builtin" class="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-slate-400">内置</span>
+                                            </td>
+                                            <td class="px-4 py-3 text-slate-500 dark:text-slate-400 font-mono text-xs" x-text="nav.url"></td>
+                                            <td class="px-4 py-3" x-text="nav.sort_order"></td>
+                                            <td class="px-4 py-3">
+                                                <span :class="nav.is_active ? 'text-green-600' : 'text-slate-400'" x-text="nav.is_active ? '启用' : '禁用'"></span>
+                                            </td>
+                                            <td class="px-4 py-3 text-right space-x-2">
+                                                <button @click="editNav(nav)" class="text-slate-900 dark:text-white font-bold hover:underline">编辑</button>
+                                                <button x-show="!nav.is_builtin" @click="deleteNav(nav.id)" class="text-red-500 hover:underline">删除</button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                            <div x-show="navigations.length === 0" class="text-center text-slate-400 py-8">暂无导航</div>
+                        </div>
+                    </div>
+                </template>
+            </main>
+        </div>
+    </div>
+
+    <!-- Theme Config Modal -->
+    <div x-show="showThemeConfig" x-cloak class="fixed inset-0 bg-black/50 dark:bg-black/80 flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-[#09090B] rounded-xl border border-slate-200 dark:border-zinc-800 shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col">
+            <div class="p-6 border-b border-slate-200 dark:border-zinc-800">
+                <h3 class="font-semibold text-lg" x-text="(themeConfigTheme ? themeConfigTheme.name : '') + ' - 主题配置'"></h3>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-4 flex-1">
+                <template x-for="(field, key) in themeConfigDefs" :key="key">
+                    <div>
+                        <label class="block text-sm font-medium mb-1.5" x-text="field.label + ' (' + key + ')'"></label>
+                        <!-- Switch -->
+                        <template x-if="field.type === 'switch'">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" :checked="themeConfigValues[key] === 'true'"
+                                    @change="themeConfigValues[key] = $el.checked ? 'true' : 'false'"
+                                    class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-900 dark:peer-checked:bg-white"></div>
+                            </label>
+                        </template>
+                        <!-- Text -->
+                        <template x-if="field.type === 'text'">
+                            <input type="text" x-model="themeConfigValues[key]"
+                                class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white">
+                        </template>
+                        <!-- Textarea -->
+                        <template x-if="field.type === 'textarea'">
+                            <textarea x-model="themeConfigValues[key]" rows="3"
+                                class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white"></textarea>
+                        </template>
+                        <!-- Color -->
+                        <template x-if="field.type === 'color'">
+                            <div class="flex items-center gap-2">
+                                <input type="color" x-model="themeConfigValues[key]"
+                                    class="w-10 h-10 rounded border border-slate-200 dark:border-zinc-800 cursor-pointer">
+                                <input type="text" x-model="themeConfigValues[key]"
+                                    class="flex-1 px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white">
+                            </div>
+                        </template>
+                        <!-- Number -->
+                        <template x-if="field.type === 'number'">
+                            <input type="number" x-model="themeConfigValues[key]"
+                                class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white">
+                        </template>
+                        <!-- Select -->
+                        <template x-if="field.type === 'select'">
+                            <select x-model="themeConfigValues[key]"
+                                class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white">
+                                <template x-for="opt in (field.options || '').split(',')" :key="opt">
+                                    <option :value="opt.trim()" x-text="opt.trim()"></option>
+                                </template>
+                            </select>
+                        </template>
+                        <p x-show="field.group" class="text-xs text-slate-400 mt-1" x-text="'分组: ' + field.group"></p>
+                    </div>
+                </template>
+                <div x-show="Object.keys(themeConfigDefs).length === 0" class="text-center text-slate-400 py-4">
+                    该主题没有可配置项
+                </div>
+            </div>
+            <div class="p-6 border-t border-slate-200 dark:border-zinc-800 flex justify-end gap-2">
+                <button @click="showThemeConfig = false" class="px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white">取消</button>
+                <button @click="saveThemeConfig()" class="px-4 py-2 bg-black dark:bg-white text-white dark:text-black font-bold rounded-lg hover:opacity-80">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Plugin Config Modal -->
+    <div x-show="showPluginConfig" x-cloak class="fixed inset-0 bg-black/50 dark:bg-black/80 flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-[#09090B] rounded-xl border border-slate-200 dark:border-zinc-800 shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col">
+            <div class="p-6 border-b border-slate-200 dark:border-zinc-800">
+                <h3 class="font-semibold text-lg" x-text="(pluginConfigPlugin ? pluginConfigPlugin.name : '') + ' - 插件配置'"></h3>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-4 flex-1">
+                <template x-for="(field, key) in pluginConfigDefs" :key="key">
+                    <div>
+                        <label class="block text-sm font-medium mb-1.5" x-text="field.label + ' (' + key + ')'"></label>
+                        <template x-if="field.type === 'switch'">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" :checked="pluginConfigValues[key] === 'true'"
+                                    @change="pluginConfigValues[key] = $el.checked ? 'true' : 'false'"
+                                    class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-900 dark:peer-checked:bg-white"></div>
+                            </label>
+                        </template>
+                        <template x-if="field.type === 'text'">
+                            <input type="text" x-model="pluginConfigValues[key]"
+                                class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white">
+                        </template>
+                        <template x-if="field.type === 'textarea'">
+                            <textarea x-model="pluginConfigValues[key]" rows="3"
+                                class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white"></textarea>
+                        </template>
+                        <template x-if="field.type === 'color'">
+                            <div class="flex items-center gap-2">
+                                <input type="color" x-model="pluginConfigValues[key]" class="w-10 h-10 rounded border border-slate-200 dark:border-zinc-800 cursor-pointer">
+                                <input type="text" x-model="pluginConfigValues[key]"
+                                    class="flex-1 px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white">
+                            </div>
+                        </template>
+                        <template x-if="field.type === 'number'">
+                            <input type="number" x-model="pluginConfigValues[key]"
+                                class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white">
+                        </template>
+                        <template x-if="field.type === 'select'">
+                            <select x-model="pluginConfigValues[key]"
+                                class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white">
+                                <template x-for="opt in (field.options || '').split(',')" :key="opt">
+                                    <option :value="opt.trim()" x-text="opt.trim()"></option>
+                                </template>
+                            </select>
+                        </template>
+                    </div>
+                </template>
+                <div x-show="Object.keys(pluginConfigDefs).length === 0" class="text-center text-slate-400 py-4">该插件没有可配置项</div>
+            </div>
+            <div class="p-6 border-t border-slate-200 dark:border-zinc-800 flex justify-end gap-2">
+                <button @click="showPluginConfig = false" class="px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white">取消</button>
+                <button @click="savePluginConfig()" class="px-4 py-2 bg-black dark:bg-white text-white dark:text-black font-bold rounded-lg hover:opacity-80">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <div x-show="showCategoryModal" x-cloak class="fixed inset-0 bg-black/50 dark:bg-black/80 flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-[#09090B] rounded-xl border border-slate-200 dark:border-zinc-800 shadow-xl w-full max-w-md p-6">
+            <h3 class="font-semibold mb-4" x-text="editingCategory ? '编辑分类' : '添加分类'"></h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">名称</label>
+                    <input type="text" x-model="categoryForm.name" class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">描述</label>
+                    <textarea x-model="categoryForm.description" rows="2" class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white"></textarea>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button @click="showCategoryModal = false" class="px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white">取消</button>
+                    <button @click="saveCategory()" class="px-4 py-2 bg-black dark:bg-white text-white dark:text-black font-bold rounded-lg hover:opacity-80">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div x-show="showTagModal" x-cloak class="fixed inset-0 bg-black/50 dark:bg-black/80 flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-[#09090B] rounded-xl border border-slate-200 dark:border-zinc-800 shadow-xl w-full max-w-md p-6">
+            <h3 class="font-semibold mb-4" x-text="editingTag ? '编辑标签' : '添加标签'"></h3>
+            <div>
+                <label class="block text-sm font-medium mb-1">名称</label>
+                <input type="text" x-model="tagForm.name" class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white">
+            </div>
+            <div class="flex justify-end gap-2 mt-4">
+                <button @click="showTagModal = false" class="px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white">取消</button>
+                <button @click="saveTag()" class="px-4 py-2 bg-black dark:bg-white text-white dark:text-black font-bold rounded-lg hover:opacity-80">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <div x-show="showNavModal" x-cloak class="fixed inset-0 bg-black/50 dark:bg-black/80 flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-[#09090B] rounded-xl border border-slate-200 dark:border-zinc-800 shadow-xl w-full max-w-md p-6">
+            <h3 class="font-semibold mb-4" x-text="editingNav ? '编辑导航' : '添加导航'"></h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">名称</label>
+                    <input type="text" x-model="navForm.name" class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">链接</label>
+                    <input type="text" x-model="navForm.url" class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white" placeholder="/path 或 https://...">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">图标 (可选)</label>
+                    <input type="text" x-model="navForm.icon" class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white" placeholder="SVG图标代码或图标类名">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">打开方式</label>
+                        <select x-model="navForm.target" class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white">
+                            <option value="_self">当前窗口</option>
+                            <option value="_blank">新窗口</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">排序</label>
+                        <input type="number" x-model="navForm.sort_order" class="w-full px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white">
+                    </div>
+                </div>
+                <label class="flex items-center gap-2">
+                    <input type="checkbox" x-model="navForm.is_active" class="rounded">
+                    <span class="text-sm">启用</span>
+                </label>
+                <div class="flex justify-end gap-2">
+                    <button @click="showNavModal = false" class="px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-transparent focus:outline-none focus:border-black dark:focus:border-white">取消</button>
+                    <button @click="saveNav()" class="px-4 py-2 bg-black dark:bg-white text-white dark:text-black font-bold rounded-lg hover:opacity-80">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        let csrfToken = '';
+
+        function getCsrfFromCookie() {
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'csrf_') {
+                    return decodeURIComponent(value);
+                }
+            }
+            return '';
+        }
+
+        async function getCsrfToken() {
+            csrfToken = getCsrfFromCookie();
+            if (!csrfToken) {
+                try {
+                    const res = await fetch('/api/csrf', {
+                        headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+                    });
+                    const data = await res.json();
+                    csrfToken = data.csrf_token || getCsrfFromCookie();
+                } catch (e) {
+                    console.error('Failed to get CSRF token:', e);
+                }
+            }
+            console.log('CSRF token:', csrfToken ? 'present' : 'missing');
+            return csrfToken;
+        }
+
+        function app() {
+            return {
+                currentPage: 'dashboard',
+                pageTitle: '仪表盘',
+                sidebarOpen: true,
+                user: null,
+                stats: {},
+                posts: [],
+                comments: [],
+                categories: [],
+                tags: [],
+                media: [],
+                themes: [],
+                themeConfigTheme: null,
+                themeConfigDefs: {},
+                themeConfigValues: {},
+                showThemeConfig: false,
+                plugins: [],
+                pluginConfigPlugin: null,
+                pluginConfigDefs: {},
+                pluginConfigValues: {},
+                showPluginConfig: false,
+                settings: {},
+                
+                editorMode: 'post',
+                postTitle: '',
+                postContent: '',
+                postCoverImage: '',
+                postCategory: '',
+                selectedTags: [],
+                tagSearch: '',
+                filteredTags: [],
+                showTagDropdown: false,
+                previewContent: '',
+                editingPost: null,
+                editingPage: null,
+                pageSlug: '',
+                pageIsInNav: false,
+                pageNavSort: 0,
+                
+                searchKeyword: '',
+                filterStatus: '',
+                filterCommentStatus: '',
+                filterMediaType: '',
+                copiedMediaUrl: '',
+                selectedComments: [],
+                
+                showCategoryModal: false,
+                showTagModal: false,
+                showNavModal: false,
+                editingCategory: null,
+                editingTag: null,
+                editingNav: null,
+                categoryForm: { name: '', description: '' },
+                tagForm: { name: '' },
+                navForm: { name: '', url: '', icon: '', target: '_self', sort_order: 0, parent_id: null, is_active: true },
+                pages: [],
+                navigations: [],
+
+                init() {
+                    getCsrfToken();
+                    this.checkAuth();
+                    this.loadCategories();
+                    this.loadTags();
+                    window.addEventListener('hashchange', () => {
+                        const hash = window.location.hash.slice(2) || 'dashboard';
+                        this.currentPage = hash;
+                        this.updatePageTitle();
+                    });
+                },
+
+                checkAuth() {
+                    if (!token) {
+                        window.location.href = '/login';
+                        return;
+                    }
+                    fetch('/api/admin/dashboard', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    }).then(r => {
+                        if (r.status === 401 || r.status === 403) {
+                            localStorage.removeItem('token');
+                            window.location.href = '/login';
+                            return;
+                        }
+                        return r.json();
+                    }).then(data => {
+                        if (data) this.stats = data;
+                    }).catch(() => {
+                        localStorage.removeItem('token');
+                        window.location.href = '/login';
+                    });
+                },
+
+                updatePageTitle() {
+                    const titles = {
+                        dashboard: '仪表盘',
+                        posts: '文章管理',
+                        editor: '编辑文章',
+                        comments: '评论管理',
+                        categories: '分类标签',
+                        media: '媒体库',
+                        themes: '主题管理',
+                        plugins: '插件管理',
+                        pages: '页面管理',
+                        navigations: '导航管理',
+                        settings: '系统设置'
+                    };
+                    this.pageTitle = titles[this.currentPage] || '管理后台';
+                },
+
+                loadDashboard() {
+                    fetch('/api/admin/dashboard', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    }).then(r => r.json()).then(data => this.stats = data);
+                },
+
+                loadPosts() {
+                    let url = '/api/admin/posts?page=1&page_size=20';
+                    if (this.filterStatus) url += '&status=' + this.filterStatus;
+                    if (this.searchKeyword) url += '&keyword=' + encodeURIComponent(this.searchKeyword);
+                    fetch(url, { headers: { 'Authorization': 'Bearer ' + token }})
+                        .then(r => r.json()).then(data => this.posts = data.posts || []);
+                },
+
+                loadComments() {
+                    let url = '/api/admin/comments?page=1&page_size=50';
+                    if (this.filterCommentStatus) url += '&status=' + this.filterCommentStatus;
+                    fetch(url, { headers: { 'Authorization': 'Bearer ' + token }})
+                        .then(r => r.json()).then(data => this.comments = data.comments || []);
+                },
+
+                loadCategories() {
+                    fetch('/api/admin/categories', { headers: { 'Authorization': 'Bearer ' + token }})
+                        .then(r => r.json()).then(data => this.categories = data || []);
+                },
+
+                loadTags() {
+                    fetch('/api/admin/tags', { headers: { 'Authorization': 'Bearer ' + token }})
+                        .then(r => r.json()).then(data => this.tags = data || []);
+                },
+
+                loadMedia() {
+                    let url = '/api/admin/media?page=1&page_size=50';
+                    if (this.filterMediaType) url += '&type=' + this.filterMediaType;
+                    fetch(url, { headers: { 'Authorization': 'Bearer ' + token }})
+                        .then(r => r.json()).then(data => this.media = data.media || []);
+                },
+
+                loadThemes() {
+                    fetch('/api/admin/themes', { headers: { 'Authorization': 'Bearer ' + token }})
+                        .then(r => r.json()).then(data => this.themes = data || []);
+                },
+
+                loadPlugins() {
+                    fetch('/api/admin/plugins', { headers: { 'Authorization': 'Bearer ' + token }})
+                        .then(r => r.json()).then(data => this.plugins = data || []);
+                },
+
+                loadSettings() {
+                    fetch('/api/admin/settings', { headers: { 'Authorization': 'Bearer ' + token }})
+                        .then(r => r.json()).then(data => this.settings = data || {});
+                },
+
+                initEditor() {
+                    this.$nextTick(() => {
+                        if (window.easyMDEInstance) {
+                            window.easyMDEInstance.toTextArea();
+                            window.easyMDEInstance = null;
+                        }
+                        
+                        const el = document.getElementById('markdown-editor');
+                        if (el) {
+                            window.easyMDEInstance = new EasyMDE({
+                                element: el,
+                                spellChecker: false,
+                                autosave: { enabled: false },
+                                placeholder: '使用 Markdown 编写文章...',
+                                toolbar: [
+                                    'bold', 'italic', 'heading', '|',
+                                    'quote', 'unordered-list', 'ordered-list', '|',
+                                    'link', {
+                                        name: 'upload-image',
+                                        action: async function customImageUpload(editor) {
+                                            const input = document.createElement('input');
+                                            input.type = 'file';
+                                            input.accept = 'image/*';
+                                            input.onchange = async (e) => {
+                                                const file = e.target.files[0];
+                                                if (!file) return;
+                                                await getCsrfToken();
+                                                const formData = new FormData();
+                                                formData.append('file', file);
+                                                fetch('/api/admin/media/upload', {
+                                                    method: 'POST',
+                                                    headers: { 'Authorization': 'Bearer ' + token, 'X-CSRF-Token': csrfToken },
+                                                    body: formData
+                                                }).then(r => r.json()).then(data => {
+                                                    if (data.url) {
+                                                        const cm = editor.codemirror;
+                                                        cm.replaceSelection(`![${file.name}](${data.url})`);
+                                                    }
+                                                });
+                                            };
+                                            input.click();
+                                        },
+                                        className: 'fa fa-picture-o',
+                                        title: '上传图片',
+                                    },
+                                    'code', '|',
+                                    'preview', 'side-by-side', 'fullscreen', '|',
+                                    'guide'
+                                ],
+                                previewRender: (plainText) => {
+                                    if (typeof marked !== 'undefined') {
+                                        return marked.parse(plainText);
+                                    }
+                                    return plainText;
+                                },
+                                status: ['autosave', 'lines', 'words'],
+                                minHeight: '300px'
+                            });
+                            
+                            window.easyMDEInstance.codemirror.on('change', () => {
+                                this.postContent = window.easyMDEInstance.value();
+                            });
+                            
+                            if (this.postContent) {
+                                window.easyMDEInstance.value(this.postContent);
+                            }
+                        }
+                    });
+                },
+
+                saveDraft() {
+                    this.savePost('draft');
+                },
+
+                publish() {
+                    this.savePost('published');
+                },
+
+                async savePost(status) {
+                    if (window.easyMDEInstance) {
+                        this.postContent = window.easyMDEInstance.value();
+                    }
+                    
+                    if (!this.postTitle || !this.postTitle.trim()) {
+                        alert(this.editorMode === 'page' ? '请输入页面标题' : '请输入文章标题');
+                        return;
+                    }
+                    
+                    await getCsrfToken();
+                    
+                    if (this.editorMode === 'page') {
+                        const data = {
+                            title: this.postTitle,
+                            slug: this.pageSlug,
+                            content: this.postContent,
+                            status: status,
+                            is_in_nav: this.pageIsInNav,
+                            nav_sort: this.pageNavSort
+                        };
+                        const url = this.editingPage ? '/api/admin/pages/' + this.editingPage.id : '/api/admin/pages';
+                        const method = this.editingPage ? 'PUT' : 'POST';
+                        
+                        fetch(url, {
+                            method: method,
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + token,
+                                'X-CSRF-Token': csrfToken
+                            },
+                            body: JSON.stringify(data)
+                        }).then(r => r.json()).then(() => {
+                            alert('保存成功');
+                            this.currentPage = 'pages';
+                            this.loadPages();
+                        }).catch(err => {
+                            alert('保存失败: ' + err.message);
+                        });
+                        return;
+                    }
+                    
+                    const data = {
+                        title: this.postTitle,
+                        content: this.postContent,
+                        cover_image: this.postCoverImage || '',
+                        category_id: this.postCategory ? parseInt(this.postCategory) : null,
+                        tag_ids: this.selectedTags.map(t => t.id),
+                        status: status
+                    };
+                    const url = this.editingPost ? '/api/admin/posts/' + this.editingPost.id : '/api/admin/posts';
+                    const method = this.editingPost ? 'PUT' : 'POST';
+                    
+                    fetch(url, {
+                        method: method,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token,
+                            'X-CSRF-Token': csrfToken
+                        },
+                        credentials: 'same-origin',
+                        body: JSON.stringify(data)
+                    }).then(r => {
+                        if (!r.ok) {
+                            return r.json().then(err => { throw new Error(err.error || '请求失败'); });
+                        }
+                        return r.json();
+                    }).then(() => {
+                        alert('保存成功');
+                        this.currentPage = 'posts';
+                        this.loadPosts();
+                    }).catch(err => {
+                        console.error('Save error:', err);
+                        alert('保存失败: ' + err.message);
+                    });
+                },
+
+                editPost(post) {
+                    this.editorMode = 'post';
+                    this.editingPost = post;
+                    this.editingPage = null;
+                    this.postTitle = post.title;
+                    this.postContent = post.content;
+                    this.postCoverImage = post.cover_image || '';
+                    this.postCategory = post.category_id || '';
+                    this.selectedTags = post.tags || [];
+                    this.tagSearch = '';
+                    this.filteredTags = [];
+                    this.currentPage = 'editor';
+                    this.$nextTick(() => {
+                        if (window.easyMDEInstance) {
+                            window.easyMDEInstance.value(this.postContent);
+                        }
+                    });
+                },
+
+                newPage() {
+                    this.editorMode = 'page';
+                    this.editingPage = null;
+                    this.editingPost = null;
+                    this.postTitle = '';
+                    this.postContent = '';
+                    this.pageSlug = '';
+                    this.pageIsInNav = false;
+                    this.pageNavSort = 0;
+                    this.currentPage = 'editor';
+                    this.$nextTick(() => {
+                        if (window.easyMDEInstance) {
+                            window.easyMDEInstance.value('');
+                        }
+                    });
+                },
+
+                editPage(page) {
+                    this.editorMode = 'page';
+                    this.editingPage = page;
+                    this.editingPost = null;
+                    this.postTitle = page.title;
+                    this.postContent = page.content;
+                    this.pageSlug = page.slug || '';
+                    this.pageIsInNav = page.is_in_nav;
+                    this.pageNavSort = page.nav_sort || 0;
+                    this.currentPage = 'editor';
+                    this.$nextTick(() => {
+                        if (window.easyMDEInstance) {
+                            window.easyMDEInstance.value(this.postContent);
+                        }
+                    });
+                },
+
+                searchTags() {
+                    const query = this.tagSearch.toLowerCase().trim();
+                    if (query) {
+                        this.filteredTags = this.tags.filter(t => 
+                            t.name.toLowerCase().includes(query) && 
+                            !this.selectedTags.some(s => s.id === t.id)
+                        );
+                    } else {
+                        this.filteredTags = this.tags.filter(t => 
+                            !this.selectedTags.some(s => s.id === t.id)
+                        );
+                    }
+                    this.showTagDropdown = true;
+                },
+
+                selectTag(tag) {
+                    if (!this.selectedTags.some(t => t.id === tag.id)) {
+                        this.selectedTags.push(tag);
+                    }
+                    this.tagSearch = '';
+                    this.searchTags();
+                    this.$refs.tagInput?.focus();
+                },
+
+                removeTag(tag) {
+                    this.selectedTags = this.selectedTags.filter(t => t.id !== tag.id);
+                    this.searchTags();
+                },
+
+                removeLastTag() {
+                    if (this.tagSearch === '' && this.selectedTags.length > 0) {
+                        this.selectedTags.pop();
+                        this.searchTags();
+                    }
+                },
+
+                async createTag() {
+                    if (!this.tagSearch.trim()) return;
+                    await getCsrfToken();
+                    fetch('/api/admin/tags', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token,
+                            'X-CSRF-Token': csrfToken
+                        },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({ name: this.tagSearch.trim() })
+                    }).then(r => {
+                        if (!r.ok) {
+                            return r.json().then(err => { throw new Error(err.error || '创建失败'); });
+                        }
+                        return r.json();
+                    }).then(tag => {
+                        this.tags.push(tag);
+                        this.selectedTags.push(tag);
+                        this.tagSearch = '';
+                        this.searchTags();
+                    }).catch(err => {
+                        console.error('Create tag error:', err);
+                        alert('创建标签失败: ' + err.message);
+                    });
+                },
+
+                createOrSelectTag() {
+                    if (!this.tagSearch.trim()) return;
+                    const existing = this.tags.find(t => 
+                        t.name.toLowerCase() === this.tagSearch.toLowerCase()
+                    );
+                    if (existing) {
+                        this.selectTag(existing);
+                    } else {
+                        this.createTag();
+                    }
+                },
+
+                deletePost(id) {
+                    if (!confirm('确定要删除这篇文章吗？')) return;
+                    fetch('/api/admin/posts/' + id, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': 'Bearer ' + token, 'X-CSRF-Token': csrfToken }
+                    }).then(() => this.loadPosts());
+                },
+
+                approveComment(id) {
+                    fetch('/api/admin/comments/' + id + '/approve', {
+                        method: 'PUT',
+                        headers: { 'Authorization': 'Bearer ' + token, 'X-CSRF-Token': csrfToken }
+                    }).then(() => this.loadComments());
+                },
+
+                spamComment(id) {
+                    fetch('/api/admin/comments/' + id + '/spam', {
+                        method: 'PUT',
+                        headers: { 'Authorization': 'Bearer ' + token, 'X-CSRF-Token': csrfToken }
+                    }).then(() => this.loadComments());
+                },
+
+                deleteComment(id) {
+                    if (!confirm('确定要删除这条评论吗？')) return;
+                    fetch('/api/admin/comments/' + id, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': 'Bearer ' + token, 'X-CSRF-Token': csrfToken }
+                    }).then(() => this.loadComments());
+                },
+
+                batchAction(action) {
+                    if (this.selectedComments.length === 0) return;
+                    fetch('/api/admin/comments/batch', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token,
+                            'X-CSRF-Token': csrfToken
+                        },
+                        body: JSON.stringify({ action: action, ids: this.selectedComments })
+                    }).then(() => {
+                        this.selectedComments = [];
+                        this.loadComments();
+                    });
+                },
+
+                saveCategory() {
+                    const url = this.editingCategory ? '/api/admin/categories/' + this.editingCategory.id : '/api/admin/categories';
+                    const method = this.editingCategory ? 'PUT' : 'POST';
+                    fetch(url, {
+                        method: method,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token,
+                            'X-CSRF-Token': csrfToken
+                        },
+                        body: JSON.stringify(this.categoryForm)
+                    }).then(() => {
+                        this.showCategoryModal = false;
+                        this.categoryForm = { name: '', description: '' };
+                        this.loadCategories();
+                    });
+                },
+
+                deleteCategory(id) {
+                    if (!confirm('确定要删除这个分类吗？')) return;
+                    fetch('/api/admin/categories/' + id, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': 'Bearer ' + token, 'X-CSRF-Token': csrfToken }
+                    }).then(() => this.loadCategories());
+                },
+
+                saveTag() {
+                    const url = this.editingTag ? '/api/admin/tags/' + this.editingTag.id : '/api/admin/tags';
+                    const method = this.editingTag ? 'PUT' : 'POST';
+                    fetch(url, {
+                        method: method,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token,
+                            'X-CSRF-Token': csrfToken
+                        },
+                        body: JSON.stringify(this.tagForm)
+                    }).then(() => {
+                        this.showTagModal = false;
+                        this.tagForm = { name: '' };
+                        this.loadTags();
+                    });
+                },
+
+                deleteTag(id) {
+                    if (!confirm('确定要删除这个标签吗？')) return;
+                    fetch('/api/admin/tags/' + id, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': 'Bearer ' + token, 'X-CSRF-Token': csrfToken }
+                    }).then(() => this.loadTags());
+                },
+
+                uploadFile(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    fetch('/api/admin/media/upload', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token, 'X-CSRF-Token': csrfToken },
+                        body: formData
+                    }).then(() => this.loadMedia());
+                },
+
+                deleteMedia(id) {
+                    if (!confirm('确定要删除这个文件吗？')) return;
+                    fetch('/api/admin/media/' + id, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': 'Bearer ' + token, 'X-CSRF-Token': csrfToken }
+                    }).then(() => this.loadMedia());
+                },
+
+                uploadTheme(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    fetch('/api/admin/themes/upload', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token, 'X-CSRF-Token': csrfToken },
+                        body: formData
+                    }).then(() => this.loadThemes());
+                },
+
+                activateTheme(id) {
+                    fetch('/api/admin/themes/' + id + '/activate', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token, 'X-CSRF-Token': csrfToken }
+                    }).then(() => this.loadThemes());
+                },
+
+                deleteTheme(id) {
+                    if (!confirm('确定要删除这个主题吗？')) return;
+                    fetch('/api/admin/themes/' + id, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': 'Bearer ' + token, 'X-CSRF-Token': csrfToken }
+                    }).then(() => this.loadThemes());
+                },
+
+                openThemeConfig(id) {
+                    this.themeConfigTheme = this.themes.find(t => t.id === id);
+                    fetch('/api/admin/themes/' + id + '/config', { headers: { 'Authorization': 'Bearer ' + token }})
+                        .then(r => r.json()).then(data => {
+                            this.themeConfigDefs = data.Fields || {};
+                            this.themeConfigValues = data.Values || {};
+                            if (Object.keys(this.themeConfigDefs).length === 0) {
+                                alert('该主题没有可配置项');
+                                return;
+                            }
+                            this.showThemeConfig = true;
+                        });
+                },
+
+                saveThemeConfig() {
+                    if (!this.themeConfigTheme) return;
+                    fetch('/api/admin/themes/' + this.themeConfigTheme.id + '/config', {
+                        method: 'PUT',
+                        headers: { 'Authorization': 'Bearer ' + token, 'X-CSRF-Token': csrfToken, 'Content-Type': 'application/json' },
+                        body: JSON.stringify(this.themeConfigValues)
+                    }).then(r => r.json()).then(data => {
+                        this.showThemeConfig = false;
+                    });
+                },
+
+                uploadPlugin(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    fetch('/api/admin/plugins/upload', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token, 'X-CSRF-Token': csrfToken },
+                        body: formData
+                    }).then(r => r.json()).then(data => {
+                        if (data.error) {
+                            alert(data.error);
+                        }
+                        this.loadPlugins();
+                        e.target.value = '';
+                    }).catch(err => {
+                        alert('上传失败: ' + err.message);
+                    });
+                },
+
+                togglePlugin(plugin) {
+                    const url = plugin.is_active ? '/api/admin/plugins/' + plugin.id + '/deactivate' : '/api/admin/plugins/' + plugin.id + '/activate';
+                    fetch(url, {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token, 'X-CSRF-Token': csrfToken }
+                    }).then(() => this.loadPlugins());
+                },
+
+                deletePlugin(id) {
+                    if (!confirm('确定要删除这个插件吗？')) return;
+                    fetch('/api/admin/plugins/' + id, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': 'Bearer ' + token, 'X-CSRF-Token': csrfToken }
+                    }).then(() => this.loadPlugins());
+                },
+
+                openPluginConfig(id) {
+                    this.pluginConfigPlugin = this.plugins.find(p => p.id === id);
+                    fetch('/api/admin/plugins/' + id + '/config', { headers: { 'Authorization': 'Bearer ' + token }})
+                        .then(r => r.json()).then(data => {
+                            this.pluginConfigDefs = data.Fields || {};
+                            this.pluginConfigValues = data.Values || {};
+                            if (Object.keys(this.pluginConfigDefs).length === 0) {
+                                alert('该插件没有可配置项');
+                                return;
+                            }
+                            this.showPluginConfig = true;
+                        });
+                },
+
+                savePluginConfig() {
+                    if (!this.pluginConfigPlugin) return;
+                    fetch('/api/admin/plugins/' + this.pluginConfigPlugin.id + '/config', {
+                        method: 'PUT',
+                        headers: { 'Authorization': 'Bearer ' + token, 'X-CSRF-Token': csrfToken, 'Content-Type': 'application/json' },
+                        body: JSON.stringify(this.pluginConfigValues)
+                    }).then(r => r.json()).then(data => {
+                        this.showPluginConfig = false;
+                    });
+                },
+
+                saveSettings() {
+                    fetch('/api/admin/settings', {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token,
+                            'X-CSRF-Token': csrfToken
+                        },
+                        body: JSON.stringify(this.settings)
+                    }).then(() => alert('设置已保存'));
+                },
+
+                async uploadAuthorAvatar(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    await getCsrfToken();
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    fetch('/api/admin/media/upload', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token, 'X-CSRF-Token': csrfToken },
+                        body: formData
+                    }).then(r => r.json()).then(data => {
+                        if (data.url) {
+                            this.settings.author_avatar = data.url;
+                        }
+                    });
+                },
+
+                async uploadCoverImage(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    await getCsrfToken();
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    fetch('/api/admin/media/upload', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token, 'X-CSRF-Token': csrfToken },
+                        body: formData
+                    }).then(r => r.json()).then(data => {
+                        if (data.url) {
+                            this.postCoverImage = data.url;
+                        }
+                    });
+                },
+
+                async uploadSettingImage(field) {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*';
+                    input.onchange = async (e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        await getCsrfToken();
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        fetch('/api/admin/media/upload', {
+                            method: 'POST',
+                            headers: { 'Authorization': 'Bearer ' + token, 'X-CSRF-Token': csrfToken },
+                            body: formData
+                        }).then(r => r.json()).then(data => {
+                            if (data.url) {
+                                this.settings[field] = data.url;
+                            }
+                        });
+                    };
+                    input.click();
+                },
+
+                copyToClipboard(text) {
+                    navigator.clipboard.writeText(text).then(() => {
+                        this.copiedMediaUrl = text;
+                        setTimeout(() => { this.copiedMediaUrl = ''; }, 2000);
+                    });
+                },
+
+                async loadPages() {
+                    const res = await fetch('/api/admin/pages', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    const data = await res.json();
+                    this.pages = data.pages || [];
+                },
+
+                async publishPage(id) {
+                    await getCsrfToken();
+                    fetch('/api/admin/pages/' + id + '/publish', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token, 'X-CSRF-Token': csrfToken }
+                    }).then(() => this.loadPages());
+                },
+
+                async deletePage(id) {
+                    if (!confirm('确定要删除这个页面吗？')) return;
+                    await getCsrfToken();
+                    fetch('/api/admin/pages/' + id, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': 'Bearer ' + token, 'X-CSRF-Token': csrfToken }
+                    }).then(() => this.loadPages());
+                },
+
+                async loadNavigations() {
+                    const res = await fetch('/api/admin/navigations', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    this.navigations = await res.json();
+                },
+
+                editNav(nav) {
+                    this.editingNav = nav;
+                    this.navForm = {
+                        name: nav.name,
+                        url: nav.url,
+                        icon: nav.icon || '',
+                        target: nav.target || '_self',
+                        sort_order: nav.sort_order,
+                        parent_id: nav.parent_id,
+                        is_active: nav.is_active
+                    };
+                    this.showNavModal = true;
+                },
+
+                async saveNav() {
+                    if (!this.navForm.name || !this.navForm.url) {
+                        alert('请填写名称和链接');
+                        return;
+                    }
+                    await getCsrfToken();
+                    const url = this.editingNav ? '/api/admin/navigations/' + this.editingNav.id : '/api/admin/navigations';
+                    const method = this.editingNav ? 'PUT' : 'POST';
+                    
+                    fetch(url, {
+                        method: method,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token,
+                            'X-CSRF-Token': csrfToken
+                        },
+                        body: JSON.stringify(this.navForm)
+                    }).then(r => r.json()).then(() => {
+                        this.showNavModal = false;
+                        this.loadNavigations();
+                        alert('保存成功');
+                    }).catch(err => {
+                        alert('保存失败: ' + err.message);
+                    });
+                },
+
+                async deleteNav(id) {
+                    if (!confirm('确定要删除这个导航吗？')) return;
+                    await getCsrfToken();
+                    fetch('/api/admin/navigations/' + id, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': 'Bearer ' + token, 'X-CSRF-Token': csrfToken }
+                    }).then(() => this.loadNavigations());
+                },
+
+                formatSize(bytes) {
+                    if (bytes < 1024) return bytes + ' B';
+                    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+                    return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+                },
+
+                logout() {
+                    localStorage.removeItem('token');
+                    window.location.href = '/';
+                }
+            };
+        }
+    </script>
+</body>
+</html>

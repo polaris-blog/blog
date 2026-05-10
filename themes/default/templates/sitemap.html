@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Homepage -->
+  <url>
+    <loc>{{.site_url}}</loc>
+    <lastmod>{{.lastMod}}</lastmod>
+    <changefreq>{{.changefreq}}</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- Posts -->
+  {{range .posts}}
+  <url>
+    <loc>{{$.site_url}}/post/{{.Slug}}</loc>
+    <lastmod>{{if .UpdatedAt}}{{.UpdatedAt.Format "2006-01-02"}}{{else if .PublishedAt}}{{.PublishedAt.Format "2006-01-02"}}{{else}}{{.CreatedAt.Format "2006-01-02"}}{{end}}</lastmod>
+    <changefreq>{{$.changefreq}}</changefreq>
+    <priority>{{$.priority}}</priority>
+  </url>
+  {{end}}
+
+  <!-- Pages -->
+  {{range .pages}}
+  <url>
+    <loc>{{$.site_url}}/page/{{.Slug}}</loc>
+    <lastmod>{{if .UpdatedAt}}{{.UpdatedAt.Format "2006-01-02"}}{{else}}{{.CreatedAt.Format "2006-01-02"}}{{end}}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  {{end}}
+
+  <!-- Categories -->
+  {{range .categories}}
+  <url>
+    <loc>{{$.site_url}}/category/{{.Slug}}</loc>
+    <lastmod>{{$.lastMod}}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  {{end}}
+
+  <!-- Tags -->
+  {{range .tags}}
+  <url>
+    <loc>{{$.site_url}}/tag/{{.Slug}}</loc>
+    <lastmod>{{$.lastMod}}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  {{end}}
+
+  <!-- Archives -->
+  <url>
+    <loc>{{.site_url}}/archives</loc>
+    <lastmod>{{.lastMod}}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <!-- About -->
+  <url>
+    <loc>{{.site_url}}/about</loc>
+    <lastmod>{{.lastMod}}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+</urlset>

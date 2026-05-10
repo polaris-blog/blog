@@ -1,0 +1,8 @@
+{
+  "name": "Default",
+  "slug": "default",
+  "version": "1.0.0",
+  "author": "Polaris",
+  "description": "Polaris 默认主题，简洁现代的博客设计",
+  "config": {}
+}

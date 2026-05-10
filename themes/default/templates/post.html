@@ -1,0 +1,183 @@
+<div class="max-w-3xl mx-auto">
+    <article class="bg-transparent md:bg-white md:dark:bg-[#18181B] md:rounded-2xl md:p-8 mb-12">
+        {{if .post.CoverImage}}
+        <div class="mb-12 overflow-hidden md:rounded-2xl border-y md:border border-slate-200 dark:border-zinc-800 -mx-6 md:mx-0">
+            <img src="{{.post.CoverImage}}" alt="{{.post.Title}}" class="w-full max-h-[60vh] object-cover">
+        </div>
+        {{end}}
+        
+        <header class="mb-6 text-center md:text-left">
+            <div class="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-3">
+                {{if .post.Category}}
+                <a href="/category/{{.post.Category.Slug}}" class="text-xs font-bold px-2.5 py-0.5 bg-black dark:bg-white text-white dark:text-black rounded-full hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors">
+                    {{.post.Category.Name}}
+                </a>
+                {{end}}
+                <span class="text-sm font-medium text-slate-500 dark:text-slate-400 font-mono">
+                    {{if .post.PublishedAt}}{{.post.PublishedAt.Format "2006-01-02"}}{{else}}{{.post.CreatedAt.Format "2006-01-02"}}{{end}}
+                </span>
+                <span class="text-slate-300 dark:text-zinc-600 hidden md:inline">&bull;</span>
+                <span class="text-sm font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                    {{.post.ViewCount}}
+                </span>
+            </div>
+            
+            <h1 class="text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-white leading-tight tracking-tight mb-3">
+                {{.post.Title}}
+            </h1>
+            
+            {{if .post.Tags}}
+            <div class="flex flex-wrap justify-center md:justify-start gap-1.5">
+                {{range .post.Tags}}
+                <a href="/tag/{{.Slug}}" class="text-xs font-medium px-2 py-0.5 text-slate-500 dark:text-slate-400 hover:text-black dark:hover:text-white transition-colors">
+                    #{{.Name}}
+                </a>
+                {{end}}
+            </div>
+            {{end}}
+        </header>
+        
+        <div class="prose max-w-none">
+            {{markdown .post.Content}}
+        </div>
+        
+    </article>
+    
+    <div class="bg-slate-50 dark:bg-zinc-900/50 rounded-2xl md:p-8 p-6 mb-12">
+        <h3 class="text-2xl font-bold text-slate-900 dark:text-white mb-8">评论 ({{.commentCount}})</h3>
+        
+        <form id="comment-form" class="mb-10">
+            <input type="hidden" name="post_id" value="{{.post.ID}}">
+            <input type="hidden" name="parent_id" value="">
+            <div class="flex items-center justify-between mb-4 mt-2">
+                <span id="replying-to-text" class="text-sm font-bold text-slate-600 dark:text-slate-400 hidden">回复给：<span id="replying-to-name" class="text-black dark:text-white"></span></span>
+                <button type="button" id="cancel-reply-btn" class="text-xs font-bold font-mono text-slate-400 hover:text-black dark:hover:text-white hidden transition-colors" onclick="cancelReply()">取消回复</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <input type="text" name="author_name" placeholder="昵称" required
+                    class="w-full px-4 py-3 bg-white dark:bg-black border border-slate-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:border-black dark:focus:border-white focus:ring-1 focus:ring-black dark:focus:ring-white text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-600 transition-colors">
+                <input type="email" name="author_email" placeholder="邮箱" required
+                    class="w-full px-4 py-3 bg-white dark:bg-black border border-slate-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:border-black dark:focus:border-white focus:ring-1 focus:ring-black dark:focus:ring-white text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-600 transition-colors">
+            </div>
+            <textarea name="content" rows="4" placeholder="加入讨论..." required
+                class="w-full px-4 py-3 bg-white dark:bg-black border border-slate-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:border-black dark:focus:border-white focus:ring-1 focus:ring-black dark:focus:ring-white text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-600 transition-colors mb-4 resize-none"></textarea>
+            <div id="comment-error" class="hidden mb-4 text-red-500 text-sm font-medium"></div>
+            <div class="flex justify-end">
+                <button type="submit" id="comment-submit-btn" class="px-6 py-2.5 font-bold bg-black dark:bg-white text-white dark:text-black rounded-xl hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors disabled:opacity-50">
+                    发表评论
+                </button>
+            </div>
+        </form>
+
+        <script>
+            function replyTo(id, name) {
+                const form = document.getElementById('comment-form');
+                form.parent_id.value = id;
+                document.getElementById('replying-to-name').textContent = name;
+                document.getElementById('replying-to-text').classList.remove('hidden');
+                document.getElementById('cancel-reply-btn').classList.remove('hidden');
+                form.content.placeholder = '回复 ' + name + '...';
+                form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                form.content.focus();
+            }
+
+            function cancelReply() {
+                const form = document.getElementById('comment-form');
+                form.parent_id.value = '';
+                document.getElementById('replying-to-text').classList.add('hidden');
+                document.getElementById('cancel-reply-btn').classList.add('hidden');
+                form.content.placeholder = '加入讨论...';
+            }
+
+            document.getElementById('comment-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const form = e.target;
+                const errorDiv = document.getElementById('comment-error');
+                const submitBtn = document.getElementById('comment-submit-btn');
+                
+                errorDiv.classList.add('hidden');
+                submitBtn.disabled = true;
+                submitBtn.textContent = '提交中...';
+
+                const data = {
+                    post_id: parseInt(form.post_id.value),
+                    author_name: form.author_name.value,
+                    author_email: form.author_email.value,
+                    content: form.content.value
+                };
+                if (form.parent_id.value) {
+                    data.parent_id = parseInt(form.parent_id.value);
+                }
+
+                try {
+                    const response = await fetch('/api/comments', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    });
+
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.error || '发布失败');
+                    }
+
+                    window.location.reload();
+                } catch (error) {
+                    errorDiv.textContent = error.message;
+                    errorDiv.classList.remove('hidden');
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '发表评论';
+                }
+            });
+        </script>
+        
+        {{if .comments}}
+        <div class="space-y-8">
+            {{range .comments}}
+            <div class="pb-8 border-b border-slate-200 dark:border-zinc-800 last:border-0 last:pb-0" id="comment-{{.ID}}">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-slate-200 dark:bg-zinc-800 rounded-full flex items-center justify-center font-bold text-slate-500 dark:text-slate-400">
+                            {{slice .AuthorName 0 1}}
+                        </div>
+                        <div>
+                            <span class="block font-bold text-slate-900 dark:text-white">{{.AuthorName}}</span>
+                            <span class="block text-xs font-medium font-mono text-slate-400 dark:text-slate-500">{{.CreatedAt.Format "2006-01-02 15:04"}}</span>
+                        </div>
+                    </div>
+                    <button type="button" class="text-sm font-bold text-slate-400 hover:text-black dark:hover:text-white transition-colors outline-none cursor-pointer" onclick="replyTo({{.ID}}, '{{.AuthorName}}')">回复</button>
+                </div>
+                <p class="text-slate-700 dark:text-slate-300 leading-relaxed md:pl-13">{{.Content}}</p>
+                
+                {{if .Replies}}
+                {{ $parentId := .ID }}
+                <div class="mt-6 md:pl-13 pl-4 space-y-6 md:border-l-2 md:border-slate-100 md:dark:border-zinc-800">
+                    {{range .Replies}}
+                    <div class="relative" id="comment-{{.ID}}">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-sm text-slate-900 dark:text-white">{{.AuthorName}}</span>
+                                <span class="text-xs font-medium font-mono text-slate-400 dark:text-slate-500">{{.CreatedAt.Format "2006-01-02 15:04"}}</span>
+                            </div>
+                            <button type="button" class="text-xs font-bold text-slate-400 hover:text-black dark:hover:text-white transition-colors outline-none cursor-pointer" onclick="replyTo({{ $parentId }}, '{{.AuthorName}}')">回复</button>
+                        </div>
+                        <p class="text-slate-700 dark:text-slate-300 text-sm leading-relaxed">{{.Content}}</p>
+                    </div>
+                    {{end}}
+                </div>
+                {{end}}
+            </div>
+            {{end}}
+        </div>
+        {{else}}
+        <div class="text-center py-8">
+            <p class="text-slate-500 dark:text-slate-400 font-medium">暂无评论，来做第一个发声的人吧。</p>
+        </div>
+        {{end}}
+    </div>
+</div>
+

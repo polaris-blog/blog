@@ -1,0 +1,22 @@
+
+<div class="max-w-3xl mx-auto">
+    <article class="bg-transparent md:bg-white md:dark:bg-[#18181B] md:rounded-2xl md:p-8 mb-12">
+        <header class="mb-6">
+            <div class="flex items-center gap-3 text-sm font-medium text-slate-500 dark:text-slate-400 font-mono mb-3">
+                <span>{{.page.CreatedAt.Format "2006-01-02"}}</span>
+                <span class="text-slate-300 dark:text-zinc-600">&bull;</span>
+                <span class="flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                    {{.page.ViewCount}}
+                </span>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-white leading-tight tracking-tight">
+                {{.page.Title}}
+            </h1>
+        </header>
+        <div class="prose max-w-none">
+            {{markdown .page.Content}}
+        </div>
+    </article>
+</div>
+
