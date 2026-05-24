@@ -26,7 +26,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  GO_VERSION: "1.23"
+  GO_VERSION: "1.26"
   UPX_VERSION: "4.2.4"
 
 permissions:
@@ -64,7 +64,7 @@ jobs:
             goarch: arm64
             suffix: windows-arm64
             ext: .exe
-            upx: true
+            upx: false
 
     runs-on: ubuntu-latest
     steps:
