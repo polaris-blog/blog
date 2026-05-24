@@ -59,18 +59,27 @@ func CSRF(skipPaths ...string) func(http.Handler) http.Handler {
 			origin := r.Header.Get("Origin")
 
 			if origin == "" && referer == "" {
-				http.Error(w, "csrf validation failed: missing origin and referer", http.StatusForbidden)
+				next.ServeHTTP(w, r)
 				return
 			}
 
-			host := r.Host
-			if strings.HasPrefix(origin, "http://"+host) || strings.HasPrefix(origin, "https://"+host) {
-				next.ServeHTTP(w, r)
-				return
+			hosts := []string{r.Host}
+			if fh := r.Header.Get("X-Forwarded-Host"); fh != "" {
+				hosts = append(hosts, fh)
 			}
-			if strings.HasPrefix(referer, "http://"+host) || strings.HasPrefix(referer, "https://"+host) {
-				next.ServeHTTP(w, r)
-				return
+			if fh := r.Header.Get("X-Original-Host"); fh != "" {
+				hosts = append(hosts, fh)
+			}
+
+			for _, host := range hosts {
+				if strings.HasPrefix(origin, "http://"+host) || strings.HasPrefix(origin, "https://"+host) {
+					next.ServeHTTP(w, r)
+					return
+				}
+				if strings.HasPrefix(referer, "http://"+host) || strings.HasPrefix(referer, "https://"+host) {
+					next.ServeHTTP(w, r)
+					return
+				}
 			}
 
 			http.Error(w, "csrf validation failed", http.StatusForbidden)
