@@ -1,0 +1,39 @@
+server:
+  addr: ":8080"
+  mode: "release"
+
+database:
+  driver: "sqlite"
+  dsn: "polaris.db"
+
+cache:
+  driver: "memory"
+  ttl: 3600
+
+storage:
+  driver: "local"
+  local:
+    path: "./uploads"
+
+theme:
+  active: "default"
+  dir: "./themes"
+
+plugin:
+  dir: "./plugins"
+  enabled: []
+  wasm:
+    max_memory_mb: 32
+    timeout_seconds: 10
+
+search:
+  driver: "bleve"
+
+log:
+  level: "info"
+  format: "json"
+
+security:
+  secret_key: "polaris-secret-change-me"
+  session_name: "polaris_session"
+  csrf_enabled: true

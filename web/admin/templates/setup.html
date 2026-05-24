@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="{{ .lang }}" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ t "admin.setup.title" }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        darkMode: 'class',
+        theme: { extend: { fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] } } }
+    }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>var I18N = {{ .i18n_json }};function __(key) { return I18N[key] || key; }</script>
+</head>
+<body class="bg-zinc-50 dark:bg-zinc-950 min-h-screen flex items-center justify-center font-sans p-5 text-zinc-900 dark:text-zinc-100">
+    <div class="w-full max-w-lg mx-auto">
+        <div class="text-center mb-8">
+            <h1 class="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">{{ t "admin.setup.welcome" }}</h1>
+            <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-2">{{ t "admin.setup.description" }}</p>
+        </div>
+
+        <form id="setup-form" class="space-y-6">
+            <div class="bg-white dark:bg-zinc-900 rounded-2xl p-6">
+                <h2 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"/></svg>
+                    {{ t "admin.setup.database" }}
+                </h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">{{ t "admin.setup.database_type" }}</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="db_driver" value="sqlite" checked class="peer sr-only">
+                                <div class="text-center py-2.5 px-3 rounded-lg border-2 border-zinc-200 dark:border-zinc-700 text-sm font-medium text-zinc-600 dark:text-zinc-400 peer-checked:border-blue-500 peer-checked:text-blue-600 peer-checked:dark:text-blue-400 transition-colors">SQLite</div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="db_driver" value="mysql" class="peer sr-only">
+                                <div class="text-center py-2.5 px-3 rounded-lg border-2 border-zinc-200 dark:border-zinc-700 text-sm font-medium text-zinc-600 dark:text-zinc-400 peer-checked:border-blue-500 peer-checked:text-blue-600 peer-checked:dark:text-blue-400 transition-colors">MySQL</div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="db_driver" value="postgres" class="peer sr-only">
+                                <div class="text-center py-2.5 px-3 rounded-lg border-2 border-zinc-200 dark:border-zinc-700 text-sm font-medium text-zinc-600 dark:text-zinc-400 peer-checked:border-blue-500 peer-checked:text-blue-600 peer-checked:dark:text-blue-400 transition-colors">PostgreSQL</div>
+                            </label>
+                        </div>
+                    </div>
+                    <div id="sqlite-config">
+                        <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">{{ t "admin.setup.database_file" }}</label>
+                        <input type="text" id="db_sqlite_path" value="polaris.db" class="w-full px-4 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 placeholder-zinc-400 dark:placeholder-zinc-500">
+                    </div>
+                    <div id="mysql-config" class="hidden space-y-4">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">{{ t "admin.setup.host" }}</label>
+                                <input type="text" id="db_mysql_host" value="127.0.0.1" class="w-full px-4 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 placeholder-zinc-400 dark:placeholder-zinc-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">{{ t "admin.setup.port" }}</label>
+                                <input type="text" id="db_mysql_port" value="3306" class="w-full px-4 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 placeholder-zinc-400 dark:placeholder-zinc-500">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">{{ t "admin.setup.database_name" }}</label>
+                            <input type="text" id="db_mysql_name" value="polaris" class="w-full px-4 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 placeholder-zinc-400 dark:placeholder-zinc-500">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">{{ t "admin.setup.username" }}</label>
+                                <input type="text" id="db_mysql_user" value="root" class="w-full px-4 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 placeholder-zinc-400 dark:placeholder-zinc-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">{{ t "admin.setup.password" }}</label>
+                                <input type="password" id="db_mysql_pass" class="w-full px-4 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 placeholder-zinc-400 dark:placeholder-zinc-500">
+                            </div>
+                        </div>
+                    </div>
+                    <div id="postgres-config" class="hidden space-y-4">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">{{ t "admin.setup.host" }}</label>
+                                <input type="text" id="db_pg_host" value="127.0.0.1" class="w-full px-4 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 placeholder-zinc-400 dark:placeholder-zinc-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">{{ t "admin.setup.port" }}</label>
+                                <input type="text" id="db_pg_port" value="5432" class="w-full px-4 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 placeholder-zinc-400 dark:placeholder-zinc-500">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">{{ t "admin.setup.database_name" }}</label>
+                            <input type="text" id="db_pg_name" value="polaris" class="w-full px-4 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 placeholder-zinc-400 dark:placeholder-zinc-500">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">{{ t "admin.setup.username" }}</label>
+                                <input type="text" id="db_pg_user" value="postgres" class="w-full px-4 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 placeholder-zinc-400 dark:placeholder-zinc-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">{{ t "admin.setup.password" }}</label>
+                                <input type="password" id="db_pg_pass" class="w-full px-4 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 placeholder-zinc-400 dark:placeholder-zinc-500">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">{{ t "admin.setup.ssl_mode" }}</label>
+                            <select id="db_pg_sslmode" class="w-full px-4 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500">
+                                <option value="disable">{{ t "admin.setup.ssl_disable" }}</option>
+                                <option value="require">{{ t "admin.setup.ssl_require" }}</option>
+                                <option value="verify-full">{{ t "admin.setup.ssl_verify_full" }}</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-zinc-900 rounded-2xl p-6">
+                <h2 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418"/></svg>
+                    {{ t "admin.setup.site_info" }}
+                </h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">{{ t "admin.setup.site_title" }}</label>
+                        <input type="text" id="site_title" value="My Blog" required class="w-full px-4 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 placeholder-zinc-400 dark:placeholder-zinc-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">{{ t "admin.setup.site_description" }}</label>
+                        <input type="text" id="site_description" placeholder="{{ t "admin.setup.site_desc_placeholder" }}" class="w-full px-4 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 placeholder-zinc-400 dark:placeholder-zinc-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">{{ t "admin.setup.site_url" }}</label>
+                        <input type="url" id="site_url" placeholder="http://localhost:8080" class="w-full px-4 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 placeholder-zinc-400 dark:placeholder-zinc-500">
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-zinc-900 rounded-2xl p-6">
+                <h2 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
+                    {{ t "admin.setup.admin_account" }}
+                </h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">{{ t "admin.setup.username" }}</label>
+                        <input type="text" id="admin_username" value="admin" required class="w-full px-4 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 placeholder-zinc-400 dark:placeholder-zinc-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">{{ t "admin.setup.email" }}</label>
+                        <input type="email" id="admin_email" placeholder="admin@example.com" required class="w-full px-4 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 placeholder-zinc-400 dark:placeholder-zinc-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">{{ t "admin.setup.password" }}</label>
+                        <input type="password" id="admin_password" required minlength="6" class="w-full px-4 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 placeholder-zinc-400 dark:placeholder-zinc-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">{{ t "admin.setup.confirm_password" }}</label>
+                        <input type="password" id="admin_password_confirm" required minlength="6" class="w-full px-4 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 placeholder-zinc-400 dark:placeholder-zinc-500">
+                    </div>
+                </div>
+            </div>
+
+            <div id="error-msg" class="hidden text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 rounded-lg px-4 py-3"></div>
+
+            <button type="submit" id="submit-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-3 rounded-full transition-colors active:scale-95">
+                {{ t "admin.setup.complete" }}
+            </button>
+        </form>
+    </div>
+    <script>
+    (function() {
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.classList.add('dark');
+    })();
+
+    document.querySelectorAll('input[name="db_driver"]').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            document.getElementById('sqlite-config').classList.toggle('hidden', this.value !== 'sqlite');
+            document.getElementById('mysql-config').classList.toggle('hidden', this.value !== 'mysql');
+            document.getElementById('postgres-config').classList.toggle('hidden', this.value !== 'postgres');
+        });
+    });
+
+    function buildDSN() {
+        var driver = document.querySelector('input[name="db_driver"]:checked').value;
+        if (driver === 'sqlite') {
+            return document.getElementById('db_sqlite_path').value || 'polaris.db';
+        } else if (driver === 'mysql') {
+            var user = document.getElementById('db_mysql_user').value || 'root';
+            var pass = document.getElementById('db_mysql_pass').value;
+            var host = document.getElementById('db_mysql_host').value || '127.0.0.1';
+            var port = document.getElementById('db_mysql_port').value || '3306';
+            var name = document.getElementById('db_mysql_name').value || 'polaris';
+            return user + ':' + pass + '@tcp(' + host + ':' + port + ')/' + name + '?charset=utf8mb4&parseTime=True&loc=Local';
+        } else if (driver === 'postgres') {
+            var user = document.getElementById('db_pg_user').value || 'postgres';
+            var pass = document.getElementById('db_pg_pass').value;
+            var host = document.getElementById('db_pg_host').value || '127.0.0.1';
+            var port = document.getElementById('db_pg_port').value || '5432';
+            var name = document.getElementById('db_pg_name').value || 'polaris';
+            var sslmode = document.getElementById('db_pg_sslmode').value;
+            return 'host=' + host + ' port=' + port + ' user=' + user + ' password=' + pass + ' dbname=' + name + ' sslmode=' + sslmode + ' TimeZone=Asia/Shanghai';
+        }
+        return '';
+    }
+
+    document.getElementById('setup-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var errEl = document.getElementById('error-msg');
+        errEl.classList.add('hidden');
+
+        var password = document.getElementById('admin_password').value;
+        var confirm = document.getElementById('admin_password_confirm').value;
+        if (password !== confirm) {
+            errEl.textContent = __('admin.setup.passwords_not_match');
+            errEl.classList.remove('hidden');
+            return;
+        }
+        if (password.length < 6) {
+            errEl.textContent = __('admin.setup.password_too_short');
+            errEl.classList.remove('hidden');
+            return;
+        }
+
+        var btn = document.getElementById('submit-btn');
+        btn.disabled = true;
+        btn.textContent = __('admin.setup.setting_up');
+
+        var driver = document.querySelector('input[name="db_driver"]:checked').value;
+        fetch('/api/setup', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                db_driver: driver,
+                db_dsn: buildDSN(),
+                site_title: document.getElementById('site_title').value,
+                site_description: document.getElementById('site_description').value,
+                site_url: document.getElementById('site_url').value,
+                admin_username: document.getElementById('admin_username').value,
+                admin_email: document.getElementById('admin_email').value,
+                admin_password: password
+            })
+        }).then(function(r) {
+            if (!r.ok) return r.json().then(function(d) { throw new Error(d.error || __('admin.setup.failed')); });
+            return r.json();
+        }).then(function(data) {
+            btn.textContent = __('admin.setup.complete_restart');
+            btn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+            btn.classList.add('bg-green-600');
+            setTimeout(function() { window.location.reload(); }, 3000);
+        }).catch(function(err) {
+            errEl.textContent = err.message;
+            errEl.classList.remove('hidden');
+            btn.disabled = false;
+            btn.textContent = __('admin.setup.complete');
+        });
+    });
+    </script>
+</body>
+</html>

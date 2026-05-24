@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}{{ category.Name }} - {{ site.Title }}{% endblock %}
+
+{% block content %}
+<div>
+    <div class="mb-10">
+        <a href="/categories" class="text-sm text-zinc-400 hover:text-accent transition-colors">&larr; {{ t("theme.category_detail.all_categories") }}</a>
+        <h1 class="text-3xl font-bold tracking-tight mt-3">{{ category.Name }}</h1>
+        {% if category.Description %}
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-2 leading-relaxed">{{ category.Description }}</p>
+        {% endif %}
+    </div>
+    <div class="space-y-6">
+        {% for post in posts %}
+        <article class="group bg-zinc-50/80 dark:bg-zinc-900/50 rounded-2xl p-8 transition-all hover:bg-zinc-50 dark:hover:bg-zinc-900/80">
+            <h2 class="text-xl font-semibold tracking-tight mb-2">
+                <a href="/posts/{{ post.Slug }}" class="hover:text-accent transition-colors">{{ post.Title }}</a>
+            </h2>
+            <div class="flex items-center gap-3 text-xs text-zinc-400 font-medium uppercase tracking-wider mb-3">
+                <span>{{ post.CreatedAt|date_format:"Jan 02, 2006" }}</span>
+                {% if post.Author %}
+                <span>&middot;</span>
+                <span>{{ post.Author.DisplayName }}</span>
+                {% endif %}
+            </div>
+            {% if post.Tags %}
+            <div class="flex flex-wrap gap-2 mb-4">
+                {% for tag in post.Tags %}
+                <a href="/tags/{{ tag.Slug }}" class="text-xs font-medium text-accent bg-accent-soft px-3 py-1 rounded-full hover:opacity-80 transition-colors">{{ tag.Name }}</a>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% if post.Excerpt %}
+            <p class="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">{{ post.Excerpt|markdown }}</p>
+            {% else %}
+            <p class="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">{{ post.Content|markdown|strip_tags|truncate:200 }}</p>
+            {% endif %}
+            <a href="/posts/{{ post.Slug }}" class="inline-flex items-center gap-1 text-sm font-medium text-accent hover:gap-2 transition-all">{{ t("theme.index.read_more") }} <span class="text-xs">&rarr;</span></a>
+        </article>
+        {% empty %}
+        <p class="text-center text-zinc-400 py-16">{{ t("theme.category_detail.no_posts") }}</p>
+        {% endfor %}
+    </div>
+    {% if pager.TotalPages > 1 %}
+    <nav class="flex items-center justify-center gap-4 pt-8">
+        {% if pager.HasPrev %}
+        <a href="?page={{ pager.PrevPage }}" class="text-sm font-medium text-accent hover:underline">&larr; {{ t("theme.index.newer") }}</a>
+        {% endif %}
+        <span class="text-xs text-zinc-400">{{ pager.CurrentPage }} / {{ pager.TotalPages }}</span>
+        {% if pager.HasNext %}
+        <a href="?page={{ pager.NextPage }}" class="text-sm font-medium text-accent hover:underline">{{ t("theme.index.older") }} &rarr;</a>
+        {% endif %}
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}{{ t("theme.404.title") }}{% endblock %}
+
+{% block content %}
+<div class="text-center py-24">
+    <p class="text-[10rem] font-bold text-zinc-100 dark:text-zinc-800 leading-none tracking-tighter">404</p>
+    <p class="text-zinc-400 mt-4 mb-10">{{ t("theme.404.description") }}</p>
+    <a href="/" class="btn-accent">{{ t("theme.404.go_home") }}</a>
+</div>
+{% endblock %}

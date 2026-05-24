@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Archives - {{ site.Title }}{% endblock %}
+
+{% block content %}
+<div>
+    <h1 class="text-3xl font-bold tracking-tight mb-10">{{ t("theme.archives.title") }}</h1>
+    {% for post in posts %}
+    <div class="flex items-center gap-5 py-3.5 border-b border-zinc-100 dark:border-zinc-800/50 hover:pl-2 transition-all">
+        <span class="text-xs text-zinc-400 font-mono min-w-[110px]">{{ post.CreatedAt|date_format:"Jan 02, 2006" }}</span>
+        <a href="/posts/{{ post.Slug }}" class="text-sm font-medium hover:text-accent transition-colors">{{ post.Title }}</a>
+    </div>
+    {% empty %}
+    <p class="text-center text-zinc-400 py-16">{{ t("theme.archives.no_posts") }}</p>
+    {% endfor %}
+</div>
+{% endblock %}

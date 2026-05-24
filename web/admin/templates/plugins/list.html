@@ -1,0 +1,211 @@
+{{ template "partials/header.html" . }}
+
+<div class="mb-6 flex items-center justify-between">
+    <h2 class="text-xl font-semibold tracking-tight">{{ t "admin.plugins.title" }}</h2>
+    <div>
+        <label for="plugin-upload" class="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-full transition-colors active:scale-95 inline-flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+            {{ t "admin.plugins.upload" }}
+        </label>
+        <input type="file" id="plugin-upload" accept=".wasm" class="hidden">
+    </div>
+</div>
+
+<div id="upload-progress" class="hidden mb-4 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm px-4 py-3 rounded-xl">
+    {{ t "admin.plugins.uploading" }}
+</div>
+
+<div id="plugins-list" class="space-y-4">
+    <div class="py-16 text-center text-zinc-400 text-sm">{{ t "admin.plugins.loading" }}</div>
+</div>
+
+<script>
+function loadPlugins() {
+    fetch('/api/admin/plugins').then(function(r) { return r.json(); }).then(function(plugins) {
+        renderPlugins(plugins);
+    }).catch(function() {
+        document.getElementById('plugins-list').innerHTML =
+            '<div class="py-16 text-center text-red-500 text-sm">' + __('admin.plugins.load_failed') + '</div>';
+    });
+}
+
+function renderPlugins(plugins) {
+    var container = document.getElementById('plugins-list');
+    if (!plugins || plugins.length === 0) {
+        container.innerHTML = '<div class="py-16 text-center text-zinc-400 text-sm">' + __('admin.plugins.no_plugins') + '</div>';
+        return;
+    }
+
+    container.innerHTML = plugins.map(function(p) {
+        var settingsBtn = (p.settings && p.settings.length > 0)
+            ? '<button type="button" class="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors" onclick="togglePluginSettings(\'' + p.id + '\')">' + __('admin.plugins.edit_settings') + '</button>'
+            : '';
+
+        var settingsPreview = '';
+        var settingsForm = '';
+        if (p.settings && p.settings.length > 0) {
+            settingsPreview = '<div id="settings-preview-' + p.id + '" class="grid grid-cols-2 gap-2">';
+            p.settings.forEach(function(s) {
+                settingsPreview += '<div class="text-xs"><span class="text-zinc-400">' + s.label + ':</span> <span class="text-zinc-600 dark:text-zinc-300">' + (s.default !== undefined ? s.default : '') + '</span></div>';
+            });
+            settingsPreview += '</div>';
+
+            settingsForm = '<div id="settings-form-' + p.id + '" class="hidden mt-3 space-y-3">';
+            p.settings.forEach(function(s) {
+                var val = s.default !== undefined ? s.default : '';
+                settingsForm += '<div><label class="block text-xs font-medium text-zinc-500 mb-1">' + s.label + '</label>';
+                if (s.type === 'boolean') {
+                    settingsForm += '<select data-setting-key="' + s.key + '" data-setting-type="boolean" class="post-select w-full px-3 py-2 text-sm bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"><option value="true"' + (val === true ? ' selected' : '') + '>' + __('admin.plugins.yes') + '</option><option value="false"' + (val === false ? ' selected' : '') + '>' + __('admin.plugins.no') + '</option></select>';
+                } else if (s.type === 'select' && s.options) {
+                    settingsForm += '<select data-setting-key="' + s.key + '" data-setting-type="select" class="post-select w-full px-3 py-2 text-sm bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500">';
+                    s.options.forEach(function(o) { settingsForm += '<option value="' + o.value + '">' + o.label + '</option>'; });
+                    settingsForm += '</select>';
+                } else if (s.type === 'number') {
+                    settingsForm += '<input type="number" data-setting-key="' + s.key + '" data-setting-type="number" value="' + val + '" class="w-full px-3 py-2 text-sm bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500">';
+                } else if (s.type === 'textarea') {
+                    settingsForm += '<textarea data-setting-key="' + s.key + '" data-setting-type="textarea" rows="3" class="w-full px-3 py-2 text-sm bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 resize-none">' + val + '</textarea>';
+                } else {
+                    settingsForm += '<input type="text" data-setting-key="' + s.key + '" data-setting-type="text" value="' + val + '" class="w-full px-3 py-2 text-sm bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500">';
+                }
+                if (s.description) {
+                    settingsForm += '<p class="text-xs text-zinc-400 mt-1">' + s.description + '</p>';
+                }
+                settingsForm += '</div>';
+            });
+            settingsForm += '<div class="flex items-center gap-2 pt-2"><button type="button" onclick="savePluginSettings(\'' + p.id + '\')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-4 py-2 rounded-full transition-colors active:scale-95">' + __('admin.plugins.save_settings') + '</button><button type="button" onclick="togglePluginSettings(\'' + p.id + '\')" class="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">' + __('admin.plugins.cancel') + '</button></div>';
+            settingsForm += '</div>';
+        }
+
+        var settingsSection = (p.settings && p.settings.length > 0)
+            ? '<div class="border-t border-zinc-100 dark:border-zinc-800 pt-4"><div class="flex items-center justify-between mb-3"><p class="text-xs font-medium text-zinc-400 uppercase tracking-wider">' + __('admin.plugins.configuration') + '</p>' + settingsBtn + '</div>' + settingsPreview + settingsForm + '</div>'
+            : '';
+
+        return '<div class="bg-white dark:bg-zinc-900 rounded-2xl p-6" id="plugin-' + p.id + '">'
+            + '<div class="flex items-start justify-between mb-4">'
+            + '<div>'
+            + '<h3 class="text-base font-semibold mb-1">' + (p.name || p.id) + '</h3>'
+            + '<p class="text-sm text-zinc-500 mb-1">' + (p.description || '') + '</p>'
+            + '<p class="text-xs text-zinc-400">' + __('admin.plugins.version_prefix') + (p.version || '?') + ' ' + __('admin.plugins.by') + ' ' + (p.author || '?') + '</p>'
+            + '</div>'
+            + '<div class="flex items-center gap-2">'
+            + '<span class="text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-3 py-1.5 rounded-full">' + __('admin.plugins.active') + '</span>'
+            + '<button onclick="deletePlugin(\'' + p.id + '\')" class="text-xs text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-lg transition-colors">' + __('admin.plugins.delete') + '</button>'
+            + '</div></div>'
+            + settingsSection
+            + '</div>';
+    }).join('');
+
+    plugins.forEach(function(p) {
+        if (p.settings && p.settings.length > 0) {
+            fetch('/api/admin/plugins/' + p.id + '/settings').then(function(r) { return r.json(); }).then(function(data) {
+                if (!data.settings) return;
+                var form = document.getElementById('settings-form-' + p.id);
+                if (!form) return;
+                form.querySelectorAll('[data-setting-key]').forEach(function(el) {
+                    var key = el.dataset.settingKey;
+                    if (data.settings[key] !== undefined) {
+                        var val = data.settings[key];
+                        if (el.dataset.settingType === 'boolean') {
+                            el.value = String(val);
+                        } else {
+                            el.value = val;
+                        }
+                    }
+                });
+                var preview = document.getElementById('settings-preview-' + p.id);
+                if (preview) {
+                    preview.innerHTML = '';
+                    p.settings.forEach(function(s) {
+                        var val = data.settings[s.key] !== undefined ? data.settings[s.key] : s.default;
+                        preview.innerHTML += '<div class="text-xs"><span class="text-zinc-400">' + s.label + ':</span> <span class="text-zinc-600 dark:text-zinc-300">' + val + '</span></div>';
+                    });
+                }
+            });
+        }
+    });
+}
+
+function togglePluginSettings(id) {
+    var preview = document.getElementById('settings-preview-' + id);
+    var form = document.getElementById('settings-form-' + id);
+    if (preview) preview.classList.toggle('hidden');
+    if (form) form.classList.toggle('hidden');
+}
+
+function collectPluginSettings(id) {
+    var form = document.getElementById('settings-form-' + id);
+    if (!form) return {};
+    var settings = {};
+    form.querySelectorAll('[data-setting-key]').forEach(function(el) {
+        var key = el.dataset.settingKey;
+        var type = el.dataset.settingType;
+        var val = el.value;
+        if (type === 'boolean') {
+            settings[key] = val === 'true';
+        } else if (type === 'number') {
+            settings[key] = Number(val);
+        } else {
+            settings[key] = val;
+        }
+    });
+    return settings;
+}
+
+function savePluginSettings(id) {
+    var settings = collectPluginSettings(id);
+    fetch('/api/admin/plugins/' + id + '/settings', {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(settings)
+    }).then(function(r) {
+        if (r.ok) {
+            adminToast(__('admin.plugins.settings_saved'));
+            togglePluginSettings(id);
+            loadPlugins();
+        } else {
+            return r.text().then(function(t) { adminToast(t || __('admin.plugins.save_failed'), 'error'); });
+        }
+    });
+}
+
+function deletePlugin(id) {
+    if (!confirm(__('admin.plugins.delete_confirm').replace('%id%', id))) return;
+    fetch('/api/admin/plugins/' + id, { method: 'DELETE' }).then(function(r) {
+        if (r.ok) {
+            adminToast(__('admin.plugins.deleted'));
+            loadPlugins();
+        } else {
+            adminToast(__('admin.plugins.delete_failed'), 'error');
+        }
+    });
+}
+
+document.getElementById('plugin-upload').addEventListener('change', function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var progress = document.getElementById('upload-progress');
+    progress.classList.remove('hidden');
+    var formData = new FormData();
+    formData.append('plugin', file);
+    fetch('/api/admin/plugins/upload', {
+        method: 'POST',
+        body: formData
+    }).then(function(r) {
+        progress.classList.add('hidden');
+        if (r.ok) {
+            adminToast(__('admin.plugins.installed'));
+            setTimeout(function() { location.reload(); }, 500);
+        } else {
+            return r.text().then(function(t) { adminToast(t || __('admin.plugins.upload_failed'), 'error'); });
+        }
+    }).catch(function(err) {
+        progress.classList.add('hidden');
+        adminToast(__('admin.plugins.upload_failed') + ': ' + err.message, 'error');
+    });
+    e.target.value = '';
+});
+
+loadPlugins();
+</script>
+
+{{ template "partials/footer.html" . }}

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Categories - {{ site.Title }}{% endblock %}
+
+{% block content %}
+<div>
+    <h1 class="text-3xl font-bold tracking-tight mb-10">{{ t("theme.categories.title") }}</h1>
+    {% if categories %}
+    <div class="grid gap-4 sm:grid-cols-2">
+        {% for cat in categories %}
+        <a href="/categories/{{ cat.Slug }}" class="group block bg-zinc-50/80 dark:bg-zinc-900/50 rounded-2xl p-6 transition-all hover:bg-zinc-50 dark:hover:bg-zinc-900/80">
+            <h2 class="text-lg font-semibold tracking-tight group-hover:text-accent transition-colors">{{ cat.Name }}</h2>
+            {% if cat.Description %}
+            <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1.5 leading-relaxed">{{ cat.Description }}</p>
+            {% endif %}
+            <span class="text-xs text-zinc-400 mt-3 block font-mono">{{ cat.Slug }}</span>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-center text-zinc-400 py-16">{{ t("theme.categories.no_categories") }}</p>
+    {% endif %}
+</div>
+{% endblock %}

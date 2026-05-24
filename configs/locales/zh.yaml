@@ -1,0 +1,323 @@
+admin.nav.dashboard: 仪表盘
+admin.nav.posts: 文章
+admin.nav.pages: 页面
+admin.nav.navigation: 导航
+admin.nav.categories: 分类
+admin.nav.tags: 标签
+admin.nav.comments: 评论
+admin.nav.media: 媒体
+admin.nav.themes: 主题
+admin.nav.plugins: 插件
+admin.nav.settings: 设置
+admin.nav.view_site: 查看站点
+admin.nav.logout: 退出登录
+admin.nav.toggle_theme: 切换主题
+
+admin.dashboard.title: 仪表盘
+admin.dashboard.published: 已发布
+admin.dashboard.drafts: 草稿
+admin.dashboard.pending: 待审核
+admin.dashboard.media: 媒体
+admin.dashboard.recent_posts: 最近文章
+admin.dashboard.title_col: 标题
+admin.dashboard.status_col: 状态
+admin.dashboard.created_col: 创建时间
+admin.dashboard.no_posts: 暂无文章
+admin.dashboard.create_first_post: 创建第一篇文章
+
+admin.posts.title: 文章
+admin.posts.new: "+ 新建文章"
+admin.posts.title_col: 标题
+admin.posts.status_col: 状态
+admin.posts.created_col: 创建时间
+admin.posts.actions_col: 操作
+admin.posts.edit: 编辑
+admin.posts.delete: 删除
+admin.posts.delete_confirm: 确定删除这篇文章？
+admin.posts.no_posts: 暂无文章
+admin.posts.create_first: 创建第一篇文章
+admin.posts.new_post: 新建文章
+admin.posts.edit_post: 编辑文章
+admin.posts.back: 返回
+admin.posts.slug: 别名
+admin.posts.category: 分类
+admin.posts.none: 无
+admin.posts.status: 状态
+admin.posts.draft: 草稿
+admin.posts.published: 已发布
+admin.posts.tags: 标签
+admin.posts.tags_placeholder: 搜索或创建标签...
+admin.posts.content: 内容 (Markdown)
+admin.posts.excerpt: 摘要
+admin.posts.save: 保存文章
+admin.posts.saving: 保存中...
+admin.posts.saved: 文章已保存
+admin.posts.save_failed: 保存失败
+admin.posts.create_tag: 创建 "%filter%"
+
+admin.pages.title: 页面
+admin.pages.new: 新建页面
+admin.pages.title_col: 标题
+admin.pages.slug_col: 别名
+admin.pages.status_col: 状态
+admin.pages.date_col: 日期
+admin.pages.actions_col: 操作
+admin.pages.delete: 删除
+admin.pages.delete_confirm: 确定删除此页面？
+admin.pages.no_pages: 暂无页面，创建你的第一个页面！
+admin.pages.new_page: 新建页面
+admin.pages.edit_page: 编辑页面
+admin.pages.back: 返回
+admin.pages.slug: 别名
+admin.pages.status: 状态
+admin.pages.draft: 草稿
+admin.pages.published: 已发布
+admin.pages.content: 内容 (Markdown)
+admin.pages.save: 保存页面
+admin.pages.saving: 保存中...
+admin.pages.saved: 页面已保存
+admin.pages.save_failed: 保存失败
+
+admin.categories.title: 分类
+admin.categories.new: "+ 新建分类"
+admin.categories.name: 名称
+admin.categories.slug: 别名
+admin.categories.description: 描述
+admin.categories.auto: 自动
+admin.categories.create: 创建
+admin.categories.cancel: 取消
+admin.categories.name_col: 名称
+admin.categories.slug_col: 别名
+admin.categories.desc_col: 描述
+admin.categories.actions_col: 操作
+admin.categories.delete: 删除
+admin.categories.delete_confirm: 确定删除？
+admin.categories.no_categories: 暂无分类
+
+admin.tags.title: 标签
+admin.tags.new: "+ 新建标签"
+admin.tags.name: 名称
+admin.tags.slug: 别名
+admin.tags.auto: 自动
+admin.tags.create: 创建
+admin.tags.cancel: 取消
+admin.tags.name_col: 名称
+admin.tags.slug_col: 别名
+admin.tags.actions_col: 操作
+admin.tags.delete: 删除
+admin.tags.delete_confirm: 确定删除？
+admin.tags.no_tags: 暂无标签
+
+admin.comments.title: 评论
+admin.comments.all: 全部
+admin.comments.pending: 待审核
+admin.comments.approved: 已通过
+admin.comments.spam: 垃圾评论
+admin.comments.reply: 回复
+admin.comments.approve: 通过
+admin.comments.spam_action: 标记垃圾
+admin.comments.delete: 删除
+admin.comments.delete_confirm: 确定删除此评论？
+admin.comments.no_comments: 暂无评论
+
+admin.media.title: 媒体
+admin.media.upload: 上传
+admin.media.loading: 加载中...
+admin.media.no_files: 暂无媒体文件，上传你的第一张图片。
+admin.media.copy_url: 复制链接
+admin.media.url_copied: 链接已复制！
+admin.media.uploaded: 已上传 %count% 个文件
+admin.media.upload_failed: "%name% 上传失败"
+admin.media.icon_upload_failed: 图标上传失败
+
+admin.themes.title: 主题
+admin.themes.upload: 上传主题
+admin.themes.uploading: 正在上传主题...
+admin.themes.active: 已启用
+admin.themes.activate: 启用
+admin.themes.delete: 删除
+admin.themes.delete_confirm: 确定删除此主题？
+admin.themes.configuration: 配置
+admin.themes.edit_settings: 编辑设置
+admin.themes.yes: 是
+admin.themes.no: 否
+admin.themes.save_settings: 保存设置
+admin.themes.preview: 预览
+admin.themes.cancel: 取消
+admin.themes.no_themes: 未找到主题
+admin.themes.settings_saved: 设置已保存！
+admin.themes.save_failed: 保存失败
+admin.themes.installed: 主题已安装！
+admin.themes.upload_failed: 上传失败
+
+admin.plugins.title: 插件
+admin.plugins.upload: 上传插件
+admin.plugins.uploading: 正在上传插件...
+admin.plugins.loading: 加载插件中...
+admin.plugins.load_failed: 加载插件失败
+admin.plugins.no_plugins: 暂无已安装插件
+admin.plugins.edit_settings: 编辑设置
+admin.plugins.configuration: 配置
+admin.plugins.yes: 是
+admin.plugins.no: 否
+admin.plugins.save_settings: 保存设置
+admin.plugins.cancel: 取消
+admin.plugins.active: 已启用
+admin.plugins.delete: 删除
+admin.plugins.delete_confirm: 确定删除插件 "%id%"？
+admin.plugins.settings_saved: 设置已保存！
+admin.plugins.save_failed: 保存失败
+admin.plugins.deleted: 插件已删除
+admin.plugins.delete_failed: 删除插件失败
+admin.plugins.installed: 插件已安装！
+admin.plugins.upload_failed: 上传失败
+admin.plugins.version_prefix: v
+admin.plugins.by: 作者
+
+admin.navigation.title: 导航
+admin.navigation.description: 自定义页眉中显示的导航链接。默认项已预填，可直接编辑。
+admin.navigation.menu_items: 菜单项
+admin.navigation.add_item: "+ 添加项"
+admin.navigation.label_placeholder: 标签
+admin.navigation.url_placeholder: 链接 (如 /about)
+admin.navigation.move_up: 上移
+admin.navigation.move_down: 下移
+admin.navigation.remove: 移除
+admin.navigation.no_items: 暂无导航项。添加项目或留空使用默认值。
+admin.navigation.save: 保存导航
+admin.navigation.saved: 导航已保存！
+admin.navigation.save_failed: 保存失败
+
+admin.settings.title: 设置
+admin.settings.site_icon: 站点图标
+admin.settings.upload: 上传
+admin.settings.icon_hint: 推荐：512x512 PNG 或 SVG
+admin.settings.site_title: 站点标题
+admin.settings.site_description: 站点描述
+admin.settings.site_url: 站点链接
+admin.settings.language: 语言
+admin.settings.lang_en: English
+admin.settings.lang_zh: 中文
+admin.settings.save: 保存设置
+admin.settings.saved: 设置已保存！
+
+admin.login.title: 登录
+admin.login.brand: Polaris 博客
+admin.login.brand_desc: 一个现代化、可扩展的博客引擎，支持插件、主题定制和美观的管理界面。
+admin.login.themes: 主题
+admin.login.plugins: 插件
+admin.login.wasm: WASM
+admin.login.mobile_brand: Polaris
+admin.login.mobile_sub: 博客管理
+admin.login.welcome: 欢迎回来
+admin.login.sign_in_desc: 登录你的管理账号
+admin.login.username: 用户名
+admin.login.password: 密码
+admin.login.sign_in: 登录
+admin.login.footer: Polaris 博客引擎
+admin.login.failed: 登录失败
+admin.login.network_error: 网络错误
+
+admin.setup.title: 安装 - Polaris
+admin.setup.welcome: 欢迎使用 Polaris
+admin.setup.description: 让我们设置你的博客。填写以下信息即可开始。
+admin.setup.database: 数据库
+admin.setup.database_type: 数据库类型
+admin.setup.database_file: 数据库文件
+admin.setup.host: 主机
+admin.setup.port: 端口
+admin.setup.database_name: 数据库名称
+admin.setup.username: 用户名
+admin.setup.password: 密码
+admin.setup.ssl_mode: SSL 模式
+admin.setup.ssl_disable: 禁用
+admin.setup.ssl_require: 必需
+admin.setup.ssl_verify_full: 完全验证
+admin.setup.site_info: 站点信息
+admin.setup.site_title: 站点标题
+admin.setup.site_description: 站点描述
+admin.setup.site_desc_placeholder: 一个关于...的博客
+admin.setup.site_url: 站点链接
+admin.setup.admin_account: 管理员账号
+admin.setup.email: 邮箱
+admin.setup.confirm_password: 确认密码
+admin.setup.complete: 完成安装
+admin.setup.passwords_not_match: 两次密码不一致
+admin.setup.password_too_short: 密码至少6个字符
+admin.setup.setting_up: 安装中...
+admin.setup.complete_restart: 安装完成！正在重启...
+admin.setup.failed: 安装失败
+
+admin.toast.comment_approved: 评论已通过
+admin.toast.marked_spam: 已标记为垃圾评论
+admin.toast.deleted: 已删除
+admin.toast.theme_activated: 主题已启用
+
+theme.nav.home: 首页
+theme.nav.archives: 归档
+theme.nav.categories: 分类
+theme.nav.tags: 标签
+theme.nav.toggle_theme: 切换主题
+theme.footer.powered_by: 驱动
+theme.footer.polaris: Polaris
+theme.sidebar.statistics: 统计
+theme.sidebar.posts: 文章
+theme.sidebar.comments: 评论
+theme.sidebar.toc: 目录
+theme.index.read_more: 阅读更多
+theme.index.no_posts: 暂无文章，敬请期待！
+theme.index.newer: 上一页
+theme.index.older: 下一页
+theme.post.comments: 评论
+theme.post.leave_comment: 发表评论
+theme.post.name_placeholder: 姓名
+theme.post.email_placeholder: 邮箱
+theme.post.comment_placeholder: 写一条评论...（支持 Markdown）
+theme.post.submit: 提交
+theme.post.replying_to: 回复
+theme.post.cancel: 取消
+theme.post.reply: 回复
+theme.post.reply_count: 条回复
+theme.post.replies_count: 条回复
+theme.post.no_comments: 暂无评论，来抢沙发！
+theme.post.comment_submitted: 评论已提交，等待审核！
+theme.404.title: 404 未找到
+theme.404.description: 你访问的页面不存在。
+theme.404.go_home: 返回首页
+theme.tags.title: 标签
+theme.tags.no_tags: 暂无标签。
+theme.categories.title: 分类
+theme.categories.no_categories: 暂无分类。
+theme.archives.title: 归档
+theme.archives.no_posts: 暂无文章。
+theme.tag_detail.all_tags: 所有标签
+theme.tag_detail.no_posts: 此标签下暂无文章。
+theme.category_detail.all_categories: 所有分类
+theme.category_detail.no_posts: 此分类下暂无文章。
+
+admin.status.published: 已发布
+admin.status.draft: 草稿
+admin.status.pending: 待审核
+admin.status.approved: 已通过
+admin.status.spam: 垃圾评论
+
+admin.page_title.dashboard: 仪表盘
+admin.page_title.posts: 文章
+admin.page_title.new_post: 新建文章
+admin.page_title.edit_post: 编辑文章
+admin.page_title.categories: 分类
+admin.page_title.tags: 标签
+admin.page_title.comments: 评论
+admin.page_title.media: 媒体
+admin.page_title.themes: 主题
+admin.page_title.settings: 设置
+admin.page_title.navigation: 导航
+admin.page_title.pages: 页面
+admin.page_title.new_page: 新建页面
+admin.page_title.edit_page: 编辑页面
+admin.page_title.plugins: 插件
+
+admin.themes.by: 作者
+admin.themes.version_prefix: v
+admin.settings.admin_suffix: 管理后台
+theme.post.link: 链接
