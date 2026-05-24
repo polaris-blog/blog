@@ -1,0 +1,77 @@
+{{ template "partials/header.html" . }}
+
+<div class="mb-6 flex items-center justify-between">
+    <h2 class="text-xl font-semibold tracking-tight">{{ t "admin.media.title" }}</h2>
+    <div>
+        <label for="media-upload" class="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-full transition-colors active:scale-95 inline-flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+            {{ t "admin.media.upload" }}
+        </label>
+        <input type="file" id="media-upload" accept="image/*" multiple class="hidden">
+    </div>
+</div>
+
+<div id="media-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+    <div class="py-16 col-span-full text-center text-zinc-400 text-sm">{{ t "admin.media.loading" }}</div>
+</div>
+
+<script>
+function loadMedia() {
+    fetch('/api/admin/media/list').then(function(r) { return r.json(); }).then(function(data) {
+        var grid = document.getElementById('media-grid');
+        if (!data.files || data.files.length === 0) {
+            grid.innerHTML = '<div class="py-16 col-span-full text-center text-zinc-400 text-sm">' + __('admin.media.no_files') + '</div>';
+            return;
+        }
+        grid.innerHTML = '';
+        data.files.forEach(function(f) {
+            var div = document.createElement('div');
+            div.className = 'group relative aspect-square rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 cursor-pointer';
+            div.innerHTML = '<img src="' + f.url + '" class="w-full h-full object-cover" loading="lazy">' +
+                '<div class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">' +
+                '<button type="button" class="copy-url bg-white/90 dark:bg-zinc-800/90 text-zinc-700 dark:text-zinc-300 text-xs font-medium px-3 py-1.5 rounded-lg" data-url="' + f.url + '">' + __('admin.media.copy_url') + '</button>' +
+                '</div>';
+            grid.appendChild(div);
+        });
+        grid.querySelectorAll('.copy-url').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                navigator.clipboard.writeText(window.location.origin + btn.dataset.url).then(function() {
+                    adminToast(__('admin.media.url_copied'));
+                });
+            });
+        });
+    });
+}
+
+document.getElementById('media-upload').addEventListener('change', function(e) {
+    var files = e.target.files;
+    if (!files.length) return;
+    var uploaded = 0;
+    var total = files.length;
+    Array.from(files).forEach(function(file) {
+        var formData = new FormData();
+        formData.append('file', file);
+        fetch('/api/admin/media/upload', {
+            method: 'POST',
+            body: formData
+        }).then(function(r) {
+            if (!r.ok) throw new Error(__('admin.media.upload_failed').replace('%name%', file.name));
+            return r.json();
+        }).then(function() {
+            uploaded++;
+            if (uploaded === total) {
+                adminToast(__('admin.media.uploaded').replace('%count%', total));
+                loadMedia();
+                e.target.value = '';
+            }
+        }).catch(function() {
+            adminToast(__('admin.media.upload_failed').replace('%name%', file.name), 'error');
+        });
+    });
+});
+
+loadMedia();
+</script>
+
+{{ template "partials/footer.html" . }}

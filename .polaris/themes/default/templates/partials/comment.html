@@ -1,0 +1,22 @@
+<div class="py-5 border-b border-zinc-100 dark:border-zinc-800/50 last:border-0" style="margin-left:{{ depth }}px">
+    <div class="flex items-center gap-3 mb-2">
+        <span class="text-sm font-semibold">{{ node.Comment.AuthorName }}</span>
+        <span class="text-xs text-zinc-400">{{ node.Comment.CreatedAt|date_format:"Jan 02, 2006 15:04" }}</span>
+        {% if node.Comment.AuthorURL %}
+        <a href="{{ node.Comment.AuthorURL }}" class="text-xs text-accent hover:underline" target="_blank" rel="nofollow">{{ t("theme.post.link") }}</a>
+        {% endif %}
+    </div>
+    <div class="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed mb-1.5">{{ node.Comment.Content|markdown }}</div>
+    <div class="flex items-center gap-3 mb-1.5">
+        {% if node.Comment.UserAgent %}
+        <span class="text-[11px] text-zinc-400 font-mono truncate max-w-[200px]">{{ node.Comment.UserAgent|truncate:60 }}</span>
+        {% endif %}
+        {% if node.Comment.IP %}
+        <span class="text-[11px] text-zinc-400 font-mono">{{ node.Comment.IP }}</span>
+        {% endif %}
+    </div>
+    <button class="text-xs font-medium text-accent hover:opacity-70 transition-opacity" onclick="replyTo('{{ node.Comment.ID }}', '{{ node.Comment.AuthorName }}')">{{ t("theme.post.reply") }}</button>
+</div>
+{% for child in node.Children %}
+{% include "comment.html" with node=child depth=depth|add:40 %}
+{% endfor %}

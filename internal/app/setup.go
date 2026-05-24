@@ -118,6 +118,10 @@ func (s *SetupServer) IsInstalled(w http.ResponseWriter, r *http.Request) {
 type setupRequest struct {
 	DBDriver        string `json:"db_driver"`
 	DBDSN           string `json:"db_dsn"`
+	CacheDriver     string `json:"cache_driver"`
+	RedisAddr       string `json:"redis_addr"`
+	RedisPassword   string `json:"redis_password"`
+	RedisDB         int    `json:"redis_db"`
 	SiteTitle       string `json:"site_title"`
 	SiteDescription string `json:"site_description"`
 	SiteURL         string `json:"site_url"`
@@ -129,6 +133,7 @@ type setupRequest struct {
 type configYAML struct {
 	Server   configServer   `yaml:"server"`
 	Database configDatabase `yaml:"database"`
+	Cache    configCache    `yaml:"cache"`
 	Security configSecurity `yaml:"security"`
 }
 
@@ -140,6 +145,18 @@ type configServer struct {
 type configDatabase struct {
 	Driver string `yaml:"driver"`
 	DSN    string `yaml:"dsn"`
+}
+
+type configCache struct {
+	Driver string      `yaml:"driver"`
+	TTL    int         `yaml:"ttl"`
+	Redis  configRedis `yaml:"redis"`
+}
+
+type configRedis struct {
+	Addr     string `yaml:"addr"`
+	Password string `yaml:"password,omitempty"`
+	DB       int    `yaml:"db"`
 }
 
 type configSecurity struct {
@@ -227,6 +244,11 @@ func (s *SetupServer) Setup(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *SetupServer) writeConfig(req setupRequest, secretKey string) error {
+	cacheDriver := req.CacheDriver
+	if cacheDriver == "" {
+		cacheDriver = "memory"
+	}
+
 	cfg := configYAML{
 		Server: configServer{
 			Addr: ":8080",
@@ -235,6 +257,15 @@ func (s *SetupServer) writeConfig(req setupRequest, secretKey string) error {
 		Database: configDatabase{
 			Driver: req.DBDriver,
 			DSN:    req.DBDSN,
+		},
+		Cache: configCache{
+			Driver: cacheDriver,
+			TTL:    3600,
+			Redis: configRedis{
+				Addr:     req.RedisAddr,
+				Password: req.RedisPassword,
+				DB:       req.RedisDB,
+			},
 		},
 		Security: configSecurity{
 			SecretKey:   secretKey,

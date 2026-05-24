@@ -87,6 +87,10 @@ func extractFS(src fs.FS, dst string) error {
 			return os.MkdirAll(target, 0755)
 		}
 
+		if _, statErr := os.Stat(target); statErr == nil {
+			return nil
+		}
+
 		data, readErr := fs.ReadFile(src, path)
 		if readErr != nil {
 			return readErr

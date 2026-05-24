@@ -1,0 +1,21 @@
+{% if theme_settings and theme_settings.banner_enabled %}
+<div id="banner" class="relative h-96 w-full rounded-2xl overflow-hidden mb-8">
+    {% if theme_settings.banner_background %}
+    <div class="absolute inset-0 bg-cover bg-center" style="--banner-bg: url('{{ theme_settings.banner_background|escape }}'); background-image: var(--banner-bg);">
+        <div class="absolute inset-0 bg-black/40"></div>
+    </div>
+    {% else %}
+    <div class="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600"></div>
+    {% endif %}
+    
+    <div class="relative h-full flex flex-col items-center justify-center text-white px-8 text-center">
+        {% if theme_settings.banner_title %}
+        <h1 class="text-4xl md:text-5xl font-bold mb-4">{{ theme_settings.banner_title }}</h1>
+        {% endif %}
+        
+        {% if theme_settings.banner_subtitle %}
+        <p id="typewriter" class="text-xl md:text-2xl font-light opacity-90" data-text="{{ theme_settings.banner_subtitle|escape }}"></p>
+        {% endif %}
+    </div>
+</div>
+{% endif %}

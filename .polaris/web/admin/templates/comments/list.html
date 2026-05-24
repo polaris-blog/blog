@@ -1,0 +1,39 @@
+{{ template "partials/header.html" . }}
+
+<div class="mb-6">
+    <h2 class="text-xl font-semibold tracking-tight">{{ t "admin.comments.title" }}</h2>
+</div>
+
+<div class="flex gap-2 mb-4">
+    <a href="/admin/comments" class="text-sm px-4 py-2 rounded-full transition-colors {{ if not .filter }}bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900{{ else }}bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700{{ end }}">{{ t "admin.comments.all" }}</a>
+    <a href="/admin/comments?filter=pending" class="text-sm px-4 py-2 rounded-full transition-colors {{ if eq .filter "pending" }}bg-amber-500 text-white{{ else }}bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700{{ end }}">{{ t "admin.comments.pending" }}</a>
+    <a href="/admin/comments?filter=approved" class="text-sm px-4 py-2 rounded-full transition-colors {{ if eq .filter "approved" }}bg-green-500 text-white{{ else }}bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700{{ end }}">{{ t "admin.comments.approved" }}</a>
+    <a href="/admin/comments?filter=spam" class="text-sm px-4 py-2 rounded-full transition-colors {{ if eq .filter "spam" }}bg-red-500 text-white{{ else }}bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700{{ end }}">{{ t "admin.comments.spam" }}</a>
+</div>
+
+{{ if .comments }}
+<div class="space-y-3">
+    {{ range .comments }}
+    <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5">
+        <div class="flex items-start justify-between mb-3">
+            <div>
+                <span class="font-medium text-sm">{{ .AuthorName }}</span>
+                <span class="text-xs text-zinc-400 ml-2">{{ .CreatedAt.Format "2006-01-02 15:04" }}</span>
+                {{ if .ParentID }}<span class="text-xs text-blue-500 ml-2">{{ t "admin.comments.reply" }}</span>{{ end }}
+                <span class="text-xs font-medium px-2 py-0.5 rounded-full ml-2 {{ if eq .Status "approved" }}bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400{{ else if eq .Status "spam" }}bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400{{ else }}bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400{{ end }}">{{ status_text .Status }}</span>
+            </div>
+            <div class="flex gap-1.5">
+                {{ if ne .Status "approved" }}<button hx-post="/api/admin/comments/{{ .ID }}/approve" hx-swap="none" hx-on::after-request="adminReload()" class="text-xs text-green-600 hover:text-green-800 bg-green-50 dark:bg-green-900/20 px-3 py-1.5 rounded-lg transition-colors">{{ t "admin.comments.approve" }}</button>{{ end }}
+                {{ if ne .Status "spam" }}<button hx-post="/api/admin/comments/{{ .ID }}/spam" hx-swap="none" hx-on::after-request="adminReload()" class="text-xs text-amber-600 hover:text-amber-800 bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 rounded-lg transition-colors">{{ t "admin.comments.spam_action" }}</button>{{ end }}
+                <button hx-delete="/api/admin/comments/{{ .ID }}" hx-swap="none" hx-on::after-request="adminReload()" hx-confirm="{{ t "admin.comments.delete_confirm" }}" class="text-xs text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-lg transition-colors">{{ t "admin.comments.delete" }}</button>
+            </div>
+        </div>
+        <p class="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">{{ .Content }}</p>
+    </div>
+    {{ end }}
+</div>
+{{ else }}
+<div class="bg-white dark:bg-zinc-900 rounded-2xl p-16 text-center text-zinc-400">{{ t "admin.comments.no_comments" }}</div>
+{{ end }}
+
+{{ template "partials/footer.html" . }}

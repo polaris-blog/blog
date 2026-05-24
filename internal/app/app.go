@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/polaris-blog/blog/internal/cache"
 	"github.com/polaris-blog/blog/internal/config"
 	"github.com/polaris-blog/blog/internal/database"
 	"github.com/polaris-blog/blog/internal/i18n"
@@ -34,6 +35,7 @@ func (s *optionsSettingsStore) Set(key string, value string) error {
 type App struct {
 	Config          *config.Config
 	Database        *database.Database
+	Cache           cache.Cache
 	EventBus        *plugin.EventBus
 	PluginManager   *plugin.Manager
 	ThemeManager    *theme.Manager
@@ -58,6 +60,12 @@ func New(cfg *config.Config, paths *ExtractedPaths, emb *EmbeddedFS) (*App, erro
 		return nil, fmt.Errorf("run migrations: %w", err)
 	}
 	logger.Info("database connected and migrated", slog.String("driver", cfg.Database.Driver))
+
+	appCache, err := cache.New(cfg.Cache)
+	if err != nil {
+		return nil, fmt.Errorf("init cache: %w", err)
+	}
+	logger.Info("cache initialized", slog.String("driver", cfg.Cache.Driver))
 
 	eventBus := plugin.NewEventBus()
 	pluginMgr := plugin.NewManager(eventBus)
@@ -115,10 +123,12 @@ func New(cfg *config.Config, paths *ExtractedPaths, emb *EmbeddedFS) (*App, erro
 		themeMgr.LoadThemeSettings(t.Meta.ID)
 	}
 
-	postService := service.NewPostService(db.Posts, db.Tags, eventBus)
+	cacheTTL := cache.TTL(cfg.Cache)
+
+	postService := service.NewPostService(db.Posts, db.Tags, eventBus, appCache, cacheTTL)
 	commentService := service.NewCommentService(db.Comments, db.Posts, eventBus)
-	categoryService := service.NewCategoryService(db.Categories, eventBus)
-	tagService := service.NewTagService(db.Tags, eventBus)
+	categoryService := service.NewCategoryService(db.Categories, eventBus, appCache, cacheTTL)
+	tagService := service.NewTagService(db.Tags, eventBus, appCache, cacheTTL)
 	authService := service.NewAuthService(db.Users, cfg.Security, eventBus)
 
 	if !authService.HasAdmin(context.Background()) {
@@ -166,6 +176,7 @@ func New(cfg *config.Config, paths *ExtractedPaths, emb *EmbeddedFS) (*App, erro
 	app := &App{
 		Config:          cfg,
 		Database:        db,
+		Cache:           appCache,
 		EventBus:        eventBus,
 		PluginManager:   pluginMgr,
 		ThemeManager:    themeMgr,
@@ -196,6 +207,10 @@ func (a *App) Shutdown(ctx context.Context) error {
 		if err := a.PluginManager.Close(ctx); err != nil {
 			a.Logger.Error("close plugin manager", slog.String("error", err.Error()))
 		}
+	}
+
+	if a.Cache != nil {
+		a.Cache.Close()
 	}
 
 	if err := a.Database.Close(); err != nil {

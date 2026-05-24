@@ -1,0 +1,38 @@
+<aside class="w-64 shrink-0 hidden lg:block" id="sidebar">
+    <div class="sticky top-20 space-y-6">
+        {% if theme_settings and theme_settings.show_sidebar %}
+        {% if theme_settings.author_name or theme_settings.author_image %}
+        <div class="bg-zinc-50/80 dark:bg-zinc-900/50 rounded-2xl p-6 text-center">
+            {% if theme_settings.author_image %}
+            <img src="{{ theme_settings.author_image }}" alt="{{ theme_settings.author_name }}" class="w-full aspect-square rounded-2xl object-cover mb-4">
+            {% endif %}
+            {% if theme_settings.author_name %}
+            <h3 class="text-base font-semibold mb-2">{{ theme_settings.author_name }}</h3>
+            {% endif %}
+            {% if theme_settings.author_description %}
+            <p class="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">{{ theme_settings.author_description }}</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="bg-zinc-50/80 dark:bg-zinc-900/50 rounded-2xl p-6">
+            <h3 class="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-4">{{ t("theme.sidebar.statistics") }}</h3>
+            <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-zinc-500">{{ t("theme.sidebar.posts") }}</span>
+                    <span class="text-sm font-semibold">{{ post_count | default:0 }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-zinc-500">{{ t("theme.sidebar.comments") }}</span>
+                    <span class="text-sm font-semibold">{{ comment_count | default:0 }}</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div id="toc-card" class="bg-zinc-50/80 dark:bg-zinc-900/50 rounded-2xl p-6 opacity-0 transition-opacity duration-300 ease-out hidden max-h-96 overflow-y-auto">
+            <h3 class="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-4">{{ t("theme.sidebar.toc") }}</h3>
+            <nav id="toc-list" class="space-y-2 text-sm"></nav>
+        </div>
+    </div>
+</aside>

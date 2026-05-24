@@ -2,10 +2,12 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/polaris-blog/blog/internal/cache"
 	"github.com/polaris-blog/blog/internal/model"
 	"github.com/polaris-blog/blog/internal/plugin"
 	"github.com/polaris-blog/blog/internal/repository"
@@ -15,25 +17,47 @@ type PostService struct {
 	posts    repository.PostRepository
 	tags     repository.TagRepository
 	eventBus *plugin.EventBus
+	cache    cache.Cache
+	cacheTTL time.Duration
 }
 
-func NewPostService(posts repository.PostRepository, tags repository.TagRepository, eventBus *plugin.EventBus) *PostService {
-	return &PostService{posts: posts, tags: tags, eventBus: eventBus}
+func NewPostService(posts repository.PostRepository, tags repository.TagRepository, eventBus *plugin.EventBus, c cache.Cache, cacheTTL time.Duration) *PostService {
+	return &PostService{posts: posts, tags: tags, eventBus: eventBus, cache: c, cacheTTL: cacheTTL}
 }
 
 func (s *PostService) GetByID(ctx context.Context, id string) (*model.Post, error) {
+	key := "post:id:" + id
+	if val, ok := s.cache.Get(key); ok {
+		if data, err := json.Marshal(val); err == nil {
+			var post model.Post
+			if json.Unmarshal(data, &post) == nil {
+				return &post, nil
+			}
+		}
+	}
 	post, err := s.posts.FindByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
+	s.cache.Set(key, post, s.cacheTTL)
 	return post, nil
 }
 
 func (s *PostService) GetBySlug(ctx context.Context, slug string) (*model.Post, error) {
+	key := "post:slug:" + slug
+	if val, ok := s.cache.Get(key); ok {
+		if data, err := json.Marshal(val); err == nil {
+			var post model.Post
+			if json.Unmarshal(data, &post) == nil {
+				return &post, nil
+			}
+		}
+	}
 	post, err := s.posts.FindBySlug(ctx, slug)
 	if err != nil {
 		return nil, err
 	}
+	s.cache.Set(key, post, s.cacheTTL)
 	return post, nil
 }
 
@@ -114,38 +138,38 @@ func (s *PostService) Search(ctx context.Context, query string, page, pageSize i
 }
 
 type CreatePostInput struct {
-	Title       string `json:"title"`
-	Slug        string `json:"slug"`
-	Content     string `json:"content"`
-	Excerpt     string `json:"excerpt"`
-	Status      string `json:"status"`
-	Type        string `json:"type"`
-	Format      string `json:"format"`
-	CoverImage  string `json:"cover_image"`
-	AuthorID    string `json:"author_id"`
-	CategoryID  string `json:"category_id"`
-	IsPinned    bool   `json:"is_pinned"`
-	AllowComment bool  `json:"allow_comment"`
-	TagIDs      []string `json:"tag_ids"`
+	Title        string   `json:"title"`
+	Slug         string   `json:"slug"`
+	Content      string   `json:"content"`
+	Excerpt      string   `json:"excerpt"`
+	Status       string   `json:"status"`
+	Type         string   `json:"type"`
+	Format       string   `json:"format"`
+	CoverImage   string   `json:"cover_image"`
+	AuthorID     string   `json:"author_id"`
+	CategoryID   string   `json:"category_id"`
+	IsPinned     bool     `json:"is_pinned"`
+	AllowComment bool     `json:"allow_comment"`
+	TagIDs       []string `json:"tag_ids"`
 }
 
 func (s *PostService) Create(ctx context.Context, input CreatePostInput) (*model.Post, error) {
 	post := &model.Post{
-		ID:            uuid.New().String(),
-		Title:         input.Title,
-		Slug:          input.Slug,
-		Content:       input.Content,
-		Excerpt:       input.Excerpt,
-		Status:        input.Status,
-		Type:          input.Type,
-		Format:        input.Format,
-		CoverImage:    input.CoverImage,
-		AuthorID:      input.AuthorID,
-		CategoryID:    input.CategoryID,
-		IsPinned:      input.IsPinned,
-		AllowComment:  input.AllowComment,
-		CreatedAt:     time.Now(),
-		UpdatedAt:     time.Now(),
+		ID:           uuid.New().String(),
+		Title:        input.Title,
+		Slug:         input.Slug,
+		Content:      input.Content,
+		Excerpt:      input.Excerpt,
+		Status:       input.Status,
+		Type:         input.Type,
+		Format:       input.Format,
+		CoverImage:   input.CoverImage,
+		AuthorID:     input.AuthorID,
+		CategoryID:   input.CategoryID,
+		IsPinned:     input.IsPinned,
+		AllowComment: input.AllowComment,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
 	}
 
 	if post.Status == "" {
@@ -176,22 +200,23 @@ func (s *PostService) Create(ctx context.Context, input CreatePostInput) (*model
 	}
 
 	_ = s.eventBus.EmitHook(ctx, plugin.HookPostAfterCreate, post)
+	s.invalidatePostCache(post)
 
 	return post, nil
 }
 
 type UpdatePostInput struct {
-	Title       *string  `json:"title"`
-	Slug        *string  `json:"slug"`
-	Content     *string  `json:"content"`
-	Excerpt     *string  `json:"excerpt"`
-	Status      *string  `json:"status"`
-	Type        *string  `json:"type"`
-	CoverImage  *string  `json:"cover_image"`
-	CategoryID  *string  `json:"category_id"`
-	IsPinned    *bool    `json:"is_pinned"`
-	AllowComment *bool   `json:"allow_comment"`
-	TagIDs      []string `json:"tag_ids"`
+	Title        *string  `json:"title"`
+	Slug         *string  `json:"slug"`
+	Content      *string  `json:"content"`
+	Excerpt      *string  `json:"excerpt"`
+	Status       *string  `json:"status"`
+	Type         *string  `json:"type"`
+	CoverImage   *string  `json:"cover_image"`
+	CategoryID   *string  `json:"category_id"`
+	IsPinned     *bool    `json:"is_pinned"`
+	AllowComment *bool    `json:"allow_comment"`
+	TagIDs       []string `json:"tag_ids"`
 }
 
 func (s *PostService) Update(ctx context.Context, id string, input UpdatePostInput) (*model.Post, error) {
@@ -251,11 +276,17 @@ func (s *PostService) Update(ctx context.Context, id string, input UpdatePostInp
 	}
 
 	_ = s.eventBus.EmitHook(ctx, plugin.HookPostAfterUpdate, post)
+	s.invalidatePostCache(post)
 
 	return post, nil
 }
 
 func (s *PostService) Delete(ctx context.Context, id string) error {
+	post, err := s.posts.FindByID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("find post: %w", err)
+	}
+
 	_ = s.eventBus.EmitHook(ctx, plugin.HookPostBeforeDelete, id)
 
 	if err := s.posts.Delete(ctx, id); err != nil {
@@ -263,6 +294,7 @@ func (s *PostService) Delete(ctx context.Context, id string) error {
 	}
 
 	_ = s.eventBus.EmitHook(ctx, plugin.HookPostAfterDelete, id)
+	s.invalidatePostCache(post)
 
 	return nil
 }
@@ -284,12 +316,21 @@ func (s *PostService) Publish(ctx context.Context, id string) error {
 	}
 
 	_ = s.eventBus.EmitHook(ctx, plugin.HookPostAfterPublish, post)
+	s.invalidatePostCache(post)
 
 	return nil
 }
 
 func (s *PostService) Unpublish(ctx context.Context, id string) error {
-	return s.posts.Unpublish(ctx, id)
+	post, err := s.posts.FindByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	err = s.posts.Unpublish(ctx, id)
+	if err == nil {
+		s.invalidatePostCache(post)
+	}
+	return err
 }
 
 func (s *PostService) CountByStatus(ctx context.Context, status string) (int64, error) {
@@ -308,4 +349,11 @@ func (s *PostService) CountByType(ctx context.Context, postType string, status s
 		return 0, err
 	}
 	return result.Total, nil
+}
+
+func (s *PostService) invalidatePostCache(post *model.Post) {
+	s.cache.Delete("post:id:" + post.ID)
+	if post.Slug != "" {
+		s.cache.Delete("post:slug:" + post.Slug)
+	}
 }

@@ -2,10 +2,12 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/polaris-blog/blog/internal/cache"
 	"github.com/polaris-blog/blog/internal/model"
 	"github.com/polaris-blog/blog/internal/plugin"
 	"github.com/polaris-blog/blog/internal/repository"
@@ -14,10 +16,12 @@ import (
 type CategoryService struct {
 	categories repository.CategoryRepository
 	eventBus   *plugin.EventBus
+	cache      cache.Cache
+	cacheTTL   time.Duration
 }
 
-func NewCategoryService(categories repository.CategoryRepository, eventBus *plugin.EventBus) *CategoryService {
-	return &CategoryService{categories: categories, eventBus: eventBus}
+func NewCategoryService(categories repository.CategoryRepository, eventBus *plugin.EventBus, c cache.Cache, cacheTTL time.Duration) *CategoryService {
+	return &CategoryService{categories: categories, eventBus: eventBus, cache: c, cacheTTL: cacheTTL}
 }
 
 type CreateCategoryInput struct {
@@ -56,11 +60,26 @@ func (s *CategoryService) Create(ctx context.Context, input CreateCategoryInput)
 		return nil, fmt.Errorf("create category: %w", err)
 	}
 
+	s.cache.Delete("categories:list")
 	return category, nil
 }
 
 func (s *CategoryService) List(ctx context.Context) ([]*model.Category, error) {
-	return s.categories.List(ctx)
+	key := "categories:list"
+	if val, ok := s.cache.Get(key); ok {
+		if data, err := json.Marshal(val); err == nil {
+			var cats []*model.Category
+			if json.Unmarshal(data, &cats) == nil {
+				return cats, nil
+			}
+		}
+	}
+	cats, err := s.categories.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	s.cache.Set(key, cats, s.cacheTTL)
+	return cats, nil
 }
 
 func (s *CategoryService) GetBySlug(ctx context.Context, slug string) (*model.Category, error) {
@@ -72,7 +91,11 @@ func (s *CategoryService) Delete(ctx context.Context, id string) error {
 	if err != nil {
 		return fmt.Errorf("category not found")
 	}
-	return s.categories.Delete(ctx, id)
+	if err := s.categories.Delete(ctx, id); err != nil {
+		return err
+	}
+	s.cache.Delete("categories:list")
+	return nil
 }
 
 func (s *CategoryService) Count(ctx context.Context) (int64, error) {

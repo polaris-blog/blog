@@ -1,0 +1,47 @@
+{{ template "partials/header.html" . }}
+
+<div class="flex items-center justify-between mb-6">
+    <h2 class="text-xl font-semibold tracking-tight">{{ t "admin.categories.title" }}</h2>
+    <button onclick="document.getElementById('cat-form').classList.toggle('hidden')" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-full transition-colors active:scale-95">{{ t "admin.categories.new" }}</button>
+</div>
+
+<div id="cat-form" class="hidden bg-white dark:bg-zinc-900 rounded-2xl p-6 mb-4">
+    <form id="category-create-form" class="flex items-end gap-3">
+        <div class="flex-1"><label class="block text-sm font-medium mb-1.5">{{ t "admin.categories.name" }}</label><input type="text" id="cat-name" required class="w-full px-3.5 py-2.5 text-sm bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"></div>
+        <div class="flex-1"><label class="block text-sm font-medium mb-1.5">{{ t "admin.categories.slug" }}</label><input type="text" id="cat-slug" placeholder="{{ t "admin.categories.auto" }}" class="w-full px-3.5 py-2.5 text-sm bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"></div>
+        <div class="flex-1"><label class="block text-sm font-medium mb-1.5">{{ t "admin.categories.description" }}</label><input type="text" id="cat-desc" class="w-full px-3.5 py-2.5 text-sm bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"></div>
+        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-full transition-colors">{{ t "admin.categories.create" }}</button>
+        <button type="button" onclick="document.getElementById('cat-form').classList.add('hidden')" class="text-sm text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-4 py-2.5 rounded-lg transition-colors">{{ t "admin.categories.cancel" }}</button>
+    </form>
+</div>
+
+<div class="bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden">
+    {{ if .categories }}
+    <table class="w-full text-sm">
+        <thead><tr class="text-xs text-zinc-400 uppercase border-b border-zinc-100 dark:border-zinc-800"><th class="text-left px-6 py-3">{{ t "admin.categories.name_col" }}</th><th class="text-left px-6 py-3">{{ t "admin.categories.slug_col" }}</th><th class="text-left px-6 py-3">{{ t "admin.categories.desc_col" }}</th><th class="text-left px-6 py-3">{{ t "admin.categories.actions_col" }}</th></tr></thead>
+        <tbody>
+            {{ range .categories }}
+            <tr class="border-b border-zinc-50 dark:border-zinc-800/50 last:border-0">
+                <td class="px-6 py-3 font-medium">{{ .Name }}</td>
+                <td class="px-6 py-3 text-zinc-400 font-mono text-xs">{{ .Slug }}</td>
+                <td class="px-6 py-3 text-zinc-500">{{ .Description }}</td>
+                <td class="px-6 py-3"><button hx-delete="/api/admin/categories/{{ .ID }}" hx-swap="none" hx-on::after-request="adminReload()" hx-confirm="{{ t "admin.categories.delete_confirm" }}" class="text-xs text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-lg transition-colors">{{ t "admin.categories.delete" }}</button></td>
+            </tr>
+            {{ end }}
+        </tbody>
+    </table>
+    {{ else }}
+    <div class="text-center py-16 text-zinc-400">{{ t "admin.categories.no_categories" }}</div>
+    {{ end }}
+</div>
+
+<script>
+document.getElementById('category-create-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const name = document.getElementById('cat-name').value;
+    const slug = document.getElementById('cat-slug').value || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    fetch('/api/admin/categories', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,slug,description:document.getElementById('cat-desc').value})}).then(r=>{if(r.ok)adminReload();else return r.text().then(t=>adminToast(t,'error'))});
+});
+</script>
+
+{{ template "partials/footer.html" . }}

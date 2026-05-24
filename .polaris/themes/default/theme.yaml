@@ -1,0 +1,48 @@
+id: default
+name: Default Theme
+version: 1.0.0
+author: Polaris Team
+description: A clean, minimal default theme for Polaris
+license: MIT
+screenshot: screenshot.png
+settings:
+  - key: posts_per_page
+    label: Posts Per Page
+    type: number
+    default: 10
+  - key: show_sidebar
+    label: Show Sidebar
+    type: boolean
+    default: true
+  - key: accent_color
+    label: Accent Color
+    type: text
+    default: "#3b82f6"
+  - key: author_name
+    label: Author Name
+    type: text
+    default: ""
+  - key: author_image
+    label: Author Avatar URL
+    type: text
+    default: ""
+  - key: author_description
+    label: Author Bio
+    type: textarea
+    default: ""
+  - key: banner_enabled
+    label: Enable Banner
+    type: boolean
+    default: false
+  - key: banner_title
+    label: Banner Title
+    type: text
+    default: ""
+  - key: banner_subtitle
+    label: Banner Subtitle (Typewriter Effect)
+    type: text
+    default: ""
+  - key: banner_background
+    label: Banner Background Image URL
+    type: text
+    default: ""

@@ -185,4 +185,13 @@ func (c *Config) applyEnvOverrides() {
 	if v := os.Getenv("POLARIS_MODE"); v != "" {
 		c.Server.Mode = v
 	}
+	if v := os.Getenv("POLARIS_CACHE_DRIVER"); v != "" {
+		c.Cache.Driver = v
+	}
+	if v := os.Getenv("POLARIS_REDIS_ADDR"); v != "" {
+		c.Cache.Redis.Addr = v
+	}
+	if v := os.Getenv("POLARIS_REDIS_PASSWORD"); v != "" {
+		c.Cache.Redis.Password = v
+	}
 }

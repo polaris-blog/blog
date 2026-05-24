@@ -2,10 +2,12 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/polaris-blog/blog/internal/cache"
 	"github.com/polaris-blog/blog/internal/model"
 	"github.com/polaris-blog/blog/internal/plugin"
 	"github.com/polaris-blog/blog/internal/repository"
@@ -14,10 +16,12 @@ import (
 type TagService struct {
 	tags     repository.TagRepository
 	eventBus *plugin.EventBus
+	cache    cache.Cache
+	cacheTTL time.Duration
 }
 
-func NewTagService(tags repository.TagRepository, eventBus *plugin.EventBus) *TagService {
-	return &TagService{tags: tags, eventBus: eventBus}
+func NewTagService(tags repository.TagRepository, eventBus *plugin.EventBus, c cache.Cache, cacheTTL time.Duration) *TagService {
+	return &TagService{tags: tags, eventBus: eventBus, cache: c, cacheTTL: cacheTTL}
 }
 
 type CreateTagInput struct {
@@ -50,11 +54,26 @@ func (s *TagService) Create(ctx context.Context, input CreateTagInput) (*model.T
 		return nil, fmt.Errorf("create tag: %w", err)
 	}
 
+	s.cache.Delete("tags:list")
 	return tag, nil
 }
 
 func (s *TagService) List(ctx context.Context) ([]*model.Tag, error) {
-	return s.tags.List(ctx)
+	key := "tags:list"
+	if val, ok := s.cache.Get(key); ok {
+		if data, err := json.Marshal(val); err == nil {
+			var tags []*model.Tag
+			if json.Unmarshal(data, &tags) == nil {
+				return tags, nil
+			}
+		}
+	}
+	tags, err := s.tags.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	s.cache.Set(key, tags, s.cacheTTL)
+	return tags, nil
 }
 
 func (s *TagService) GetBySlug(ctx context.Context, slug string) (*model.Tag, error) {
@@ -66,7 +85,11 @@ func (s *TagService) Delete(ctx context.Context, id string) error {
 	if err != nil {
 		return fmt.Errorf("tag not found")
 	}
-	return s.tags.Delete(ctx, id)
+	if err := s.tags.Delete(ctx, id); err != nil {
+		return err
+	}
+	s.cache.Delete("tags:list")
+	return nil
 }
 
 func (s *TagService) Count(ctx context.Context) (int64, error) {
