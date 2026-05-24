@@ -3,13 +3,13 @@ package database
 import (
 	"fmt"
 
+	"github.com/glebarez/sqlite"
 	"github.com/polaris-blog/blog/internal/config"
 	"github.com/polaris-blog/blog/internal/model"
 	"github.com/polaris-blog/blog/internal/repository"
 	gormrepo "github.com/polaris-blog/blog/internal/repository/gorm"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
