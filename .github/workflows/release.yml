@@ -22,16 +22,12 @@ on:
         required: true
         type: boolean
         default: false
-      compress_binaries:
-        description: "Compress binaries with UPX?"
-        required: false
-        type: boolean
-        default: true
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   GO_VERSION: "1.23"
+  UPX_VERSION: "4.2.4"
 
 permissions:
   contents: write
@@ -40,7 +36,7 @@ permissions:
 jobs:
   build:
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
           - goos: linux
@@ -89,16 +85,18 @@ jobs:
           echo "Original size: $(ls -lh polaris${{ matrix.ext }} | awk '{print $5}')"
 
       - name: Install UPX
-        if: inputs.compress_binaries == true && matrix.upx == true
+        if: matrix.upx == true
         run: |
-          sudo apt-get update
-          sudo apt-get install -y upx-ucl
+          wget -q https://github.com/upx/upx/releases/download/v${{ env.UPX_VERSION }}/upx-${{ env.UPX_VERSION }}-amd64_linux.tar.xz
+          tar -xf upx-${{ env.UPX_VERSION }}-amd64_linux.tar.xz
+          sudo cp upx-${{ env.UPX_VERSION }}-amd64_linux/upx /usr/local/bin/
+          upx --version
 
       - name: Compress binary with UPX
-        if: inputs.compress_binaries == true && matrix.upx == true
+        if: matrix.upx == true
         run: |
-          upx --best --lzma polaris${{ matrix.ext }}
-          echo "Compressed size: $(ls -lh polaris${{ matrix.ext }} | awk '{print $5}')"
+          upx --best polaris${{ matrix.ext }} || echo "UPX compression failed, using uncompressed binary"
+          echo "Final size: $(ls -lh polaris${{ matrix.ext }} | awk '{print $5}')"
 
       - name: Create archive
         run: |
