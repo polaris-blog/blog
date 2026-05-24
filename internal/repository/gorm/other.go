@@ -53,6 +53,12 @@ func (r *CategoryRepo) Delete(ctx context.Context, id string) error {
 	return r.db.WithContext(ctx).Delete(&model.Category{}, "id = ?", id).Error
 }
 
+func (r *CategoryRepo) Count(ctx context.Context) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&model.Category{}).Count(&count).Error
+	return count, err
+}
+
 type TagRepo struct {
 	db *gorm.DB
 }
@@ -95,6 +101,12 @@ func (r *TagRepo) Update(ctx context.Context, tag *model.Tag) error {
 
 func (r *TagRepo) Delete(ctx context.Context, id string) error {
 	return r.db.WithContext(ctx).Delete(&model.Tag{}, "id = ?", id).Error
+}
+
+func (r *TagRepo) Count(ctx context.Context) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&model.Tag{}).Count(&count).Error
+	return count, err
 }
 
 type CommentRepo struct {
@@ -236,19 +248,6 @@ func (r *OptionRepo) Set(ctx context.Context, key string, value string) error {
 		Columns:   []clause.Column{{Name: "key"}},
 		DoUpdates: clause.AssignmentColumns([]string{"value"}),
 	}).Create(&opt).Error
-}
-
-func (r *OptionRepo) GetAll(ctx context.Context) (map[string]string, error) {
-	var opts []model.Option
-	err := r.db.WithContext(ctx).Find(&opts).Error
-	if err != nil {
-		return nil, err
-	}
-	m := make(map[string]string, len(opts))
-	for _, o := range opts {
-		m[o.Key] = o.Value
-	}
-	return m, nil
 }
 
 func (r *OptionRepo) Delete(ctx context.Context, key string) error {

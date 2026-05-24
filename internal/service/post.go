@@ -13,13 +13,12 @@ import (
 
 type PostService struct {
 	posts    repository.PostRepository
-	users    repository.UserRepository
 	tags     repository.TagRepository
 	eventBus *plugin.EventBus
 }
 
-func NewPostService(posts repository.PostRepository, users repository.UserRepository, tags repository.TagRepository, eventBus *plugin.EventBus) *PostService {
-	return &PostService{posts: posts, users: users, tags: tags, eventBus: eventBus}
+func NewPostService(posts repository.PostRepository, tags repository.TagRepository, eventBus *plugin.EventBus) *PostService {
+	return &PostService{posts: posts, tags: tags, eventBus: eventBus}
 }
 
 func (s *PostService) GetByID(ctx context.Context, id string) (*model.Post, error) {
@@ -77,20 +76,6 @@ func (s *PostService) ListByTag(ctx context.Context, tagID string, page, pageSiz
 		Status:   "published",
 	}
 	result, err := s.posts.FindByTag(ctx, tagID, opts)
-	if err != nil {
-		return nil, 0, err
-	}
-	return result.Items, result.Total, nil
-}
-
-func (s *PostService) ListByAuthor(ctx context.Context, authorID string, page, pageSize int) ([]*model.Post, int64, error) {
-	opts := repository.ListOptions{
-		Page:     page,
-		PageSize: pageSize,
-		OrderBy:  "created_at",
-		Order:    "DESC",
-	}
-	result, err := s.posts.FindByAuthor(ctx, authorID, opts)
 	if err != nil {
 		return nil, 0, err
 	}

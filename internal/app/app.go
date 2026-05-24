@@ -7,14 +7,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/polaris-blog/blog/internal/cache"
 	"github.com/polaris-blog/blog/internal/config"
 	"github.com/polaris-blog/blog/internal/database"
 	"github.com/polaris-blog/blog/internal/i18n"
 	httphandler "github.com/polaris-blog/blog/internal/http"
 	"github.com/polaris-blog/blog/internal/plugin"
 	"github.com/polaris-blog/blog/internal/service"
-	"github.com/polaris-blog/blog/internal/storage"
 	"github.com/polaris-blog/blog/internal/theme"
 )
 
@@ -36,8 +34,6 @@ func (s *optionsSettingsStore) Set(key string, value string) error {
 type App struct {
 	Config          *config.Config
 	Database        *database.Database
-	Cache           *cache.MemoryCache
-	Storage         *storage.LocalStorage
 	EventBus        *plugin.EventBus
 	PluginManager   *plugin.Manager
 	ThemeManager    *theme.Manager
@@ -62,9 +58,6 @@ func New(cfg *config.Config, paths *ExtractedPaths, emb *EmbeddedFS) (*App, erro
 		return nil, fmt.Errorf("run migrations: %w", err)
 	}
 	logger.Info("database connected and migrated", slog.String("driver", cfg.Database.Driver))
-
-	memCache := cache.NewMemoryCache()
-	localStorage := storage.NewLocalStorage(cfg.Storage.Local.Path)
 
 	eventBus := plugin.NewEventBus()
 	pluginMgr := plugin.NewManager(eventBus)
@@ -122,7 +115,7 @@ func New(cfg *config.Config, paths *ExtractedPaths, emb *EmbeddedFS) (*App, erro
 		themeMgr.LoadThemeSettings(t.Meta.ID)
 	}
 
-	postService := service.NewPostService(db.Posts, db.Users, db.Tags, eventBus)
+	postService := service.NewPostService(db.Posts, db.Tags, eventBus)
 	commentService := service.NewCommentService(db.Comments, db.Posts, eventBus)
 	categoryService := service.NewCategoryService(db.Categories, eventBus)
 	tagService := service.NewTagService(db.Tags, eventBus)
@@ -142,7 +135,9 @@ func New(cfg *config.Config, paths *ExtractedPaths, emb *EmbeddedFS) (*App, erro
 		configDir = paths.ConfigsDir
 		uploadsDir = filepath.Join(paths.DataDir, "uploads")
 	}
-	os.MkdirAll(uploadsDir, 0755)
+	if err := os.MkdirAll(uploadsDir, 0755); err != nil {
+		return nil, fmt.Errorf("create uploads dir: %w", err)
+	}
 
 	i18nBundle := i18n.NewBundle()
 	if emb != nil {
@@ -171,8 +166,6 @@ func New(cfg *config.Config, paths *ExtractedPaths, emb *EmbeddedFS) (*App, erro
 	app := &App{
 		Config:          cfg,
 		Database:        db,
-		Cache:           memCache,
-		Storage:         localStorage,
 		EventBus:        eventBus,
 		PluginManager:   pluginMgr,
 		ThemeManager:    themeMgr,
@@ -184,9 +177,6 @@ func New(cfg *config.Config, paths *ExtractedPaths, emb *EmbeddedFS) (*App, erro
 		Server:          server,
 		Logger:          logger,
 	}
-
-	_ = memCache
-	_ = localStorage
 
 	return app, nil
 }
@@ -207,9 +197,6 @@ func (a *App) Shutdown(ctx context.Context) error {
 			a.Logger.Error("close plugin manager", slog.String("error", err.Error()))
 		}
 	}
-
-	a.Cache.Clear()
-	a.Cache.Close()
 
 	if err := a.Database.Close(); err != nil {
 		a.Logger.Error("close database", slog.String("error", err.Error()))

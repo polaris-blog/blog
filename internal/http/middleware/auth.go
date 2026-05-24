@@ -123,13 +123,3 @@ func GetUserID(r *http.Request) string {
 	v, _ := r.Context().Value(UserIDKey).(string)
 	return v
 }
-
-func GetUsername(r *http.Request) string {
-	v, _ := r.Context().Value(UsernameKey).(string)
-	return v
-}
-
-func GetRole(r *http.Request) string {
-	v, _ := r.Context().Value(RoleKey).(string)
-	return v
-}

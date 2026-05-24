@@ -2,6 +2,7 @@ package web
 
 import (
 	"encoding/json"
+	"net"
 	"net/http"
 	"strings"
 
@@ -63,9 +64,9 @@ func (h *CommentHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func extractIP(r *http.Request) string {
-	ip := r.RemoteAddr
-	if idx := strings.LastIndex(ip, ":"); idx != -1 {
-		ip = ip[:idx]
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
 	}
-	return ip
+	return host
 }

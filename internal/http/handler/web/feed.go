@@ -116,7 +116,7 @@ func (h *PageHandler) Sitemap(w http.ResponseWriter, r *http.Request) {
 func sitemapURL(loc string, lastMod time.Time, priority, changefreq string) string {
 	return fmt.Sprintf(
 		"  <url>\n    <loc>%s</loc>\n    <lastmod>%s</lastmod>\n    <priority>%s</priority>\n    <changefreq>%s</changefreq>\n  </url>\n",
-		loc,
+		escapeXML(loc),
 		lastMod.UTC().Format("2006-01-02T15:04:05Z07:00"),
 		priority,
 		changefreq,

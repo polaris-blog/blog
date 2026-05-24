@@ -11,17 +11,15 @@ import (
 )
 
 type Renderer struct {
-	loader     *Loader
-	customFunc map[string]interface{}
-	mu         sync.RWMutex
-	debug      bool
+	loader *Loader
+	mu     sync.RWMutex
+	debug  bool
 }
 
 func NewRenderer(loader *Loader, debug bool) *Renderer {
 	r := &Renderer{
-		loader:     loader,
-		customFunc: make(map[string]interface{}),
-		debug:      debug,
+		loader: loader,
+		debug:  debug,
 	}
 	r.registerBuiltinFunctions()
 	return r
@@ -37,20 +35,6 @@ func (r *Renderer) Render(w io.Writer, name string, ctx pongo2.Context) error {
 	}
 
 	return tpl.ExecuteWriter(ctx, w)
-}
-
-func (r *Renderer) RenderString(tplStr string, ctx pongo2.Context) (string, error) {
-	tpl, err := pongo2.FromString(tplStr)
-	if err != nil {
-		return "", err
-	}
-	return tpl.Execute(ctx)
-}
-
-func (r *Renderer) RegisterFunction(name string, fn interface{}) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.customFunc[name] = fn
 }
 
 func (r *Renderer) ReloadTemplates() {
@@ -80,10 +64,11 @@ func (r *Renderer) registerBuiltinFunctions() {
 func filterTruncate(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
 	length := param.Integer()
 	s := in.String()
-	if len(s) <= length {
+	runes := []rune(s)
+	if len(runes) <= length {
 		return in, nil
 	}
-	return pongo2.AsValue(s[:length] + "..."), nil
+	return pongo2.AsValue(string(runes[:length]) + "..."), nil
 }
 
 func filterDateFormat(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {

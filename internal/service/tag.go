@@ -70,9 +70,5 @@ func (s *TagService) Delete(ctx context.Context, id string) error {
 }
 
 func (s *TagService) Count(ctx context.Context) (int64, error) {
-	tags, err := s.tags.List(ctx)
-	if err != nil {
-		return 0, err
-	}
-	return int64(len(tags)), nil
+	return s.tags.Count(ctx)
 }

@@ -3,6 +3,7 @@ package admin
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/polaris-blog/blog/internal/http/middleware"
 	"github.com/polaris-blog/blog/internal/service"
@@ -34,19 +35,20 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	isSecure := r.TLS != nil || strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https")
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     "access_token",
 		Value:    tokens.AccessToken,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   isSecure,
 		SameSite: http.SameSiteStrictMode,
 		MaxAge:   7200,
 	})
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"user":   user,
-		"tokens": tokens,
+		"user": user,
 	})
 }
 

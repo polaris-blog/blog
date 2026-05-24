@@ -105,7 +105,14 @@ func (h *PluginAPIHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p, _ := h.pluginManager.Get(pluginID)
+	p, ok := h.pluginManager.Get(pluginID)
+	if !ok {
+		writeJSON(w, http.StatusCreated, map[string]interface{}{
+			"status": "loaded",
+			"plugin": map[string]string{"id": pluginID},
+		})
+		return
+	}
 	meta := p.Meta()
 	writeJSON(w, http.StatusCreated, map[string]interface{}{
 		"status": "loaded",

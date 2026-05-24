@@ -2,6 +2,8 @@ package app
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"html/template"
 	"log/slog"
@@ -173,7 +175,9 @@ func (s *SetupServer) Setup(w http.ResponseWriter, r *http.Request) {
 		req.DBDSN = "polaris.db"
 	}
 
-	if err := s.writeConfig(req); err != nil {
+	secretKey := generateSecretKey()
+
+	if err := s.writeConfig(req, secretKey); err != nil {
 		s.logger.Error("write config", slog.String("error", err.Error()))
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to save configuration"})
 		return
@@ -181,23 +185,26 @@ func (s *SetupServer) Setup(w http.ResponseWriter, r *http.Request) {
 
 	db, err := database.New(config.DatabaseConfig{Driver: req.DBDriver, DSN: req.DBDSN})
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "database connection failed: " + err.Error()})
+		s.logger.Error("database connection failed", slog.String("error", err.Error()))
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "database connection failed"})
 		return
 	}
 	defer db.Close()
 
 	if err := db.Migrate(); err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "database migration failed: " + err.Error()})
+		s.logger.Error("database migration failed", slog.String("error", err.Error()))
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "database migration failed"})
 		return
 	}
 
 	authService := service.NewAuthService(db.Users, config.SecurityConfig{
-		SecretKey:   "polaris-secret-change-me",
+		SecretKey:   secretKey,
 		SessionName: "polaris_session",
 	}, nil)
 
 	if _, err := authService.InitAdmin(r.Context(), req.AdminUsername, req.AdminEmail, req.AdminPassword); err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		s.logger.Error("init admin failed", slog.String("error", err.Error()))
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to create admin user"})
 		return
 	}
 
@@ -219,7 +226,7 @@ func (s *SetupServer) Setup(w http.ResponseWriter, r *http.Request) {
 	}()
 }
 
-func (s *SetupServer) writeConfig(req setupRequest) error {
+func (s *SetupServer) writeConfig(req setupRequest, secretKey string) error {
 	cfg := configYAML{
 		Server: configServer{
 			Addr: ":8080",
@@ -230,7 +237,7 @@ func (s *SetupServer) writeConfig(req setupRequest) error {
 			DSN:    req.DBDSN,
 		},
 		Security: configSecurity{
-			SecretKey:   "polaris-secret-change-me",
+			SecretKey:   secretKey,
 			SessionName: "polaris_session",
 			CSRFEnabled: true,
 		},
@@ -242,7 +249,7 @@ func (s *SetupServer) writeConfig(req setupRequest) error {
 	}
 
 	configPath := filepath.Join(s.paths.ConfigsDir, "default.yaml")
-	return os.WriteFile(configPath, data, 0644)
+	return os.WriteFile(configPath, data, 0600)
 }
 
 func (s *SetupServer) checkAdminExists() bool {
@@ -260,6 +267,14 @@ func (s *SetupServer) checkAdminExists() bool {
 
 	authService := service.NewAuthService(db.Users, cfg.Security, nil)
 	return authService.HasAdmin(context.Background())
+}
+
+func generateSecretKey() string {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return hex.EncodeToString([]byte(time.Now().Format("20060102150405.000000000")))
+	}
+	return hex.EncodeToString(b)
 }
 
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {

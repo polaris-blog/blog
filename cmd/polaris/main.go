@@ -65,7 +65,7 @@ func main() {
 }
 
 func needsSetup(cfg *config.Config, paths *app.ExtractedPaths, logger *slog.Logger) bool {
-	db, err := app.TryConnectDB(cfg)
+	db, err := app.NewDatabase(cfg)
 	if err != nil {
 		logger.Info("database not available, entering setup mode", slog.String("error", err.Error()))
 		return true
@@ -77,13 +77,7 @@ func needsSetup(cfg *config.Config, paths *app.ExtractedPaths, logger *slog.Logg
 		return true
 	}
 
-	authService := app.CreateAuthService(db, cfg)
-	if !authService.HasAdmin(context.Background()) {
-		logger.Info("no admin user found, entering setup mode")
-		return true
-	}
-
-	return false
+	return app.NeedsSetup(db, cfg)
 }
 
 func runSetupMode(cfg *config.Config, paths *app.ExtractedPaths, emb *app.EmbeddedFS, logger *slog.Logger) {

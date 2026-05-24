@@ -60,24 +60,12 @@ func New(cfg config.DatabaseConfig) (*Database, error) {
 	return d, nil
 }
 
-func (d *Database) DB() *gorm.DB {
-	return d.db
-}
-
 func (d *Database) Close() error {
 	sqlDB, err := d.db.DB()
 	if err != nil {
 		return err
 	}
 	return sqlDB.Close()
-}
-
-func (d *Database) Ping() error {
-	sqlDB, err := d.db.DB()
-	if err != nil {
-		return err
-	}
-	return sqlDB.Ping()
 }
 
 func (d *Database) Migrate() error {
@@ -95,9 +83,6 @@ func (d *Database) Migrate() error {
 	}
 
 	m := d.db.Migrator()
-	if m.HasIndex(&model.Post{}, "idx_posts_slug") {
-		m.DropIndex(&model.Post{}, "idx_posts_slug")
-	}
 	if !m.HasIndex(&model.Post{}, "idx_posts_slug") {
 		d.db.Exec("CREATE UNIQUE INDEX idx_posts_slug ON posts(slug)")
 	}

@@ -105,20 +105,13 @@ func (r *PostRepo) FindByTag(ctx context.Context, tagID string, opts repository.
 	return &repository.ListResult[model.Post]{Items: posts, Total: total}, nil
 }
 
-func (r *PostRepo) FindByAuthor(ctx context.Context, authorID string, opts repository.ListOptions) (*repository.ListResult[model.Post], error) {
-	if opts.Filters == nil {
-		opts.Filters = make(map[string]interface{})
-	}
-	opts.Filters["author_id"] = authorID
-	return r.List(ctx, opts)
-}
-
 func (r *PostRepo) Search(ctx context.Context, query string, opts repository.ListOptions) (*repository.ListResult[model.Post], error) {
 	var posts []*model.Post
 	var total int64
 
+	escapedQuery := escapeLike(query)
 	q := r.db.WithContext(ctx).Model(&model.Post{}).
-		Where("title LIKE ? OR content LIKE ?", "%"+query+"%", "%"+query+"%")
+		Where("title LIKE ? OR content LIKE ?", "%"+escapedQuery+"%", "%"+escapedQuery+"%")
 
 	if opts.Status != "" {
 		q = q.Where("status = ?", opts.Status)
@@ -167,9 +160,16 @@ func applyPostFilters(query *gorm.DB, opts repository.ListOptions) *gorm.DB {
 		if !allowedColumns[k] {
 			continue
 		}
-		query = query.Where(fmt.Sprintf("%s = ?", k), v)
+		query = query.Where(fmt.Sprintf("\"%s\" = ?", k), v)
 	}
 	return query
+}
+
+func escapeLike(s string) string {
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, "%", "\\%")
+	s = strings.ReplaceAll(s, "_", "\\_")
+	return s
 }
 
 func applyPagination(query *gorm.DB, opts repository.ListOptions) *gorm.DB {

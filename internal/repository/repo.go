@@ -29,7 +29,6 @@ type PostRepository interface {
 	Delete(ctx context.Context, id string) error
 	FindByCategory(ctx context.Context, categoryID string, opts ListOptions) (*ListResult[model.Post], error)
 	FindByTag(ctx context.Context, tagID string, opts ListOptions) (*ListResult[model.Post], error)
-	FindByAuthor(ctx context.Context, authorID string, opts ListOptions) (*ListResult[model.Post], error)
 	Search(ctx context.Context, query string, opts ListOptions) (*ListResult[model.Post], error)
 	Publish(ctx context.Context, id string) error
 	Unpublish(ctx context.Context, id string) error
@@ -54,6 +53,7 @@ type CategoryRepository interface {
 	Create(ctx context.Context, category *model.Category) error
 	Update(ctx context.Context, category *model.Category) error
 	Delete(ctx context.Context, id string) error
+	Count(ctx context.Context) (int64, error)
 }
 
 type TagRepository interface {
@@ -63,6 +63,7 @@ type TagRepository interface {
 	Create(ctx context.Context, tag *model.Tag) error
 	Update(ctx context.Context, tag *model.Tag) error
 	Delete(ctx context.Context, id string) error
+	Count(ctx context.Context) (int64, error)
 }
 
 type CommentRepository interface {
@@ -85,6 +86,5 @@ type MediaRepository interface {
 type OptionRepository interface {
 	Get(ctx context.Context, key string) (string, error)
 	Set(ctx context.Context, key string, value string) error
-	GetAll(ctx context.Context) (map[string]string, error)
 	Delete(ctx context.Context, key string) error
 }

@@ -330,7 +330,14 @@ func (h *AdminHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
+	allowedKeys := map[string]bool{
+		"site_title": true, "site_description": true, "site_url": true,
+		"site_icon": true, "site_language": true,
+	}
 	for k, v := range settings {
+		if !allowedKeys[k] {
+			continue
+		}
 		if err := h.options.Set(r.Context(), k, v); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

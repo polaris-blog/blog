@@ -1,8 +1,8 @@
 package i18n
 
 import (
-	"bytes"
 	"embed"
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"os"
@@ -150,49 +150,5 @@ func (b *Bundle) AllTranslations(lang string) map[string]string {
 
 func (b *Bundle) ToJSON(lang string) ([]byte, error) {
 	translations := b.AllTranslations(lang)
-	var buf bytes.Buffer
-	buf.WriteByte('{')
-	first := true
-	for k, v := range translations {
-		if !first {
-			buf.WriteByte(',')
-		}
-		first = false
-		buf.WriteString(fmt.Sprintf("%q:%q", k, v))
-	}
-	buf.WriteByte('}')
-	return buf.Bytes(), nil
-}
-
-func DetectLanguage(preferred, acceptLang string, available []string, defaultLang string) string {
-	if preferred != "" {
-		for _, l := range available {
-			if l == preferred {
-				return l
-			}
-		}
-	}
-
-	if acceptLang != "" {
-		parts := strings.Split(acceptLang, ",")
-		for _, part := range parts {
-			lang := strings.TrimSpace(strings.Split(part, ";")[0])
-			lang = strings.ToLower(lang)
-			for _, l := range available {
-				if l == lang || strings.HasPrefix(l, lang) {
-					return l
-				}
-			}
-			if len(lang) >= 2 {
-				prefix := lang[:2]
-				for _, l := range available {
-					if strings.HasPrefix(l, prefix) {
-						return l
-					}
-				}
-			}
-		}
-	}
-
-	return defaultLang
+	return json.Marshal(translations)
 }

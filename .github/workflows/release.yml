@@ -22,10 +22,16 @@ on:
         required: true
         type: boolean
         default: false
+      compress_binaries:
+        description: "Compress binaries with UPX?"
+        required: false
+        type: boolean
+        default: true
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  GO_VERSION: "1.23"
 
 permissions:
   contents: write
@@ -34,28 +40,35 @@ permissions:
 jobs:
   build:
     strategy:
+      fail-fast: true
       matrix:
         include:
           - goos: linux
             goarch: amd64
             suffix: linux-amd64
+            upx: true
           - goos: linux
             goarch: arm64
             suffix: linux-arm64
+            upx: true
           - goos: darwin
             goarch: amd64
             suffix: darwin-amd64
+            upx: false
           - goos: darwin
             goarch: arm64
             suffix: darwin-arm64
+            upx: false
           - goos: windows
             goarch: amd64
             suffix: windows-amd64
             ext: .exe
+            upx: true
           - goos: windows
             goarch: arm64
             suffix: windows-arm64
             ext: .exe
+            upx: true
 
     runs-on: ubuntu-latest
     steps:
@@ -63,23 +76,50 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.23"
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
 
-      - name: Build
+      - name: Build binary
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 0
         run: |
-          go build -ldflags="-s -w" -o polaris${{ matrix.ext }} ./cmd/polaris
+          go build -ldflags="-s -w -X main.version=${{ inputs.version }}" -o polaris${{ matrix.ext }} ./cmd/polaris
+          echo "Original size: $(ls -lh polaris${{ matrix.ext }} | awk '{print $5}')"
+
+      - name: Install UPX
+        if: inputs.compress_binaries == true && matrix.upx == true
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y upx-ucl
+
+      - name: Compress binary with UPX
+        if: inputs.compress_binaries == true && matrix.upx == true
+        run: |
+          upx --best --lzma polaris${{ matrix.ext }}
+          echo "Compressed size: $(ls -lh polaris${{ matrix.ext }} | awk '{print $5}')"
+
+      - name: Create archive
+        run: |
+          mkdir -p release
+          cp polaris${{ matrix.ext }} release/
+          cp -r web release/
+          cp -r plugins release/
+          if [ -f config.example.yaml ]; then cp config.example.yaml release/; fi
+          if [ -f README.md ]; then cp README.md release/; fi
+          cd release
+          tar -czvf ../polaris-${{ matrix.suffix }}.tar.gz *
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: polaris-${{ matrix.suffix }}
-          path: polaris${{ matrix.ext }}
+          path: polaris-${{ matrix.suffix }}.tar.gz
+          retention-days: 7
 
   docker:
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -134,12 +174,36 @@ jobs:
           sha256sum * > checksums-sha256.txt
           cat checksums-sha256.txt
 
+      - name: Generate release notes
+        id: notes
+        run: |
+          cat << 'EOF' > release_notes.md
+          ${{ inputs.description }}
+
+          ## Downloads
+
+          | Platform | Architecture | File |
+          |----------|-------------|------|
+          | Linux | x86_64 | polaris-linux-amd64.tar.gz |
+          | Linux | ARM64 | polaris-linux-arm64.tar.gz |
+          | macOS | x86_64 | polaris-darwin-amd64.tar.gz |
+          | macOS | ARM64 (M1/M2) | polaris-darwin-arm64.tar.gz |
+          | Windows | x86_64 | polaris-windows-amd64.tar.gz |
+          | Windows | ARM64 | polaris-windows-arm64.tar.gz |
+
+          ## Docker
+
+          ```bash
+          docker pull ghcr.io/${{ github.repository }}:${{ inputs.version }}
+          ```
+          EOF
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.version }}
           name: Polaris ${{ inputs.version }}
-          body: ${{ inputs.description }}
+          body_path: release_notes.md
           files: |
             artifacts/*
           draft: false

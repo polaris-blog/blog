@@ -36,7 +36,7 @@ func (h *MediaAPIHandler) Upload(w http.ResponseWriter, r *http.Request) {
 
 	ext := strings.ToLower(filepath.Ext(header.Filename))
 	allowedExts := map[string]bool{
-		".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".webp": true, ".svg": true,
+		".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".webp": true,
 		".ico": true, ".bmp": true, ".tiff": true, ".tif": true,
 	}
 	if !allowedExts[ext] {

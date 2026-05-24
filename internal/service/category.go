@@ -76,9 +76,5 @@ func (s *CategoryService) Delete(ctx context.Context, id string) error {
 }
 
 func (s *CategoryService) Count(ctx context.Context) (int64, error) {
-	cats, err := s.categories.List(ctx)
-	if err != nil {
-		return 0, err
-	}
-	return int64(len(cats)), nil
+	return s.categories.Count(ctx)
 }
