@@ -63,6 +63,7 @@ admin.pages.status_col: Status
 admin.pages.date_col: Date
 admin.pages.actions_col: Actions
 admin.pages.delete: Delete
+admin.pages.edit: Edit
 admin.pages.delete_confirm: Delete this page?
 admin.pages.no_pages: No pages yet. Create your first one!
 admin.pages.new_page: New Page

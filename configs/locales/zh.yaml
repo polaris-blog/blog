@@ -63,6 +63,7 @@ admin.pages.status_col: 状态
 admin.pages.date_col: 日期
 admin.pages.actions_col: 操作
 admin.pages.delete: 删除
+admin.pages.edit: 编辑
 admin.pages.delete_confirm: 确定删除此页面？
 admin.pages.no_pages: 暂无页面，创建你的第一个页面！
 admin.pages.new_page: 新建页面

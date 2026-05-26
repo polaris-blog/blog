@@ -79,6 +79,7 @@ func (s *Server) setupRoutes() {
 	r.Use(chimw.Recoverer)
 	r.Use(middleware.SecurityHeaders())
 	r.Use(middleware.CORS([]string{}))
+	r.Use(chimw.Compress(5))
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -204,6 +205,7 @@ func (s *Server) setupRoutes() {
 			r.Put("/nav", adminPageHandler.UpdateNavItems)
 			r.Post("/pages", adminPageHandler.CreatePage)
 			r.Put("/pages/{id}", adminPageHandler.UpdatePage)
+			r.Delete("/pages/{id}", adminAPIPostHandler.Delete)
 		})
 	})
 

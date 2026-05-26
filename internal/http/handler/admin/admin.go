@@ -441,23 +441,6 @@ func (h *AdminHandler) UpdatePage(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(post)
 }
 
-func (h *AdminHandler) UpdatePostPage(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	var input service.UpdatePostInput
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
-		return
-	}
-	post, err := h.postService.Update(r.Context(), id, input)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(post)
-}
-
 func (h *AdminHandler) PagesList(w http.ResponseWriter, r *http.Request) {
 	pages, _, _ := h.postService.ListByType(r.Context(), "page", 1, 100, "")
 	data := map[string]interface{}{"page_title": "Pages", "pages": pages}

@@ -45,15 +45,16 @@ func SelfExtract(dataDir string, emb *EmbeddedFS, logger *slog.Logger) (*Extract
 	logger.Info("self-extract: ensuring embedded files are present", slog.String("dir", dataDir))
 
 	extractions := []struct {
-		src    embed.FS
-		prefix string
-		dst    string
+		src       embed.FS
+		prefix    string
+		dst       string
+		overwrite bool
 	}{
-		{emb.AdminTemplates, "web/admin/templates", p.AdminTemplates},
-		{emb.AdminStatic, "web/admin/static", p.AdminStatic},
-		{emb.DefaultTheme, "themes/default", filepath.Join(p.ThemesDir, "default")},
-		{emb.Plugins, "plugins", p.PluginsDir},
-		{emb.Configs, "configs", p.ConfigsDir},
+		{emb.AdminTemplates, "web/admin/templates", p.AdminTemplates, true},
+		{emb.AdminStatic, "web/admin/static", p.AdminStatic, true},
+		{emb.DefaultTheme, "themes/default", filepath.Join(p.ThemesDir, "default"), false},
+		{emb.Plugins, "plugins", p.PluginsDir, false},
+		{emb.Configs, "configs", p.ConfigsDir, false},
 	}
 
 	for _, e := range extractions {
@@ -61,7 +62,7 @@ func SelfExtract(dataDir string, emb *EmbeddedFS, logger *slog.Logger) (*Extract
 		if err != nil {
 			return nil, fmt.Errorf("sub fs %s: %w", e.prefix, err)
 		}
-		if err := extractFS(sub, e.dst); err != nil {
+		if err := extractFS(sub, e.dst, e.overwrite); err != nil {
 			return nil, fmt.Errorf("extract to %s: %w", e.dst, err)
 		}
 	}
@@ -75,7 +76,7 @@ func SelfExtract(dataDir string, emb *EmbeddedFS, logger *slog.Logger) (*Extract
 	return p, nil
 }
 
-func extractFS(src fs.FS, dst string) error {
+func extractFS(src fs.FS, dst string, overwrite bool) error {
 	return fs.WalkDir(src, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -87,8 +88,10 @@ func extractFS(src fs.FS, dst string) error {
 			return os.MkdirAll(target, 0755)
 		}
 
-		if _, statErr := os.Stat(target); statErr == nil {
-			return nil
+		if !overwrite {
+			if _, statErr := os.Stat(target); statErr == nil {
+				return nil
+			}
 		}
 
 		data, readErr := fs.ReadFile(src, path)

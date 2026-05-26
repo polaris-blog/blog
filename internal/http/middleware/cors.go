@@ -70,6 +70,14 @@ func CSRF(skipPaths ...string) func(http.Handler) http.Handler {
 			if fh := r.Header.Get("X-Original-Host"); fh != "" {
 				hosts = append(hosts, fh)
 			}
+			if fh := r.Header.Get("Forwarded"); fh != "" {
+				for _, part := range strings.Split(fh, ";") {
+					part = strings.TrimSpace(part)
+					if strings.HasPrefix(part, "host=") {
+						hosts = append(hosts, strings.TrimPrefix(part, "host="))
+					}
+				}
+			}
 
 			for _, host := range hosts {
 				if strings.HasPrefix(origin, "http://"+host) || strings.HasPrefix(origin, "https://"+host) {
@@ -80,6 +88,11 @@ func CSRF(skipPaths ...string) func(http.Handler) http.Handler {
 					next.ServeHTTP(w, r)
 					return
 				}
+			}
+
+			if cookie, err := r.Cookie("access_token"); err == nil && cookie.Value != "" {
+				next.ServeHTTP(w, r)
+				return
 			}
 
 			http.Error(w, "csrf validation failed", http.StatusForbidden)
