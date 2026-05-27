@@ -1,9 +1,18 @@
         </div>
     </main>
+<style>
+#nav-progress{position:fixed;top:0;left:0;width:0;height:2px;background:var(--accent-color,#3b82f6);z-index:99999;transition:width .2s ease,opacity .3s ease;opacity:0;pointer-events:none}
+#nav-progress.active{opacity:1}
+#nav-progress.finishing{width:100%!important;transition:width .15s ease,opacity .3s ease .1s}
+#nav-progress.done{opacity:0}
+</style>
+<div id="nav-progress"></div>
 <script>
 (function() {
     var PAGE_ID = 'admin-page';
     var navVersion = 0;
+    var progressBar = document.getElementById('nav-progress');
+    var progressTimer = null;
 
     function isInternalLink(url) {
         try { var u = new URL(url, location.origin); return u.origin === location.origin && u.pathname.startsWith('/admin'); }
@@ -34,10 +43,29 @@
         });
     }
 
-    function showLoading() {
-        var page = document.getElementById(PAGE_ID);
-        if (!page) return;
-        page.innerHTML = '<div class="flex items-center justify-center py-32"><div class="flex flex-col items-center gap-3"><div class="w-8 h-8 border-2 border-zinc-300 dark:border-zinc-600 border-t-zinc-800 dark:border-t-zinc-200 rounded-full animate-spin"></div><span class="text-sm text-zinc-400 dark:text-zinc-500">' + (typeof __ === 'function' ? __('admin.common.loading') : 'Loading...') + '</span></div></div>';
+    function startProgress() {
+        if (progressTimer) clearTimeout(progressTimer);
+        progressBar.className = '';
+        progressBar.style.width = '0';
+        requestAnimationFrame(function() {
+            progressBar.classList.add('active');
+            progressBar.style.width = '60%';
+        });
+        progressTimer = setTimeout(function() {
+            progressBar.style.width = '80%';
+        }, 400);
+    }
+
+    function finishProgress() {
+        if (progressTimer) clearTimeout(progressTimer);
+        progressBar.classList.add('finishing');
+        setTimeout(function() {
+            progressBar.classList.add('done');
+            setTimeout(function() {
+                progressBar.className = '';
+                progressBar.style.width = '0';
+            }, 350);
+        }, 200);
     }
 
     function swapContent(html, url) {
@@ -50,21 +78,16 @@
         page.innerHTML = newPage.innerHTML;
         if (newTitle) document.title = newTitle.textContent;
 
-        page.style.transition = 'opacity 0.15s ease';
-        page.style.opacity = '0';
-        requestAnimationFrame(function() {
-            page.style.opacity = '1';
-            setTimeout(function() { page.style.transition = ''; }, 200);
-        });
-
         executeScripts(page);
         if (typeof htmx !== 'undefined') htmx.process(page);
+
+        finishProgress();
     }
 
     function navigate(url, push) {
         var ver = ++navVersion;
         if (push) history.pushState({ url: url }, '', url);
-        showLoading();
+        startProgress();
         window.scrollTo({ top: 0, behavior: 'instant' });
 
         fetch(url, { headers: { 'X-Requested-With': 'polarnav' } }).then(function(res) {
