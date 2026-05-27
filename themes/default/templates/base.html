@@ -25,6 +25,9 @@
     }
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="https://cdn.tailwindcss.com">
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
     <style>
@@ -275,6 +278,7 @@ document.addEventListener('DOMContentLoaded', onPageLoad);
     const MAIN_ID = 'main-content';
     const NAV_HEADER = 'X-Requested-With';
     const NAV_VALUE = 'polarnav';
+    var navVersion = 0;
 
     function isInternalLink(url) {
         try {
@@ -291,6 +295,12 @@ document.addEventListener('DOMContentLoaded', onPageLoad);
         return isInternalLink(a.href);
     }
 
+    function showLoading() {
+        var main = document.getElementById(MAIN_ID);
+        if (!main) return;
+        main.innerHTML = '<div class="flex items-center justify-center py-32"><div class="flex flex-col items-center gap-3"><div class="w-8 h-8 border-2 border-zinc-300 dark:border-zinc-600 border-t-zinc-800 dark:border-t-zinc-200 rounded-full animate-spin"></div><span class="text-sm text-zinc-400 dark:text-zinc-500">Loading...</span></div></div>';
+    }
+
     function swapContent(html, url) {
         const doc = new DOMParser().parseFromString(html, 'text/html');
         const newMain = doc.getElementById(MAIN_ID);
@@ -301,49 +311,51 @@ document.addEventListener('DOMContentLoaded', onPageLoad);
 
         if (typeof hideTOC === 'function') hideTOC();
 
+        main.innerHTML = newMain.innerHTML;
+        if (newTitle) document.title = newTitle.textContent;
+
+        main.style.transition = 'opacity 0.2s ease';
         main.style.opacity = '0';
-        main.style.transform = 'translateY(8px)';
-
-        setTimeout(() => {
-            main.innerHTML = newMain.innerHTML;
-            if (newTitle) document.title = newTitle.textContent;
-            window.scrollTo({ top: 0, behavior: 'instant' });
-
-            main.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+        requestAnimationFrame(function() {
             main.style.opacity = '1';
-            main.style.transform = 'translateY(0)';
+            setTimeout(function() { main.style.transition = ''; }, 250);
+        });
 
-            setTimeout(() => { main.style.transition = ''; main.style.transform = ''; }, 250);
+        if (typeof renderContent === 'function') {
+            renderContent(main.querySelector('.prose'));
+        }
 
-            if (typeof renderContent === 'function') {
-                renderContent(main.querySelector('.prose'));
+        setTimeout(function() {
+            if (typeof initTOC === 'function') initTOC();
+            if (typeof initTypewriter === 'function') initTypewriter();
+        }, 50);
+
+        main.querySelectorAll('script').forEach(function(oldScript) {
+            var newScript = document.createElement('script');
+            if (oldScript.src) {
+                newScript.src = oldScript.src;
+            } else {
+                newScript.textContent = oldScript.textContent;
             }
-
-            setTimeout(function() {
-                if (typeof initTOC === 'function') initTOC();
-                if (typeof initTypewriter === 'function') initTypewriter();
-            }, 50);
-
-            main.querySelectorAll('script').forEach(function(oldScript) {
-                var newScript = document.createElement('script');
-                if (oldScript.src) {
-                    newScript.src = oldScript.src;
-                } else {
-                    newScript.textContent = oldScript.textContent;
-                }
-                oldScript.parentNode.replaceChild(newScript, oldScript);
-            });
-        }, 150);
+            oldScript.parentNode.replaceChild(newScript, oldScript);
+        });
     }
 
     async function navigate(url, push) {
+        var ver = ++navVersion;
+        if (push) history.pushState({ url }, '', url);
+        showLoading();
+        window.scrollTo({ top: 0, behavior: 'instant' });
+
         try {
             const res = await fetch(url, { headers: { [NAV_HEADER]: NAV_VALUE } });
+            if (ver !== navVersion) return;
             if (!res.ok) { location.href = url; return; }
             const html = await res.text();
+            if (ver !== navVersion) return;
             swapContent(html, url);
-            if (push) history.pushState({ url }, '', url);
         } catch {
+            if (ver !== navVersion) return;
             location.href = url;
         }
     }

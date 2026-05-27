@@ -90,7 +90,14 @@ func runSetupMode(cfg *config.Config, paths *app.ExtractedPaths, emb *app.Embedd
 
 	logger.Info(fmt.Sprintf("setup mode - please visit http://localhost%s to complete installation", addr))
 
-	httpServer := &http.Server{Addr: addr, Handler: setupServer}
+	httpServer := &http.Server{
+		Addr:           addr,
+		Handler:        setupServer,
+		ReadTimeout:    15 * time.Second,
+		WriteTimeout:   30 * time.Second,
+		IdleTimeout:    120 * time.Second,
+		MaxHeaderBytes: 1 << 20,
+	}
 
 	go func() {
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {

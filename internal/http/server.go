@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
@@ -79,6 +80,7 @@ func (s *Server) setupRoutes() {
 	r.Use(chimw.Recoverer)
 	r.Use(middleware.SecurityHeaders())
 	r.Use(middleware.CORS([]string{}))
+	r.Use(middleware.CacheControl())
 	r.Use(chimw.Compress(5))
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -253,7 +255,14 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) ListenAndServe(addr string) error {
 	s.logger.Info("starting server", slog.String("addr", addr))
-	s.httpServer = &http.Server{Addr: addr, Handler: s.router}
+	s.httpServer = &http.Server{
+		Addr:           addr,
+		Handler:        s.router,
+		ReadTimeout:    15 * time.Second,
+		WriteTimeout:   30 * time.Second,
+		IdleTimeout:    120 * time.Second,
+		MaxHeaderBytes: 1 << 20,
+	}
 	return s.httpServer.ListenAndServe()
 }
 

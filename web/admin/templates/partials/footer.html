@@ -3,6 +3,7 @@
 <script>
 (function() {
     var PAGE_ID = 'admin-page';
+    var navVersion = 0;
 
     function isInternalLink(url) {
         try { var u = new URL(url, location.origin); return u.origin === location.origin && u.pathname.startsWith('/admin'); }
@@ -33,6 +34,12 @@
         });
     }
 
+    function showLoading() {
+        var page = document.getElementById(PAGE_ID);
+        if (!page) return;
+        page.innerHTML = '<div class="flex items-center justify-center py-32"><div class="flex flex-col items-center gap-3"><div class="w-8 h-8 border-2 border-zinc-300 dark:border-zinc-600 border-t-zinc-800 dark:border-t-zinc-200 rounded-full animate-spin"></div><span class="text-sm text-zinc-400 dark:text-zinc-500">' + (typeof __ === 'function' ? __('admin.common.loading') : 'Loading...') + '</span></div></div>';
+    }
+
     function swapContent(html, url) {
         var doc = new DOMParser().parseFromString(html, 'text/html');
         var newPage = doc.getElementById(PAGE_ID);
@@ -40,37 +47,39 @@
         if (!newPage) { location.href = url; return; }
 
         var page = document.getElementById(PAGE_ID);
+        page.innerHTML = newPage.innerHTML;
+        if (newTitle) document.title = newTitle.textContent;
+
+        page.style.transition = 'opacity 0.15s ease';
         page.style.opacity = '0';
-        page.style.transform = 'translateY(6px)';
-
-        setTimeout(function() {
-            page.innerHTML = newPage.innerHTML;
-            if (newTitle) document.title = newTitle.textContent;
-            window.scrollTo({ top: 0, behavior: 'instant' });
-
-            executeScripts(page);
-
-            page.style.transition = 'opacity 0.15s ease, transform 0.15s ease';
+        requestAnimationFrame(function() {
             page.style.opacity = '1';
-            page.style.transform = 'translateY(0)';
+            setTimeout(function() { page.style.transition = ''; }, 200);
+        });
 
-            setTimeout(function() { page.style.transition = ''; page.style.transform = ''; }, 200);
-
-            if (typeof htmx !== 'undefined') htmx.process(page);
-        }, 120);
+        executeScripts(page);
+        if (typeof htmx !== 'undefined') htmx.process(page);
     }
 
     function navigate(url, push) {
+        var ver = ++navVersion;
+        if (push) history.pushState({ url: url }, '', url);
+        showLoading();
+        window.scrollTo({ top: 0, behavior: 'instant' });
+
         fetch(url, { headers: { 'X-Requested-With': 'polarnav' } }).then(function(res) {
+            if (ver !== navVersion) return;
             if (res.status === 401 || res.status === 403) { location.href = '/admin/login'; return; }
             if (res.redirected) { location.href = res.url; return; }
             if (!res.ok) { location.href = url; return; }
             return res.text();
         }).then(function(html) {
-            if (!html) return;
+            if (ver !== navVersion || !html) return;
             swapContent(html, url);
-            if (push) history.pushState({ url: url }, '', url);
-        }).catch(function() { location.href = url; });
+        }).catch(function() {
+            if (ver !== navVersion) return;
+            location.href = url;
+        });
     }
 
     window.adminNavigate = function(url) {
