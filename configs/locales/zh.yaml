@@ -265,6 +265,8 @@ theme.nav.archives: 归档
 theme.nav.categories: 分类
 theme.nav.tags: 标签
 theme.nav.toggle_theme: 切换主题
+theme.nav.dark_mode: 深色模式
+theme.nav.light_mode: 浅色模式
 theme.footer.powered_by: 驱动
 theme.footer.polaris: Polaris
 theme.sidebar.statistics: 统计

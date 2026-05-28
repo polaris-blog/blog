@@ -1,7 +1,7 @@
 <header class="sticky top-0 z-50 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-lg border-b border-zinc-100 dark:border-zinc-800/50">
-    <div class="max-w-2xl mx-auto px-5 flex items-center justify-between h-14">
+    <div class="max-w-6xl mx-auto px-4 sm:px-5 flex items-center justify-between h-14">
         <a href="/" class="text-base font-semibold tracking-tight hover:opacity-60 transition-opacity">{{ site.Title }}</a>
-        <nav class="flex items-center gap-1">
+        <nav class="hidden sm:flex items-center gap-1">
             {% if nav_items %}
             {% for item in nav_items %}
             <a href="{{ item.URL }}" class="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 px-3 py-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">{{ item.Label }}</a>
@@ -16,24 +16,53 @@
                 <svg id="theme-icon" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/></svg>
             </button>
         </nav>
+        <button id="mobile-menu-btn" class="sm:hidden p-2 -mr-2 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors" onclick="document.getElementById('mobile-menu').classList.toggle('hidden')">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg>
+        </button>
+    </div>
+    <div id="mobile-menu" class="hidden sm:hidden border-t border-zinc-100 dark:border-zinc-800/50 bg-white dark:bg-zinc-950">
+        <div class="px-4 py-3 space-y-1">
+            {% if nav_items %}
+            {% for item in nav_items %}
+            <a href="{{ item.URL }}" class="mobile-nav-link block text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 px-3 py-2.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">{{ item.Label }}</a>
+            {% endfor %}
+            {% else %}
+            <a href="/" class="mobile-nav-link block text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 px-3 py-2.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">{{ t("theme.nav.home") }}</a>
+            <a href="/archives" class="mobile-nav-link block text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 px-3 py-2.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">{{ t("theme.nav.archives") }}</a>
+            <a href="/categories" class="mobile-nav-link block text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 px-3 py-2.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">{{ t("theme.nav.categories") }}</a>
+            <a href="/tags" class="mobile-nav-link block text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 px-3 py-2.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">{{ t("theme.nav.tags") }}</a>
+            {% endif %}
+            <div class="pt-2 mt-2 border-t border-zinc-100 dark:border-zinc-800/50">
+                <button onclick="toggleTheme()" class="w-full flex items-center gap-3 text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 px-3 py-2.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+                    <svg id="mobile-theme-icon" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"></svg>
+                    <span id="mobile-theme-label"></span>
+                </button>
+            </div>
+        </div>
     </div>
 </header>
 
 <script>
 (function() {
-    const stored = localStorage.getItem('theme');
+    var stored = localStorage.getItem('theme');
     if (stored === 'dark' || (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
         document.documentElement.classList.add('dark');
     }
     updateIcon();
 
     function updateIcon() {
-        const el = document.getElementById('theme-icon');
-        if (!el) return;
-        const isDark = document.documentElement.classList.contains('dark');
-        el.innerHTML = isDark
-            ? '<path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/>'
-            : '<path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/>';
+        var isDark = document.documentElement.classList.contains('dark');
+        var sunPath = '<path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/>';
+        var moonPath = '<path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/>';
+
+        var el = document.getElementById('theme-icon');
+        if (el) el.innerHTML = isDark ? moonPath : sunPath;
+
+        var mobileIcon = document.getElementById('mobile-theme-icon');
+        if (mobileIcon) mobileIcon.innerHTML = isDark ? moonPath : sunPath;
+
+        var mobileLabel = document.getElementById('mobile-theme-label');
+        if (mobileLabel) mobileLabel.textContent = isDark ? '{{ t("theme.nav.dark_mode") }}' : '{{ t("theme.nav.light_mode") }}';
     }
 
     window.toggleTheme = function() {
@@ -41,5 +70,12 @@
         localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
         updateIcon();
     };
+
+    document.getElementById('mobile-menu').addEventListener('click', function(e) {
+        var link = e.target.closest('.mobile-nav-link');
+        if (link) {
+            document.getElementById('mobile-menu').classList.add('hidden');
+        }
+    });
 })();
 </script>

@@ -101,6 +101,7 @@
     .dark .gc-book-icon, .dark .gc-repo-icon { fill:#8b949e !important; }
     .dark .gc-fork { fill:#8b949e !important; }
     .dark .gc-lang-dot { border-color:rgba(255,255,255,0.1); }
+    @media(max-width:1023px){.sidebar-mobile{display:block;margin-top:2rem}}
     </style>
     <script>
     (function() {
@@ -125,19 +126,17 @@
     {% block head %}{% endblock %}
 </head>
 <body class="bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans antialiased transition-colors duration-200 min-h-screen flex flex-col">
-    <style>
-    #nav-progress{position:fixed;top:0;left:0;width:0;height:2px;background:var(--accent-color,#3b82f6);z-index:99999;transition:width .2s ease,opacity .3s ease;opacity:0;pointer-events:none}
-    #nav-progress.active{opacity:1}
-    #nav-progress.finishing{width:100%!important;transition:width .15s ease,opacity .3s ease .1s}
-    #nav-progress.done{opacity:0}
-    </style>
-    <div id="nav-progress"></div>
     {% include "partials/header.html" %}
-    <div class="flex-1 w-full max-w-6xl mx-auto px-5 pt-16 pb-16 flex gap-8">
+    <div class="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-5 pt-4 sm:pt-16 pb-8 sm:pb-16 flex flex-col lg:flex-row gap-6 lg:gap-8">
         <main id="main-content" class="flex-1 min-w-0">
             {% block content %}{% endblock %}
         </main>
-        {% include "partials/sidebar.html" %}
+        <div class="sidebar-mobile lg:hidden">
+            {% include "partials/sidebar.html" %}
+        </div>
+        <div class="hidden lg:block w-64 shrink-0">
+            {% include "partials/sidebar.html" %}
+        </div>
     </div>
     {% include "partials/footer.html" %}
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
@@ -282,123 +281,117 @@ document.addEventListener('DOMContentLoaded', onPageLoad);
 </script>
 <script>
 (function() {
-    const MAIN_ID = 'main-content';
-    const NAV_HEADER = 'X-Requested-With';
-    const NAV_VALUE = 'polarnav';
-    var navVersion = 0;
+    var bar = document.createElement('div');
+    bar.style.cssText = 'position:fixed;top:0;left:0;height:3px;z-index:999999;pointer-events:none;width:0;transition:none';
+    bar.style.background = getComputedStyle(document.documentElement).getPropertyValue('--accent-color').trim() || '#3b82f6';
+    bar.style.boxShadow = '0 0 10px ' + bar.style.background;
+    document.documentElement.appendChild(bar);
 
-    var progressBar = document.getElementById('nav-progress');
+    var navVersion = 0;
     var progressTimer = null;
+    var MAIN_ID = 'main-content';
 
     function isInternalLink(url) {
-        try {
-            const u = new URL(url, location.origin);
-            return u.origin === location.origin;
-        } catch { return false; }
+        try { return new URL(url, location.origin).origin === location.origin; }
+        catch(e) { return false; }
     }
 
     function isNavigable(a) {
-        if (a.target === '_blank') return false;
-        if (a.hasAttribute('download')) return false;
-        if (a.href.startsWith('javascript:')) return false;
+        if (!a.href || a.target === '_blank' || a.hasAttribute('download')) return false;
+        if (a.href.indexOf('javascript:') === 0) return false;
         if (a.closest('#comment-form')) return false;
         return isInternalLink(a.href);
     }
 
     function startProgress() {
         if (progressTimer) clearTimeout(progressTimer);
-        progressBar.className = '';
-        progressBar.style.width = '0';
-        requestAnimationFrame(function() {
-            progressBar.classList.add('active');
-            progressBar.style.width = '60%';
-        });
+        bar.style.transition = 'none';
+        bar.style.width = '0';
+        void bar.offsetWidth;
+        bar.style.transition = 'width 300ms ease';
+        bar.style.width = '60%';
         progressTimer = setTimeout(function() {
-            progressBar.style.width = '80%';
-        }, 400);
+            bar.style.width = '85%';
+        }, 600);
     }
 
     function finishProgress() {
         if (progressTimer) clearTimeout(progressTimer);
-        progressBar.classList.add('finishing');
+        bar.style.transition = 'width 150ms ease';
+        bar.style.width = '100%';
         setTimeout(function() {
-            progressBar.classList.add('done');
-            setTimeout(function() {
-                progressBar.className = '';
-                progressBar.style.width = '0';
-            }, 350);
+            bar.style.transition = 'none';
+            bar.style.width = '0';
         }, 200);
     }
 
     function swapContent(html, url) {
-        const doc = new DOMParser().parseFromString(html, 'text/html');
-        const newMain = doc.getElementById(MAIN_ID);
-        const newTitle = doc.querySelector('title');
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        var newMain = doc.getElementById(MAIN_ID);
         if (!newMain) { location.href = url; return; }
 
-        const main = document.getElementById(MAIN_ID);
-
+        var main = document.getElementById(MAIN_ID);
         if (typeof hideTOC === 'function') hideTOC();
 
         main.innerHTML = newMain.innerHTML;
+
+        var newTitle = doc.querySelector('title');
         if (newTitle) document.title = newTitle.textContent;
 
         if (typeof renderContent === 'function') {
             renderContent(main.querySelector('.prose'));
         }
-
         setTimeout(function() {
             if (typeof initTOC === 'function') initTOC();
             if (typeof initTypewriter === 'function') initTypewriter();
         }, 50);
 
-        main.querySelectorAll('script').forEach(function(oldScript) {
-            var newScript = document.createElement('script');
-            if (oldScript.src) {
-                newScript.src = oldScript.src;
-            } else {
-                newScript.textContent = oldScript.textContent;
-            }
-            oldScript.parentNode.replaceChild(newScript, oldScript);
+        main.querySelectorAll('script').forEach(function(old) {
+            var s = document.createElement('script');
+            if (old.src) s.src = old.src; else s.textContent = old.textContent;
+            old.parentNode.replaceChild(s, old);
         });
 
         finishProgress();
     }
 
-    async function navigate(url, push) {
+    function navigate(url, push) {
         var ver = ++navVersion;
-        if (push) history.pushState({ url }, '', url);
+        if (push) history.pushState({ url: url }, '', url);
         startProgress();
         window.scrollTo({ top: 0, behavior: 'instant' });
 
-        try {
-            const res = await fetch(url, { headers: { [NAV_HEADER]: NAV_VALUE } });
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', url, true);
+        xhr.setRequestHeader('X-Requested-With', 'polarnav');
+        xhr.onload = function() {
             if (ver !== navVersion) return;
-            if (!res.ok) { location.href = url; return; }
-            const html = await res.text();
-            if (ver !== navVersion) return;
-            swapContent(html, url);
-        } catch {
+            if (xhr.status >= 200 && xhr.status < 400) {
+                swapContent(xhr.responseText, url);
+            } else {
+                location.href = url;
+            }
+        };
+        xhr.onerror = function() {
             if (ver !== navVersion) return;
             location.href = url;
-        }
+        };
+        xhr.send();
     }
 
     document.addEventListener('click', function(e) {
-        const a = e.target.closest('a[href]');
+        var a = e.target.closest('a[href]');
         if (!a || !isNavigable(a)) return;
-        if (a.getAttribute('href').charAt(0) === '#') return;
+        var href = a.getAttribute('href');
+        if (!href || href.charAt(0) === '#') return;
         if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
         e.preventDefault();
         navigate(a.href, true);
     });
 
     window.addEventListener('popstate', function(e) {
-        if (e.state && e.state.url) {
-            navigate(e.state.url, false);
-        } else {
-            navigate(location.href, false);
-        }
+        if (e.state && e.state.url) navigate(e.state.url, false);
+        else navigate(location.href, false);
     });
 
     history.replaceState({ url: location.href }, '');

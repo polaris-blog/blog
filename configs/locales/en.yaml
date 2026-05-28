@@ -265,6 +265,8 @@ theme.nav.archives: Archives
 theme.nav.categories: Categories
 theme.nav.tags: Tags
 theme.nav.toggle_theme: Toggle theme
+theme.nav.dark_mode: Dark Mode
+theme.nav.light_mode: Light Mode
 theme.footer.powered_by: Powered by
 theme.footer.polaris: Polaris
 theme.sidebar.statistics: Statistics

@@ -1,28 +1,23 @@
         </div>
     </main>
-<style>
-#nav-progress{position:fixed;top:0;left:0;width:0;height:2px;background:var(--accent-color,#3b82f6);z-index:99999;transition:width .2s ease,opacity .3s ease;opacity:0;pointer-events:none}
-#nav-progress.active{opacity:1}
-#nav-progress.finishing{width:100%!important;transition:width .15s ease,opacity .3s ease .1s}
-#nav-progress.done{opacity:0}
-</style>
-<div id="nav-progress"></div>
 <script>
 (function() {
+    var bar = document.createElement('div');
+    bar.style.cssText = 'position:fixed;top:0;left:0;height:3px;z-index:999999;pointer-events:none;width:0;transition:none;background:#3b82f6;box-shadow:0 0 10px #3b82f6';
+    document.documentElement.appendChild(bar);
+
     var PAGE_ID = 'admin-page';
     var navVersion = 0;
-    var progressBar = document.getElementById('nav-progress');
     var progressTimer = null;
 
     function isInternalLink(url) {
         try { var u = new URL(url, location.origin); return u.origin === location.origin && u.pathname.startsWith('/admin'); }
-        catch { return false; }
+        catch(e) { return false; }
     }
 
     function isNavigable(a) {
-        if (a.target === '_blank') return false;
-        if (a.hasAttribute('download')) return false;
-        if (a.href.startsWith('javascript:')) return false;
+        if (!a.href || a.target === '_blank' || a.hasAttribute('download')) return false;
+        if (a.href.indexOf('javascript:') === 0) return false;
         if (a.closest('form')) return false;
         if (a.getAttribute('hx-delete') || a.getAttribute('hx-post')) return false;
         if (a.pathname === '/admin/auth/logout') return false;
@@ -45,37 +40,35 @@
 
     function startProgress() {
         if (progressTimer) clearTimeout(progressTimer);
-        progressBar.className = '';
-        progressBar.style.width = '0';
-        requestAnimationFrame(function() {
-            progressBar.classList.add('active');
-            progressBar.style.width = '60%';
-        });
+        bar.style.transition = 'none';
+        bar.style.width = '0';
+        void bar.offsetWidth;
+        bar.style.transition = 'width 300ms ease';
+        bar.style.width = '60%';
         progressTimer = setTimeout(function() {
-            progressBar.style.width = '80%';
-        }, 400);
+            bar.style.width = '85%';
+        }, 600);
     }
 
     function finishProgress() {
         if (progressTimer) clearTimeout(progressTimer);
-        progressBar.classList.add('finishing');
+        bar.style.transition = 'width 150ms ease';
+        bar.style.width = '100%';
         setTimeout(function() {
-            progressBar.classList.add('done');
-            setTimeout(function() {
-                progressBar.className = '';
-                progressBar.style.width = '0';
-            }, 350);
+            bar.style.transition = 'none';
+            bar.style.width = '0';
         }, 200);
     }
 
     function swapContent(html, url) {
         var doc = new DOMParser().parseFromString(html, 'text/html');
         var newPage = doc.getElementById(PAGE_ID);
-        var newTitle = doc.querySelector('title');
         if (!newPage) { location.href = url; return; }
 
         var page = document.getElementById(PAGE_ID);
         page.innerHTML = newPage.innerHTML;
+
+        var newTitle = doc.querySelector('title');
         if (newTitle) document.title = newTitle.textContent;
 
         executeScripts(page);
@@ -90,19 +83,23 @@
         startProgress();
         window.scrollTo({ top: 0, behavior: 'instant' });
 
-        fetch(url, { headers: { 'X-Requested-With': 'polarnav' } }).then(function(res) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', url, true);
+        xhr.setRequestHeader('X-Requested-With', 'polarnav');
+        xhr.onload = function() {
             if (ver !== navVersion) return;
-            if (res.status === 401 || res.status === 403) { location.href = '/admin/login'; return; }
-            if (res.redirected) { location.href = res.url; return; }
-            if (!res.ok) { location.href = url; return; }
-            return res.text();
-        }).then(function(html) {
-            if (ver !== navVersion || !html) return;
-            swapContent(html, url);
-        }).catch(function() {
+            if (xhr.status === 401 || xhr.status === 403) { location.href = '/admin/login'; return; }
+            if (xhr.status >= 200 && xhr.status < 400) {
+                swapContent(xhr.responseText, url);
+            } else {
+                location.href = url;
+            }
+        };
+        xhr.onerror = function() {
             if (ver !== navVersion) return;
             location.href = url;
-        });
+        };
+        xhr.send();
     }
 
     window.adminNavigate = function(url) {
