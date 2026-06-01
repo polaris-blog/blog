@@ -45,16 +45,17 @@ func SelfExtract(dataDir string, emb *EmbeddedFS, logger *slog.Logger) (*Extract
 	logger.Info("self-extract: ensuring embedded files are present", slog.String("dir", dataDir))
 
 	extractions := []struct {
-		src       embed.FS
-		prefix    string
-		dst       string
-		overwrite bool
+		src             embed.FS
+		prefix          string
+		dst             string
+		overwrite       bool
+		skipOverwriteExt []string
 	}{
-		{emb.AdminTemplates, "web/admin/templates", p.AdminTemplates, true},
-		{emb.AdminStatic, "web/admin/static", p.AdminStatic, true},
-		{emb.DefaultTheme, "themes/default", filepath.Join(p.ThemesDir, "default"), false},
-		{emb.Plugins, "plugins", p.PluginsDir, false},
-		{emb.Configs, "configs", p.ConfigsDir, false},
+		{emb.AdminTemplates, "web/admin/templates", p.AdminTemplates, true, nil},
+		{emb.AdminStatic, "web/admin/static", p.AdminStatic, true, nil},
+		{emb.DefaultTheme, "themes/default", filepath.Join(p.ThemesDir, "default"), true, []string{".yaml", ".yml"}},
+		{emb.Plugins, "plugins", p.PluginsDir, false, nil},
+		{emb.Configs, "configs", p.ConfigsDir, false, nil},
 	}
 
 	for _, e := range extractions {
@@ -62,7 +63,7 @@ func SelfExtract(dataDir string, emb *EmbeddedFS, logger *slog.Logger) (*Extract
 		if err != nil {
 			return nil, fmt.Errorf("sub fs %s: %w", e.prefix, err)
 		}
-		if err := extractFS(sub, e.dst, e.overwrite); err != nil {
+		if err := extractFS(sub, e.dst, e.overwrite, e.skipOverwriteExt); err != nil {
 			return nil, fmt.Errorf("extract to %s: %w", e.dst, err)
 		}
 	}
@@ -76,7 +77,7 @@ func SelfExtract(dataDir string, emb *EmbeddedFS, logger *slog.Logger) (*Extract
 	return p, nil
 }
 
-func extractFS(src fs.FS, dst string, overwrite bool) error {
+func extractFS(src fs.FS, dst string, overwrite bool, skipExt []string) error {
 	return fs.WalkDir(src, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -91,6 +92,14 @@ func extractFS(src fs.FS, dst string, overwrite bool) error {
 		if !overwrite {
 			if _, statErr := os.Stat(target); statErr == nil {
 				return nil
+			}
+		} else if len(skipExt) > 0 {
+			if _, statErr := os.Stat(target); statErr == nil {
+				for _, ext := range skipExt {
+					if strings.HasSuffix(path, ext) {
+						return nil
+					}
+				}
 			}
 		}
 

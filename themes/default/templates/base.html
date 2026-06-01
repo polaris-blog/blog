@@ -333,26 +333,35 @@ document.addEventListener('DOMContentLoaded', onPageLoad);
         var main = document.getElementById(MAIN_ID);
         if (typeof hideTOC === 'function') hideTOC();
 
-        main.innerHTML = newMain.innerHTML;
+        main.style.transition = 'opacity 0.12s ease';
+        main.style.opacity = '0';
 
-        var newTitle = doc.querySelector('title');
-        if (newTitle) document.title = newTitle.textContent;
-
-        if (typeof renderContent === 'function') {
-            renderContent(main.querySelector('.prose'));
-        }
         setTimeout(function() {
-            if (typeof initTOC === 'function') initTOC();
-            if (typeof initTypewriter === 'function') initTypewriter();
-        }, 50);
+            main.innerHTML = newMain.innerHTML;
 
-        main.querySelectorAll('script').forEach(function(old) {
-            var s = document.createElement('script');
-            if (old.src) s.src = old.src; else s.textContent = old.textContent;
-            old.parentNode.replaceChild(s, old);
-        });
+            var newTitle = doc.querySelector('title');
+            if (newTitle) document.title = newTitle.textContent;
 
-        finishProgress();
+            if (typeof renderContent === 'function') {
+                renderContent(main.querySelector('.prose'));
+            }
+            setTimeout(function() {
+                if (typeof initTOC === 'function') initTOC();
+                if (typeof initTypewriter === 'function') initTypewriter();
+            }, 50);
+
+            main.querySelectorAll('script').forEach(function(old) {
+                var s = document.createElement('script');
+                if (old.src) s.src = old.src; else s.textContent = old.textContent;
+                old.parentNode.replaceChild(s, old);
+            });
+
+            main.style.transition = 'opacity 0.2s ease';
+            main.style.opacity = '1';
+            setTimeout(function() { main.style.transition = ''; }, 250);
+
+            finishProgress();
+        }, 120);
     }
 
     function navigate(url, push) {

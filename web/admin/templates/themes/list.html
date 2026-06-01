@@ -35,15 +35,7 @@
 
     {{ if .Meta.Settings }}
     <div class="border-t border-zinc-100 dark:border-zinc-800 pt-4">
-        <div class="flex items-center justify-between mb-3">
-            <p class="text-xs font-medium text-zinc-400 uppercase tracking-wider">{{ t "admin.themes.configuration" }}</p>
-            <button type="button" class="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors" onclick="toggleThemeSettings('{{ .Meta.ID }}')">{{ t "admin.themes.edit_settings" }}</button>
-        </div>
-        <div id="settings-preview-{{ .Meta.ID }}" class="grid grid-cols-2 gap-2">
-            {{ range .Meta.Settings }}
-            <div class="text-xs"><span class="text-zinc-400">{{ .Label }}:</span> <span class="text-zinc-600 dark:text-zinc-300">{{ .Default }}</span></div>
-            {{ end }}
-        </div>
+        <button type="button" class="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors" onclick="toggleThemeSettings('{{ .Meta.ID }}')">{{ t "admin.themes.edit_settings" }}</button>
         <div id="settings-form-{{ .Meta.ID }}" class="hidden mt-3 space-y-3">
             {{ range .Meta.Settings }}
             <div>
@@ -86,9 +78,7 @@
 
 <script>
 function toggleThemeSettings(id) {
-    var preview = document.getElementById('settings-preview-' + id);
     var form = document.getElementById('settings-form-' + id);
-    if (preview) preview.classList.toggle('hidden');
     if (form) form.classList.toggle('hidden');
 }
 

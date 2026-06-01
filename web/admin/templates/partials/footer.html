@@ -66,15 +66,24 @@
         if (!newPage) { location.href = url; return; }
 
         var page = document.getElementById(PAGE_ID);
-        page.innerHTML = newPage.innerHTML;
+        page.style.transition = 'opacity 0.12s ease';
+        page.style.opacity = '0';
 
-        var newTitle = doc.querySelector('title');
-        if (newTitle) document.title = newTitle.textContent;
+        setTimeout(function() {
+            page.innerHTML = newPage.innerHTML;
 
-        executeScripts(page);
-        if (typeof htmx !== 'undefined') htmx.process(page);
+            var newTitle = doc.querySelector('title');
+            if (newTitle) document.title = newTitle.textContent;
 
-        finishProgress();
+            executeScripts(page);
+            if (typeof htmx !== 'undefined') htmx.process(page);
+
+            page.style.transition = 'opacity 0.2s ease';
+            page.style.opacity = '1';
+            setTimeout(function() { page.style.transition = ''; }, 250);
+
+            finishProgress();
+        }, 120);
     }
 
     function navigate(url, push) {

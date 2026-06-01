@@ -64,14 +64,14 @@ func (h *AdminHandler) loadTemplates(dir string) *template.Template {
 		"parse_os":      func(ua string) string { return theme.ParseOS(ua) },
 		"t":             func(key string) string { return key },
 		"status_text":   func(s string) string { return s },
-		"json": func(v interface{}) template.HTML {
+		"json": func(v interface{}) template.JS {
 			b, err := json.Marshal(v)
 			if err != nil {
-				return template.HTML("{}")
+				return template.JS("{}")
 			}
 			safe := strings.ReplaceAll(string(b), "</script>", `<\/script>`)
 			safe = strings.ReplaceAll(safe, "<!--", `<\!--`)
-			return template.HTML(safe)
+			return template.JS(safe)
 		},
 	})
 

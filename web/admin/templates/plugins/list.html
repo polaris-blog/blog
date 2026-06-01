@@ -41,15 +41,8 @@ function renderPlugins(plugins) {
             ? '<button type="button" class="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors" onclick="togglePluginSettings(\'' + p.id + '\')">' + __('admin.plugins.edit_settings') + '</button>'
             : '';
 
-        var settingsPreview = '';
         var settingsForm = '';
         if (p.settings && p.settings.length > 0) {
-            settingsPreview = '<div id="settings-preview-' + p.id + '" class="grid grid-cols-2 gap-2">';
-            p.settings.forEach(function(s) {
-                settingsPreview += '<div class="text-xs"><span class="text-zinc-400">' + s.label + ':</span> <span class="text-zinc-600 dark:text-zinc-300">' + (s.default !== undefined ? s.default : '') + '</span></div>';
-            });
-            settingsPreview += '</div>';
-
             settingsForm = '<div id="settings-form-' + p.id + '" class="hidden mt-3 space-y-3">';
             p.settings.forEach(function(s) {
                 var val = s.default !== undefined ? s.default : '';
@@ -77,7 +70,7 @@ function renderPlugins(plugins) {
         }
 
         var settingsSection = (p.settings && p.settings.length > 0)
-            ? '<div class="border-t border-zinc-100 dark:border-zinc-800 pt-4"><div class="flex items-center justify-between mb-3"><p class="text-xs font-medium text-zinc-400 uppercase tracking-wider">' + __('admin.plugins.configuration') + '</p>' + settingsBtn + '</div>' + settingsPreview + settingsForm + '</div>'
+            ? '<div class="border-t border-zinc-100 dark:border-zinc-800 pt-4">' + settingsBtn + settingsForm + '</div>'
             : '';
 
         return '<div class="bg-white dark:bg-zinc-900 rounded-2xl p-6" id="plugin-' + p.id + '">'
@@ -112,23 +105,13 @@ function renderPlugins(plugins) {
                         }
                     }
                 });
-                var preview = document.getElementById('settings-preview-' + p.id);
-                if (preview) {
-                    preview.innerHTML = '';
-                    p.settings.forEach(function(s) {
-                        var val = data.settings[s.key] !== undefined ? data.settings[s.key] : s.default;
-                        preview.innerHTML += '<div class="text-xs"><span class="text-zinc-400">' + s.label + ':</span> <span class="text-zinc-600 dark:text-zinc-300">' + val + '</span></div>';
-                    });
-                }
             });
         }
     });
 }
 
 function togglePluginSettings(id) {
-    var preview = document.getElementById('settings-preview-' + id);
     var form = document.getElementById('settings-form-' + id);
-    if (preview) preview.classList.toggle('hidden');
     if (form) form.classList.toggle('hidden');
 }
 
