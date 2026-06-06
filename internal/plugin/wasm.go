@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
+	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 )
 
 type WasmRuntime struct {
@@ -48,6 +50,14 @@ func NewWasmRuntime(ctx context.Context, eventBus *EventBus, cfg WasmConfig, man
 	}
 
 	rt := wazero.NewRuntime(ctx)
+	httpClient := &http.Client{
+		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			MaxIdleConns:        10,
+			MaxIdleConnsPerHost: 5,
+			IdleConnTimeout:     90 * time.Second,
+		},
+	}
 	host := &wasmHost{
 		eventBus:   eventBus,
 		runtime:    rt,
@@ -55,6 +65,7 @@ func NewWasmRuntime(ctx context.Context, eventBus *EventBus, cfg WasmConfig, man
 		nextID:     1,
 		timeoutSec: cfg.TimeoutSeconds,
 		manager:    manager,
+		httpClient: httpClient,
 	}
 
 	wr := &WasmRuntime{
@@ -71,6 +82,8 @@ func NewWasmRuntime(ctx context.Context, eventBus *EventBus, cfg WasmConfig, man
 }
 
 func (r *WasmRuntime) initHostModules(ctx context.Context) {
+	wasi_snapshot_preview1.MustInstantiate(ctx, r.runtime)
+
 	envBuilder := r.runtime.NewHostModuleBuilder("env")
 	envBuilder.NewFunctionBuilder().
 		WithGoModuleFunction(api.GoModuleFunc(func(ctx context.Context, m api.Module, stack []uint64) {
@@ -108,6 +121,11 @@ func (r *WasmRuntime) initHostModules(ctx context.Context) {
 			r.host.hostHttpGet(m, stack)
 		}), []api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32}, []api.ValueType{api.ValueTypeI32}).
 		WithParameterNames("url_ptr", "url_len", "buf_ptr", "buf_len").WithResultNames("written").Export("http_get")
+	builder.NewFunctionBuilder().
+		WithGoModuleFunction(api.GoModuleFunc(func(ctx context.Context, m api.Module, stack []uint64) {
+			r.host.hostHttpPost(m, stack)
+		}), []api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32}, []api.ValueType{api.ValueTypeI32}).
+		WithParameterNames("url_ptr", "url_len", "body_ptr", "body_len", "buf_ptr", "buf_len").WithResultNames("written").Export("http_post")
 
 	if _, err := builder.Instantiate(ctx); err != nil {
 		panic(fmt.Sprintf("instantiate polaris module: %v", err))
@@ -122,7 +140,9 @@ func (r *WasmRuntime) Load(ctx context.Context, wasmBytes []byte, pluginID strin
 
 	inst, err := r.runtime.InstantiateModule(ctx, compiled, wazero.NewModuleConfig().
 		WithName(pluginID).
-		WithStartFunctions("_start"))
+		WithStartFunctions("_start").
+		WithStdout(os.Stdout).
+		WithStderr(os.Stderr))
 	if err != nil {
 		compiled.Close(ctx)
 		return nil, fmt.Errorf("instantiate wasm module: %w", err)
@@ -433,6 +453,7 @@ type wasmHost struct {
 	mu         sync.Mutex
 	timeoutSec int
 	manager    *Manager
+	httpClient *http.Client
 }
 
 func (h *wasmHost) hostRegisterHook(m api.Module, stack []uint64) uint64 {
@@ -593,32 +614,17 @@ func (h *wasmHost) hostHttpGet(m api.Module, stack []uint64) {
 	if len(url) > 2048 {
 		return
 	}
-	if !strings.HasPrefix(url, "https://api.github.com/") {
+	if !strings.HasPrefix(url, "https://") {
 		return
 	}
 
-	client := &http.Client{Timeout: 5 * time.Second}
 	req, err := http.NewRequestWithContext(context.Background(), "GET", url, nil)
 	if err != nil {
 		return
 	}
 	req.Header.Set("User-Agent", "Polaris-Blog")
 
-	pluginName := m.Name()
-	h.manager.wasmRT.mu.RLock()
-	mod, exists := h.manager.wasmRT.modules[pluginName]
-	if exists {
-		mod.settingsMu.RLock()
-		if token, ok := mod.settings["github_token"]; ok {
-			if tokenStr, ok := token.(string); ok && tokenStr != "" {
-				req.Header.Set("Authorization", "token "+tokenStr)
-			}
-		}
-		mod.settingsMu.RUnlock()
-	}
-	h.manager.wasmRT.mu.RUnlock()
-
-	resp, err := client.Do(req)
+	resp, err := h.httpClient.Do(req)
 	if err != nil {
 		return
 	}
@@ -638,5 +644,73 @@ func (h *wasmHost) hostHttpGet(m api.Module, stack []uint64) {
 		return
 	}
 	copy(mem, body[:copyLen])
+	stack[0] = uint64(copyLen)
+}
+
+func (h *wasmHost) hostHttpPost(m api.Module, stack []uint64) {
+	defer func() {
+		if r := recover(); r != nil {
+			stack[0] = 0
+		}
+	}()
+
+	urlPtr := uint32(stack[0])
+	urlLen := uint32(stack[1])
+	bodyPtr := uint32(stack[2])
+	bodyLen := uint32(stack[3])
+	bufPtr := uint32(stack[4])
+	bufLen := uint32(stack[5])
+
+	stack[0] = 0
+
+	urlBytes, ok := m.Memory().Read(urlPtr, urlLen)
+	if !ok {
+		return
+	}
+	url := string(urlBytes)
+
+	if len(url) > 2048 {
+		return
+	}
+	if !strings.HasPrefix(url, "https://") {
+		return
+	}
+
+	var reqBody io.Reader
+	if bodyLen > 0 {
+		reqBodyBytes, ok := m.Memory().Read(bodyPtr, bodyLen)
+		if !ok {
+			return
+		}
+		reqBody = strings.NewReader(string(reqBodyBytes))
+	}
+
+	req, err := http.NewRequestWithContext(context.Background(), "POST", url, reqBody)
+	if err != nil {
+		return
+	}
+	req.Header.Set("User-Agent", "Polaris-Blog")
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := h.httpClient.Do(req)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, int64(bufLen)))
+	if err != nil {
+		return
+	}
+
+	copyLen := uint32(len(respBody))
+	if copyLen > bufLen {
+		copyLen = bufLen
+	}
+	mem, ok := m.Memory().Read(bufPtr, copyLen)
+	if !ok {
+		return
+	}
+	copy(mem, respBody[:copyLen])
 	stack[0] = uint64(copyLen)
 }

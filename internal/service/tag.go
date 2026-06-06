@@ -61,8 +61,11 @@ func (s *TagService) Create(ctx context.Context, input CreateTagInput) (*model.T
 func (s *TagService) List(ctx context.Context) ([]*model.Tag, error) {
 	key := "tags:list"
 	if val, ok := s.cache.Get(key); ok {
+		if tags, ok := val.([]*model.Tag); ok {
+			return tags, nil
+		}
+		var tags []*model.Tag
 		if data, err := json.Marshal(val); err == nil {
-			var tags []*model.Tag
 			if json.Unmarshal(data, &tags) == nil {
 				return tags, nil
 			}

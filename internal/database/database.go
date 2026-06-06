@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/glebarez/sqlite"
 	"github.com/polaris-blog/blog/internal/config"
@@ -48,6 +49,22 @@ func New(cfg config.DatabaseConfig) (*Database, error) {
 		return nil, fmt.Errorf("open database: %w", err)
 	}
 
+	if cfg.Driver == "sqlite" {
+		db.Exec("PRAGMA journal_mode=WAL")
+		db.Exec("PRAGMA busy_timeout=5000")
+		db.Exec("PRAGMA synchronous=NORMAL")
+		db.Exec("PRAGMA cache_size=-64000")
+		db.Exec("PRAGMA temp_store=MEMORY")
+	} else {
+		sqlDB, _ := db.DB()
+		if sqlDB != nil {
+			sqlDB.SetMaxOpenConns(25)
+			sqlDB.SetMaxIdleConns(10)
+			sqlDB.SetConnMaxLifetime(5 * time.Minute)
+			sqlDB.SetConnMaxIdleTime(10 * time.Minute)
+		}
+	}
+
 	d := &Database{db: db}
 	d.Posts = gormrepo.NewPostRepo(db)
 	d.Users = gormrepo.NewUserRepo(db)
@@ -85,6 +102,21 @@ func (d *Database) Migrate() error {
 	m := d.db.Migrator()
 	if !m.HasIndex(&model.Post{}, "idx_posts_slug") {
 		d.db.Exec("CREATE UNIQUE INDEX idx_posts_slug ON posts(slug)")
+	}
+	if !m.HasIndex(&model.Post{}, "idx_posts_status") {
+		d.db.Exec("CREATE INDEX idx_posts_status ON posts(status)")
+	}
+	if !m.HasIndex(&model.Post{}, "idx_posts_type_status") {
+		d.db.Exec("CREATE INDEX idx_posts_type_status ON posts(type, status)")
+	}
+	if !m.HasIndex(&model.Post{}, "idx_posts_created_at") {
+		d.db.Exec("CREATE INDEX idx_posts_created_at ON posts(created_at DESC)")
+	}
+	if !m.HasIndex(&model.Comment{}, "idx_comments_status") {
+		d.db.Exec("CREATE INDEX idx_comments_status ON comments(status)")
+	}
+	if !m.HasIndex(&model.Comment{}, "idx_comments_post_id") {
+		d.db.Exec("CREATE INDEX idx_comments_post_id ON comments(post_id)")
 	}
 	return nil
 }

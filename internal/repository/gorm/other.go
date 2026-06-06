@@ -85,6 +85,15 @@ func (r *TagRepo) FindBySlug(ctx context.Context, slug string) (*model.Tag, erro
 	return &tag, nil
 }
 
+func (r *TagRepo) FindByIDs(ctx context.Context, ids []string) ([]*model.Tag, error) {
+	var tags []*model.Tag
+	if len(ids) == 0 {
+		return tags, nil
+	}
+	err := r.db.WithContext(ctx).Where("id IN ?", ids).Find(&tags).Error
+	return tags, err
+}
+
 func (r *TagRepo) List(ctx context.Context) ([]*model.Tag, error) {
 	var tags []*model.Tag
 	err := r.db.WithContext(ctx).Order("name ASC").Find(&tags).Error
@@ -177,6 +186,12 @@ func (r *CommentRepo) UpdateStatus(ctx context.Context, id string, status string
 		Update("status", status).Error
 }
 
+func (r *CommentRepo) CountByStatus(ctx context.Context, status string) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&model.Comment{}).Where("status = ?", status).Count(&count).Error
+	return count, err
+}
+
 type MediaRepo struct {
 	db *gorm.DB
 }
@@ -237,6 +252,22 @@ func (r *OptionRepo) Get(ctx context.Context, key string) (string, error) {
 		return "", err
 	}
 	return opt.Value, nil
+}
+
+func (r *OptionRepo) GetMulti(ctx context.Context, keys []string) (map[string]string, error) {
+	if len(keys) == 0 {
+		return map[string]string{}, nil
+	}
+	var opts []model.Option
+	err := r.db.WithContext(ctx).Where("key IN ?", keys).Find(&opts).Error
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[string]string, len(opts))
+	for _, o := range opts {
+		result[o.Key] = o.Value
+	}
+	return result, nil
 }
 
 func (r *OptionRepo) Set(ctx context.Context, key string, value string) error {

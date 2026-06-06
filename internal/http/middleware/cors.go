@@ -13,19 +13,22 @@ func CORS(allowedOrigins []string) func(http.Handler) http.Handler {
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if len(origins) == 0 {
+				next.ServeHTTP(w, r)
+				return
+			}
+
 			origin := r.Header.Get("Origin")
 
-			if len(origins) > 0 && origins[origin] {
+			if origins[origin] {
 				w.Header().Set("Access-Control-Allow-Origin", origin)
 				w.Header().Set("Vary", "Origin")
 				w.Header().Set("Access-Control-Allow-Credentials", "true")
 			}
 
-			if len(origins) > 0 {
-				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
-				w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
-				w.Header().Set("Access-Control-Max-Age", "86400")
-			}
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+			w.Header().Set("Access-Control-Max-Age", "86400")
 
 			if r.Method == http.MethodOptions {
 				w.WriteHeader(http.StatusNoContent)
@@ -88,11 +91,6 @@ func CSRF(skipPaths ...string) func(http.Handler) http.Handler {
 					next.ServeHTTP(w, r)
 					return
 				}
-			}
-
-			if cookie, err := r.Cookie("access_token"); err == nil && cookie.Value != "" {
-				next.ServeHTTP(w, r)
-				return
 			}
 
 			http.Error(w, "csrf validation failed", http.StatusForbidden)

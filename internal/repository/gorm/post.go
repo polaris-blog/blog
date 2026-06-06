@@ -148,6 +148,31 @@ func (r *PostRepo) CountByStatus(ctx context.Context, status string) (int64, err
 	return count, err
 }
 
+func (r *PostRepo) CountByType(ctx context.Context, postType string, status string) (int64, error) {
+	var count int64
+	query := r.db.WithContext(ctx).Model(&model.Post{}).Where("type = ?", postType)
+	if status != "" {
+		query = query.Where("status = ?", status)
+	}
+	err := query.Count(&count).Error
+	return count, err
+}
+
+func (r *PostRepo) ListSlugs(ctx context.Context, postType string, status string, limit int) ([]*model.Post, error) {
+	var posts []*model.Post
+	query := r.db.WithContext(ctx).Model(&model.Post{}).
+		Select("id", "slug", "updated_at", "published_at").
+		Where("type = ?", postType)
+	if status != "" {
+		query = query.Where("status = ?", status)
+	}
+	if limit <= 0 {
+		limit = 500
+	}
+	err := query.Order("created_at DESC").Limit(limit).Find(&posts).Error
+	return posts, err
+}
+
 func applyPostFilters(query *gorm.DB, opts repository.ListOptions) *gorm.DB {
 	if opts.Status != "" {
 		query = query.Where("status = ?", opts.Status)

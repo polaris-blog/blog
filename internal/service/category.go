@@ -67,8 +67,11 @@ func (s *CategoryService) Create(ctx context.Context, input CreateCategoryInput)
 func (s *CategoryService) List(ctx context.Context) ([]*model.Category, error) {
 	key := "categories:list"
 	if val, ok := s.cache.Get(key); ok {
+		if cats, ok := val.([]*model.Category); ok {
+			return cats, nil
+		}
+		var cats []*model.Category
 		if data, err := json.Marshal(val); err == nil {
-			var cats []*model.Category
 			if json.Unmarshal(data, &cats) == nil {
 				return cats, nil
 			}

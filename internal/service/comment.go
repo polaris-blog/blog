@@ -120,12 +120,7 @@ func (s *CommentService) Delete(ctx context.Context, id string) error {
 }
 
 func (s *CommentService) CountByStatus(ctx context.Context, status string) (int64, error) {
-	opts := repository.ListOptions{Page: 1, PageSize: 1, Status: status}
-	result, err := s.comments.List(ctx, opts)
-	if err != nil {
-		return 0, err
-	}
-	return result.Total, nil
+	return s.comments.CountByStatus(ctx, status)
 }
 
 func (s *CommentService) Count(ctx context.Context, status string) (int64, error) {

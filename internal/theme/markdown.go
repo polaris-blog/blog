@@ -3,6 +3,7 @@ package theme
 import (
 	"bytes"
 	"context"
+	"sync"
 
 	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
 	"github.com/yuin/goldmark"
@@ -37,12 +38,54 @@ func SetFilterApplier(fa FilterApplier) {
 	globalFilterApplier = fa
 }
 
+const markdownCacheSize = 256
+
+type markdownCache struct {
+	items map[string]string
+	keys  []string
+	mu    sync.RWMutex
+}
+
+var mdCache = &markdownCache{
+	items: make(map[string]string, markdownCacheSize),
+	keys:  make([]string, 0, markdownCacheSize),
+}
+
+func (c *markdownCache) Get(key string) (string, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	v, ok := c.items[key]
+	return v, ok
+}
+
+func (c *markdownCache) Set(key string, value string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if _, exists := c.items[key]; exists {
+		c.items[key] = value
+		return
+	}
+	if len(c.keys) >= markdownCacheSize {
+		evictKey := c.keys[0]
+		delete(c.items, evictKey)
+		c.keys = c.keys[1:]
+	}
+	c.items[key] = value
+	c.keys = append(c.keys, key)
+}
+
 func renderMarkdown(content string) string {
+	if cached, ok := mdCache.Get(content); ok {
+		return cached
+	}
+
 	var buf bytes.Buffer
 	if err := md.Convert([]byte(content), &buf); err != nil {
 		return content
 	}
-	return buf.String()
+	result := buf.String()
+	mdCache.Set(content, result)
+	return result
 }
 
 func renderMarkdownWithFilter(content string) string {

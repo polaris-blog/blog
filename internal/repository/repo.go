@@ -33,6 +33,8 @@ type PostRepository interface {
 	Publish(ctx context.Context, id string) error
 	Unpublish(ctx context.Context, id string) error
 	CountByStatus(ctx context.Context, status string) (int64, error)
+	CountByType(ctx context.Context, postType string, status string) (int64, error)
+	ListSlugs(ctx context.Context, postType string, status string, limit int) ([]*model.Post, error)
 }
 
 type UserRepository interface {
@@ -59,6 +61,7 @@ type CategoryRepository interface {
 type TagRepository interface {
 	FindByID(ctx context.Context, id string) (*model.Tag, error)
 	FindBySlug(ctx context.Context, slug string) (*model.Tag, error)
+	FindByIDs(ctx context.Context, ids []string) ([]*model.Tag, error)
 	List(ctx context.Context) ([]*model.Tag, error)
 	Create(ctx context.Context, tag *model.Tag) error
 	Update(ctx context.Context, tag *model.Tag) error
@@ -74,6 +77,7 @@ type CommentRepository interface {
 	Update(ctx context.Context, comment *model.Comment) error
 	Delete(ctx context.Context, id string) error
 	UpdateStatus(ctx context.Context, id string, status string) error
+	CountByStatus(ctx context.Context, status string) (int64, error)
 }
 
 type MediaRepository interface {
@@ -85,6 +89,7 @@ type MediaRepository interface {
 
 type OptionRepository interface {
 	Get(ctx context.Context, key string) (string, error)
+	GetMulti(ctx context.Context, keys []string) (map[string]string, error)
 	Set(ctx context.Context, key string, value string) error
 	Delete(ctx context.Context, key string) error
 }

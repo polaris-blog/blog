@@ -36,6 +36,7 @@ type Server struct {
 	configDir       string
 	uploadsDir      string
 	i18nBundle      *i18n.Bundle
+	pageHandler     *web.PageHandler
 }
 
 func NewServer(
@@ -74,14 +75,23 @@ func NewServer(
 func (s *Server) setupRoutes() {
 	r := chi.NewRouter()
 
+	siteInfo := web.SiteInfo{
+		Title:       "Polaris Blog",
+		Description: "A dynamic blog powered by Polaris",
+		URL:         "http://localhost:8080",
+	}
+
+	if s.themeManager != nil {
+		s.pageHandler = web.NewPageHandler(s.themeManager, s.postService, s.commentService, s.categoryService, s.tagService, s.options, siteInfo, s.i18nBundle)
+	}
+
 	r.Use(chimw.RequestID)
 	r.Use(chimw.RealIP)
 	r.Use(middleware.Logging(s.logger))
 	r.Use(chimw.Recoverer)
 	r.Use(middleware.SecurityHeaders())
-	r.Use(middleware.CORS([]string{}))
 	r.Use(middleware.CacheControl())
-	r.Use(chimw.Compress(5))
+	r.Use(chimw.Compress(4))
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -111,14 +121,8 @@ func (s *Server) setupRoutes() {
 	os.MkdirAll(uploadsDir, 0755)
 	r.Handle("/uploads/*", http.StripPrefix("/uploads/", http.FileServer(http.Dir(uploadsDir))))
 
-	siteInfo := web.SiteInfo{
-		Title:       "Polaris Blog",
-		Description: "A dynamic blog powered by Polaris",
-		URL:         "http://localhost:8080",
-	}
-
-	if s.themeManager != nil {
-		pageHandler := web.NewPageHandler(s.themeManager, s.postService, s.commentService, s.categoryService, s.tagService, s.options, siteInfo, s.i18nBundle)
+	if s.themeManager != nil && s.pageHandler != nil {
+		pageHandler := s.pageHandler
 		r.Get("/", pageHandler.Index)
 		r.Get("/posts/{slug}", pageHandler.Post)
 		r.Get("/archives", pageHandler.Archives)
@@ -129,6 +133,14 @@ func (s *Server) setupRoutes() {
 		r.Get("/p/{slug}", pageHandler.CustomPage)
 		r.Get("/feed.xml", pageHandler.RSS)
 		r.Get("/sitemap.xml", pageHandler.Sitemap)
+
+		r.NotFound(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			pageHandler.NotFound(w, r)
+		}))
+	} else {
+		r.NotFound(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Error(w, "Not Found", http.StatusNotFound)
+		}))
 	}
 
 	webPostHandler := web.NewPostHandler(s.postService)
@@ -167,47 +179,47 @@ func (s *Server) setupRoutes() {
 
 			r.Route("/posts", func(r chi.Router) {
 				r.Get("/", adminAPIPostHandler.List)
-				r.Post("/", adminAPIPostHandler.Create)
+				r.Post("/", s.invalidateCacheThen(adminAPIPostHandler.Create))
 				r.Get("/{id}", adminAPIPostHandler.Get)
-				r.Put("/{id}", adminAPIPostHandler.Update)
-				r.Delete("/{id}", adminAPIPostHandler.Delete)
-				r.Post("/{id}/publish", adminAPIPostHandler.Publish)
-				r.Post("/{id}/unpublish", adminAPIPostHandler.Unpublish)
+				r.Put("/{id}", s.invalidateCacheThen(adminAPIPostHandler.Update))
+				r.Delete("/{id}", s.invalidateCacheThen(adminAPIPostHandler.Delete))
+				r.Post("/{id}/publish", s.invalidateCacheThen(adminAPIPostHandler.Publish))
+				r.Post("/{id}/unpublish", s.invalidateCacheThen(adminAPIPostHandler.Unpublish))
 			})
 
 			r.Route("/comments", func(r chi.Router) {
 				r.Get("/", commentAPIHandler.List)
-				r.Delete("/{id}", commentAPIHandler.Delete)
-				r.Post("/{id}/approve", commentAPIHandler.Approve)
-				r.Post("/{id}/spam", commentAPIHandler.Spam)
+				r.Delete("/{id}", s.invalidateCacheThen(commentAPIHandler.Delete))
+				r.Post("/{id}/approve", s.invalidateCacheThen(commentAPIHandler.Approve))
+				r.Post("/{id}/spam", s.invalidateCacheThen(commentAPIHandler.Spam))
 			})
 
-			r.Post("/categories", categoryAPIHandler.Create)
-			r.Delete("/categories/{id}", categoryAPIHandler.Delete)
-			r.Post("/tags", tagAPIHandler.Create)
-			r.Delete("/tags/{id}", tagAPIHandler.Delete)
-			r.Post("/themes/{id}/activate", themeAPIHandler.Activate)
+			r.Post("/categories", s.invalidateCacheThen(categoryAPIHandler.Create))
+			r.Delete("/categories/{id}", s.invalidateCacheThen(categoryAPIHandler.Delete))
+			r.Post("/tags", s.invalidateCacheThen(tagAPIHandler.Create))
+			r.Delete("/tags/{id}", s.invalidateCacheThen(tagAPIHandler.Delete))
+			r.Post("/themes/{id}/activate", s.invalidateCacheThen(themeAPIHandler.Activate))
 			r.Get("/themes/{id}/settings", themeAPIHandler.GetSettings)
-			r.Put("/themes/{id}/settings", themeAPIHandler.UpdateSettings)
-			r.Post("/themes/upload", themeAPIHandler.Upload)
-			r.Delete("/themes/{id}", themeAPIHandler.Delete)
+			r.Put("/themes/{id}/settings", s.invalidateCacheThen(themeAPIHandler.UpdateSettings))
+			r.Post("/themes/upload", s.invalidateCacheThen(themeAPIHandler.Upload))
+			r.Delete("/themes/{id}", s.invalidateCacheThen(themeAPIHandler.Delete))
 
 			r.Post("/media/upload", mediaAPIHandler.Upload)
 			r.Get("/media/list", mediaAPIHandler.List)
 
 			pluginAPIHandler := admin.NewPluginAPIHandler(s.pluginManager)
 			r.Get("/plugins", pluginAPIHandler.List)
-			r.Post("/plugins/upload", pluginAPIHandler.Upload)
-			r.Delete("/plugins/{id}", pluginAPIHandler.Delete)
+			r.Post("/plugins/upload", s.invalidateCacheThen(pluginAPIHandler.Upload))
+			r.Delete("/plugins/{id}", s.invalidateCacheThen(pluginAPIHandler.Delete))
 			r.Get("/plugins/{id}/settings", pluginAPIHandler.GetSettings)
-			r.Put("/plugins/{id}/settings", pluginAPIHandler.UpdateSettings)
+			r.Put("/plugins/{id}/settings", s.invalidateCacheThen(pluginAPIHandler.UpdateSettings))
 
-			r.Put("/settings", adminPageHandler.UpdateSettings)
+			r.Put("/settings", s.invalidateCacheThen(adminPageHandler.UpdateSettings))
 			r.Get("/nav", adminPageHandler.GetNavItems)
-			r.Put("/nav", adminPageHandler.UpdateNavItems)
-			r.Post("/pages", adminPageHandler.CreatePage)
-			r.Put("/pages/{id}", adminPageHandler.UpdatePage)
-			r.Delete("/pages/{id}", adminAPIPostHandler.Delete)
+			r.Put("/nav", s.invalidateCacheThen(adminPageHandler.UpdateNavItems))
+			r.Post("/pages", s.invalidateCacheThen(adminPageHandler.CreatePage))
+			r.Put("/pages/{id}", s.invalidateCacheThen(adminPageHandler.UpdatePage))
+			r.Delete("/pages/{id}", s.invalidateCacheThen(adminAPIPostHandler.Delete))
 		})
 	})
 
@@ -237,19 +249,13 @@ func (s *Server) setupRoutes() {
 		r.Get("/settings", adminPageHandler.SettingsPage)
 	})
 
-	r.NotFound(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if s.themeManager != nil {
-			pageHandler := web.NewPageHandler(s.themeManager, s.postService, s.commentService, s.categoryService, s.tagService, s.options, siteInfo, s.i18nBundle)
-			pageHandler.NotFound(w, r)
-			return
-		}
-		http.Error(w, "Not Found", http.StatusNotFound)
-	}))
-
 	s.router = r
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if s.pageHandler != nil && s.pageHandler.TryServeCached(w, r) {
+		return
+	}
 	s.router.ServeHTTP(w, r)
 }
 
@@ -257,9 +263,9 @@ func (s *Server) ListenAndServe(addr string) error {
 	s.logger.Info("starting server", slog.String("addr", addr))
 	s.httpServer = &http.Server{
 		Addr:           addr,
-		Handler:        s.router,
-		ReadTimeout:    15 * time.Second,
-		WriteTimeout:   30 * time.Second,
+		Handler:        s,
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   15 * time.Second,
 		IdleTimeout:    120 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
@@ -271,4 +277,13 @@ func (s *Server) Shutdown(ctx context.Context) error {
 		return s.httpServer.Shutdown(ctx)
 	}
 	return nil
+}
+
+func (s *Server) invalidateCacheThen(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		next(w, r)
+		if s.pageHandler != nil {
+			s.pageHandler.InvalidateHTMLCache()
+		}
+	}
 }

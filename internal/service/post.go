@@ -25,15 +25,32 @@ func NewPostService(posts repository.PostRepository, tags repository.TagReposito
 	return &PostService{posts: posts, tags: tags, eventBus: eventBus, cache: c, cacheTTL: cacheTTL}
 }
 
+func cacheGet[T any](c cache.Cache, key string) (*T, bool) {
+	val, ok := c.Get(key)
+	if !ok {
+		return nil, false
+	}
+	if v, ok := val.(*T); ok {
+		return v, true
+	}
+	if v, ok := val.(T); ok {
+		return &v, true
+	}
+	data, err := json.Marshal(val)
+	if err != nil {
+		return nil, false
+	}
+	var result T
+	if json.Unmarshal(data, &result) != nil {
+		return nil, false
+	}
+	return &result, true
+}
+
 func (s *PostService) GetByID(ctx context.Context, id string) (*model.Post, error) {
 	key := "post:id:" + id
-	if val, ok := s.cache.Get(key); ok {
-		if data, err := json.Marshal(val); err == nil {
-			var post model.Post
-			if json.Unmarshal(data, &post) == nil {
-				return &post, nil
-			}
-		}
+	if val, ok := cacheGet[model.Post](s.cache, key); ok {
+		return val, nil
 	}
 	post, err := s.posts.FindByID(ctx, id)
 	if err != nil {
@@ -45,13 +62,8 @@ func (s *PostService) GetByID(ctx context.Context, id string) (*model.Post, erro
 
 func (s *PostService) GetBySlug(ctx context.Context, slug string) (*model.Post, error) {
 	key := "post:slug:" + slug
-	if val, ok := s.cache.Get(key); ok {
-		if data, err := json.Marshal(val); err == nil {
-			var post model.Post
-			if json.Unmarshal(data, &post) == nil {
-				return &post, nil
-			}
-		}
+	if val, ok := cacheGet[model.Post](s.cache, key); ok {
+		return val, nil
 	}
 	post, err := s.posts.FindBySlug(ctx, slug)
 	if err != nil {
@@ -183,14 +195,13 @@ func (s *PostService) Create(ctx context.Context, input CreatePostInput) (*model
 	}
 
 	if len(input.TagIDs) > 0 {
-		var tagList []model.Tag
-		for _, tid := range input.TagIDs {
-			t, err := s.tags.FindByID(ctx, tid)
-			if err == nil {
-				tagList = append(tagList, *t)
+		tagList, err := s.tags.FindByIDs(ctx, input.TagIDs)
+		if err == nil {
+			post.Tags = make([]model.Tag, len(tagList))
+			for i, t := range tagList {
+				post.Tags[i] = *t
 			}
 		}
-		post.Tags = tagList
 	}
 
 	_ = s.eventBus.EmitHook(ctx, plugin.HookPostBeforeCreate, post)
@@ -257,14 +268,13 @@ func (s *PostService) Update(ctx context.Context, id string, input UpdatePostInp
 	}
 
 	if input.TagIDs != nil {
-		var tagList []model.Tag
-		for _, tid := range input.TagIDs {
-			t, err := s.tags.FindByID(ctx, tid)
-			if err == nil {
-				tagList = append(tagList, *t)
+		tagList, err := s.tags.FindByIDs(ctx, input.TagIDs)
+		if err == nil {
+			post.Tags = make([]model.Tag, len(tagList))
+			for i, t := range tagList {
+				post.Tags[i] = *t
 			}
 		}
-		post.Tags = tagList
 	}
 
 	post.UpdatedAt = time.Now()
@@ -338,17 +348,11 @@ func (s *PostService) CountByStatus(ctx context.Context, status string) (int64, 
 }
 
 func (s *PostService) CountByType(ctx context.Context, postType string, status string) (int64, error) {
-	opts := repository.ListOptions{
-		Page:     1,
-		PageSize: 1,
-		Status:   status,
-		Filters:  map[string]interface{}{"type": postType},
-	}
-	result, err := s.posts.List(ctx, opts)
-	if err != nil {
-		return 0, err
-	}
-	return result.Total, nil
+	return s.posts.CountByType(ctx, postType, status)
+}
+
+func (s *PostService) ListSlugs(ctx context.Context, postType string, status string, limit int) ([]*model.Post, error) {
+	return s.posts.ListSlugs(ctx, postType, status, limit)
 }
 
 func (s *PostService) invalidatePostCache(post *model.Post) {

@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/polaris-blog/blog/internal/config"
@@ -22,10 +23,14 @@ import (
 )
 
 type SetupServer struct {
-	paths      *ExtractedPaths
-	templates  *template.Template
-	i18nBundle *i18n.Bundle
-	logger     *slog.Logger
+	paths        *ExtractedPaths
+	templates    *template.Template
+	i18nBundle   *i18n.Bundle
+	logger       *slog.Logger
+	mux          *http.ServeMux
+	adminChecked bool
+	adminExists  bool
+	adminCheckMu sync.Mutex
 }
 
 func NewSetupServer(paths *ExtractedPaths, emb *EmbeddedFS, logger *slog.Logger) *SetupServer {
@@ -42,6 +47,11 @@ func NewSetupServer(paths *ExtractedPaths, emb *EmbeddedFS, logger *slog.Logger)
 	}
 	s.i18nBundle.SetDefault("en")
 	s.templates = s.loadTemplates()
+	s.mux = http.NewServeMux()
+	s.mux.HandleFunc("/", s.SetupPage)
+	s.mux.HandleFunc("/api/setup/status", s.IsInstalled)
+	s.mux.HandleFunc("/api/setup", s.Setup)
+	s.mux.HandleFunc("/admin/static/", s.serveStatic)
 	return s
 }
 
@@ -72,12 +82,7 @@ func (s *SetupServer) loadTemplates() *template.Template {
 }
 
 func (s *SetupServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", s.SetupPage)
-	mux.HandleFunc("/api/setup/status", s.IsInstalled)
-	mux.HandleFunc("/api/setup", s.Setup)
-	mux.HandleFunc("/admin/static/", s.serveStatic)
-	mux.ServeHTTP(w, r)
+	s.mux.ServeHTTP(w, r)
 }
 
 func (s *SetupServer) serveStatic(w http.ResponseWriter, r *http.Request) {
@@ -284,6 +289,12 @@ func (s *SetupServer) writeConfig(req setupRequest, secretKey string) error {
 }
 
 func (s *SetupServer) checkAdminExists() bool {
+	s.adminCheckMu.Lock()
+	defer s.adminCheckMu.Unlock()
+	if s.adminChecked {
+		return s.adminExists
+	}
+
 	cfgPath := filepath.Join(s.paths.ConfigsDir, "default.yaml")
 	cfg, err := config.Load(cfgPath)
 	if err != nil {
@@ -297,7 +308,9 @@ func (s *SetupServer) checkAdminExists() bool {
 	defer db.Close()
 
 	authService := service.NewAuthService(db.Users, cfg.Security, nil)
-	return authService.HasAdmin(context.Background())
+	s.adminExists = authService.HasAdmin(context.Background())
+	s.adminChecked = true
+	return s.adminExists
 }
 
 func generateSecretKey() string {

@@ -31,20 +31,20 @@ func Logging(logger *slog.Logger) func(http.Handler) http.Handler {
 
 			next.ServeHTTP(sw, r)
 
-			duration := time.Since(start)
-			attrs := []slog.Attr{
-				slog.Int("status", sw.status),
-				slog.String("method", r.Method),
-				slog.String("path", r.URL.Path),
-				slog.Duration("latency", duration),
-			}
+			if sw.status >= 400 {
+				duration := time.Since(start)
+				attrs := []slog.Attr{
+					slog.Int("status", sw.status),
+					slog.String("method", r.Method),
+					slog.String("path", r.URL.Path),
+					slog.Duration("latency", duration),
+				}
 
-			if sw.status >= 500 {
-				logger.LogAttrs(r.Context(), slog.LevelError, "SERVER_ERROR", attrs...)
-			} else if sw.status >= 400 {
-				logger.LogAttrs(r.Context(), slog.LevelWarn, "CLIENT_ERROR", attrs...)
-			} else {
-				logger.LogAttrs(r.Context(), slog.LevelInfo, r.Method+" "+r.URL.Path, attrs...)
+				if sw.status >= 500 {
+					logger.LogAttrs(r.Context(), slog.LevelError, "SERVER_ERROR", attrs...)
+				} else {
+					logger.LogAttrs(r.Context(), slog.LevelWarn, "CLIENT_ERROR", attrs...)
+				}
 			}
 		})
 	}

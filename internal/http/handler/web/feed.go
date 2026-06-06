@@ -71,7 +71,7 @@ func (h *PageHandler) RSS(w http.ResponseWriter, r *http.Request) {
 func (h *PageHandler) Sitemap(w http.ResponseWriter, r *http.Request) {
 	siteInfo := h.getSiteInfo(r)
 
-	posts, _, err := h.postService.ListByType(r.Context(), "post", 1, 1000, "published")
+	posts, err := h.postService.ListSlugs(r.Context(), "post", "published", 500)
 	if err != nil {
 		http.Error(w, "failed to load posts", http.StatusInternalServerError)
 		return
@@ -135,14 +135,15 @@ func escapeXML(s string) string {
 func (h *PageHandler) getSiteInfo(r *http.Request) SiteInfo {
 	siteInfo := h.siteInfo
 	if h.options != nil {
-		if title, err := h.options.Get(r.Context(), "site_title"); err == nil && title != "" {
-			siteInfo.Title = title
+		opts, _ := h.options.GetMulti(r.Context(), []string{"site_title", "site_description", "site_url"})
+		if v, ok := opts["site_title"]; ok && v != "" {
+			siteInfo.Title = v
 		}
-		if desc, err := h.options.Get(r.Context(), "site_description"); err == nil && desc != "" {
-			siteInfo.Description = desc
+		if v, ok := opts["site_description"]; ok && v != "" {
+			siteInfo.Description = v
 		}
-		if url, err := h.options.Get(r.Context(), "site_url"); err == nil && url != "" {
-			siteInfo.URL = url
+		if v, ok := opts["site_url"]; ok && v != "" {
+			siteInfo.URL = v
 		}
 	}
 	return siteInfo

@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -103,16 +102,17 @@ func (h *AdminHandler) render(w http.ResponseWriter, r *http.Request, name strin
 	}
 	lang := "en"
 	if h.options != nil {
-		if title, err := h.options.Get(context.Background(), "site_title"); err == nil && title != "" {
-			data["site_title"] = title
+		opts, _ := h.options.GetMulti(r.Context(), []string{"site_title", "site_icon", "site_language"})
+		if v, ok := opts["site_title"]; ok && v != "" {
+			data["site_title"] = v
 		} else {
 			data["site_title"] = "Polaris"
 		}
-		if icon, err := h.options.Get(context.Background(), "site_icon"); err == nil && icon != "" {
-			data["site_icon"] = icon
+		if v, ok := opts["site_icon"]; ok && v != "" {
+			data["site_icon"] = v
 		}
-		if siteLang, err := h.options.Get(context.Background(), "site_language"); err == nil && siteLang != "" {
-			lang = siteLang
+		if v, ok := opts["site_language"]; ok && v != "" {
+			lang = v
 		}
 	} else {
 		data["site_title"] = "Polaris"
@@ -299,9 +299,10 @@ func (h *AdminHandler) SettingsPage(w http.ResponseWriter, r *http.Request) {
 		"site_url":         "http://localhost:8080",
 		"site_language":    "en",
 	}
-	for _, key := range []string{"site_title", "site_description", "site_url", "site_icon", "site_language"} {
-		if val, err := h.options.Get(r.Context(), key); err == nil && val != "" {
-			settings[key] = val
+	opts, _ := h.options.GetMulti(r.Context(), []string{"site_title", "site_description", "site_url", "site_icon", "site_language"})
+	for k, v := range opts {
+		if v != "" {
+			settings[k] = v
 		}
 	}
 	data := map[string]interface{}{
