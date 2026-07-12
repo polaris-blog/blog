@@ -2,6 +2,7 @@ package gorm
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/polaris-blog/blog/internal/model"
 	"github.com/polaris-blog/blog/internal/repository"
@@ -142,6 +143,13 @@ func (r *CommentRepo) List(ctx context.Context, opts repository.ListOptions) (*r
 	query := r.db.WithContext(ctx).Model(&model.Comment{})
 	if opts.Status != "" {
 		query = query.Where("status = ?", opts.Status)
+	}
+	allowedColumns := map[string]bool{"post_id": true, "status": true, "author_id": true}
+	for k, v := range opts.Filters {
+		if !allowedColumns[k] {
+			continue
+		}
+		query = query.Where(fmt.Sprintf("\"%s\" = ?", k), v)
 	}
 	if err := query.Count(&total).Error; err != nil {
 		return nil, err
