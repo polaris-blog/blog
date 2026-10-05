@@ -52,11 +52,7 @@ pub async fn submit(
         .map(|p| p.slug == form.post_slug)
         .unwrap_or(false);
     if !post_ok {
-        return Ok((
-            StatusCode::NOT_FOUND,
-            crate::i18n::tr_or("post not found"),
-        )
-            .into_response());
+        return Ok((StatusCode::NOT_FOUND, crate::i18n::tr_or("post not found")).into_response());
     }
     // Simple per-IP rate limit (5 submissions per 15 minutes).
     let ip =

@@ -362,7 +362,10 @@ async fn navigation_page_lists_system_entries_and_saves_custom_links() {
     let html = body(resp).await;
     assert!(html.contains("System navigation"), "system section present");
     assert!(html.contains("Custom links"), "custom section present");
-    assert!(html.contains("sys_enabled"), "visibility checkboxes present");
+    assert!(
+        html.contains("sys_enabled"),
+        "visibility checkboxes present"
+    );
     assert!(html.contains("sys_url"), "system rows carry their URL key");
     assert!(html.contains("nav-badge-page"), "published pages listed");
     assert!(html.contains("nav-edit-list"), "list-style editor present");
@@ -389,7 +392,10 @@ async fn navigation_page_lists_system_entries_and_saves_custom_links() {
     assert_eq!(resp.status(), StatusCode::SEE_OTHER);
 
     let stored = app.settings.get("site.navigation").expect("stored value");
-    assert!(stored.contains("\"label\":\"Docs\""), "label stored: {stored}");
+    assert!(
+        stored.contains("\"label\":\"Docs\""),
+        "label stored: {stored}"
+    );
     assert!(stored.contains("\"url\":\"/docs\""), "url stored: {stored}");
 
     let html = body(get_with_session(&router, "/admin/navigation", &session).await).await;
@@ -453,7 +459,10 @@ async fn navigation_rss_entry_follows_theme_config() {
 
     let html = body(get_with_session(&router, "/admin/navigation", &session).await).await;
     assert!(html.contains("rss.xml"), "rss entry listed");
-    assert!(html.contains("nav-badge-theme"), "rss marked as theme-driven");
+    assert!(
+        html.contains("nav-badge-theme"),
+        "rss marked as theme-driven"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -560,7 +569,15 @@ async fn nested_comments_validate_parent_and_render_depth() {
     };
 
     // Top-level comment, then approve it.
-    let resp = submit(&router, format!("post_id={}&post_slug=hello-polaris&name=Ann&email=&url=&content=Top+level", seeded.id), 40050).await;
+    let resp = submit(
+        &router,
+        format!(
+            "post_id={}&post_slug=hello-polaris&name=Ann&email=&url=&content=Top+level",
+            seeded.id
+        ),
+        40050,
+    )
+    .await;
     assert_eq!(resp.status(), StatusCode::SEE_OTHER);
     let top_id = approve_latest(&app, "Top level").await;
 
@@ -628,10 +645,16 @@ async fn setup_wizard_creates_first_admin() {
     let resp = send(&router, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
     let html = body(resp).await;
-    assert!(html.contains("Environment configuration saved"), "saved banner");
+    assert!(
+        html.contains("Environment configuration saved"),
+        "saved banner"
+    );
 
     let raw = std::fs::read_to_string(dir.path().join("polaris.toml")).expect("config written");
-    assert!(raw.contains("[setup]") && raw.contains("env_done = true"), "marker written");
+    assert!(
+        raw.contains("[setup]") && raw.contains("env_done = true"),
+        "marker written"
+    );
     assert!(raw.contains("sqlite"), "database driver written");
 
     // Step 2 now renders (administrator account).
@@ -653,7 +676,10 @@ async fn setup_wizard_creates_first_admin() {
     let resp = send(&router, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
     let html = body(resp).await;
-    assert!(html.contains("Passwords do not match"), "mismatch error shown");
+    assert!(
+        html.contains("Passwords do not match"),
+        "mismatch error shown"
+    );
 
     // Successful install: creates the admin, seeds content, redirects to login.
     let req = Request::builder()
@@ -684,7 +710,9 @@ async fn setup_wizard_creates_first_admin() {
         .method("POST")
         .uri("/admin/setup")
         .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
-        .body(Body::from("csrf=&site_title=X&username=hax&password=password123&password_confirm=password123"))
+        .body(Body::from(
+            "csrf=&site_title=X&username=hax&password=password123&password_confirm=password123",
+        ))
         .unwrap();
     assert_eq!(send(&router, req).await.status(), StatusCode::SEE_OTHER);
 

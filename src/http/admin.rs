@@ -217,9 +217,7 @@ fn human_duration(secs: i64) -> String {
 
 async fn login_page(app: &App, error: &str) -> Response {
     // Fresh instance: send visitors to the setup wizard instead.
-    if app.needs_setup()
-        && repositories::users::count(&app.db).await.unwrap_or(0) == 0
-    {
+    if app.needs_setup() && repositories::users::count(&app.db).await.unwrap_or(0) == 0 {
         return Redirect::to("/admin/setup").into_response();
     }
     let csrf = cookies::random_token(32);
@@ -253,7 +251,8 @@ async fn login_submit(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
     Form(form): Form<auth::LoginForm>,
-) -> Response {    if !auth::login_csrf_ok(&headers, &form.csrf) {
+) -> Response {
+    if !auth::login_csrf_ok(&headers, &form.csrf) {
         return login_page(&app, "Invalid or expired form token — please try again.").await;
     }
     let ip =
@@ -398,17 +397,27 @@ fn setup_page(
     ctx.insert("v_sqlite_path", &def("sqlite_path", sqlite_default));
     ctx.insert(
         "v_db_port",
-        &def("db_port", if db.driver == "postgres" { "5432" } else { "3306" }),
+        &def(
+            "db_port",
+            if db.driver == "postgres" {
+                "5432"
+            } else {
+                "3306"
+            },
+        ),
     );
     ctx.insert("v_db_host", &def("db_host", "127.0.0.1"));
     ctx.insert("v_db_user", &def("db_user", "polaris"));
     ctx.insert("v_db_name", &def("db_name", "polaris"));
     ctx.insert(
         "v_cache_enabled",
-        &values
-            .get("cache_enabled")
-            .cloned()
-            .unwrap_or_else(|| if cache.enabled { "on".into() } else { String::new() }),
+        &values.get("cache_enabled").cloned().unwrap_or_else(|| {
+            if cache.enabled {
+                "on".into()
+            } else {
+                String::new()
+            }
+        }),
     );
     ctx.insert("v_cache_driver", &def("cache_driver", &cache.driver));
     ctx.insert("v_redis_url", &def("redis_url", &cache.redis.url));
@@ -653,9 +662,12 @@ async fn setup_submit(
         let msg = tr("setup.error.site_title");
         return Ok(setup_page(&app, "admin", &msg, false, &values));
     }
-    if !form.username.trim().chars().all(|c| {
-        c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.'
-    }) || form.username.trim().is_empty()
+    if !form
+        .username
+        .trim()
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
+        || form.username.trim().is_empty()
         || form.username.trim().chars().count() > 64
     {
         let msg = tr("setup.error.username");
@@ -671,8 +683,14 @@ async fn setup_submit(
     }
 
     let locale = crate::i18n::normalize(&form.site_locale);
-    match services::users::create_user(&app, &form.username, &form.email, &form.password, Role::Admin)
-        .await
+    match services::users::create_user(
+        &app,
+        &form.username,
+        &form.email,
+        &form.password,
+        Role::Admin,
+    )
+    .await
     {
         Ok(_) => {
             let setting_values: HashMap<String, String> = [
@@ -804,7 +822,10 @@ async fn cache_clear(
         }
         Err(e) => Ok(redirect_err(
             "/admin",
-            &crate::i18n::tr("admin.flash.cache_clear_failed", &[("error", &e.to_string())]),
+            &crate::i18n::tr(
+                "admin.flash.cache_clear_failed",
+                &[("error", &e.to_string())],
+            ),
         )),
     }
 }
@@ -851,10 +872,7 @@ async fn search_page(
         Err(e) => {
             return Ok(redirect_err(
                 "/admin",
-                &crate::i18n::tr(
-                    "admin.flash.search_unavailable",
-                    &[("error", &e.message())],
-                ),
+                &crate::i18n::tr("admin.flash.search_unavailable", &[("error", &e.message())]),
             ));
         }
     };
@@ -948,10 +966,7 @@ async fn search_rebuild(
         }
         Err(e) => Ok(redirect_err(
             "/admin/search",
-            &crate::i18n::tr(
-                "admin.flash.rebuild_failed",
-                &[("error", &e.message())],
-            ),
+            &crate::i18n::tr("admin.flash.rebuild_failed", &[("error", &e.message())]),
         )),
     }
 }
@@ -2380,10 +2395,7 @@ async fn navigation_page(
     for item in system_nav.iter_mut() {
         let url = item["url"].as_str().unwrap_or_default().to_owned();
         let ov = sys_overrides.get(&url).cloned().unwrap_or_default();
-        item["hidden"] = ov
-            .get("hidden")
-            .cloned()
-            .unwrap_or(json!(false));
+        item["hidden"] = ov.get("hidden").cloned().unwrap_or(json!(false));
         item["label_override"] = ov.get("label").cloned().unwrap_or(json!(""));
     }
     let rows: Vec<serde_json::Value> = app
@@ -2498,7 +2510,9 @@ async fn navigation_save(
         .map_err(|e| AppError::Internal(anyhow::anyhow!("navigation serialization failed: {e}")))?;
     app.settings.set(&app.db, "site.navigation", &value).await?;
     let sys_value = serde_json::to_string(&sys_overrides).map_err(|e| {
-        AppError::Internal(anyhow::anyhow!("navigation overrides serialization failed: {e}"))
+        AppError::Internal(anyhow::anyhow!(
+            "navigation overrides serialization failed: {e}"
+        ))
     })?;
     app.settings
         .set(&app.db, "site.navigation.system", &sys_value)
@@ -2590,7 +2604,10 @@ async fn settings_save(
             "comments.moderate".to_string(),
             (form.comments_moderate == "on").to_string(),
         ),
-        ("site.locale".to_string(), crate::i18n::normalize(&form.site_locale)),
+        (
+            "site.locale".to_string(),
+            crate::i18n::normalize(&form.site_locale),
+        ),
     ]
     .into_iter()
     .collect();

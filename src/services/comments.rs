@@ -57,9 +57,7 @@ pub async fn create(app: &App, input: NewComment, moderate: bool) -> AppResult<C
                 .await?
                 .map(|ancestor| ancestor.parent_id)
                 .ok_or_else(|| {
-                    AppError::BadRequest(
-                        "the comment you replied to is no longer available".into(),
-                    )
+                    AppError::BadRequest("the comment you replied to is no longer available".into())
                 })?;
         }
     }
