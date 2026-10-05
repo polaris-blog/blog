@@ -1,0 +1,123 @@
+# Polaris default theme — configuration schema.
+#
+# Polaris generates the admin settings page (Appearance → Themes → default →
+# Settings) from this file and validates saved values against it. Templates
+# read effective values via {{ theme.config.<key> }}.
+#
+# Priority (later wins): schema default → config.toml → database (admin UI)
+# → environment (POLARIS_THEME_DEFAULT_<KEY>).
+
+[groups.appearance]
+label = "Appearance"
+
+[groups.layout]
+label = "Layout"
+
+[groups.social]
+label = "Social"
+
+[groups.footer]
+label = "Footer"
+
+[groups.carousel]
+label = "Homepage carousel"
+
+# --- Appearance -----------------------------------------------------------
+
+[accent_color]
+type = "color"
+label = "Accent color"
+description = "Interactive color only — links, buttons and focus rings (Apple Blue by default)."
+default = "#0071e3"
+group = "appearance"
+
+[dark_mode]
+type = "boolean"
+label = "Dark mode"
+description = "Follow the visitor's system preference for a dark color scheme."
+default = true
+group = "appearance"
+
+[show_rss_link]
+type = "boolean"
+label = "RSS link in navigation"
+default = true
+group = "appearance"
+
+# --- Homepage carousel ----------------------------------------------------
+
+[carousel]
+type = "array"
+label = "Carousel slides"
+description = "Ordered slides: image is required; title, description and an optional https:// link can be provided. Use [] to hide."
+group = "carousel"
+default = []
+
+[carousel.item.image]
+type = "image"
+label = "Image URL"
+required = true
+
+[carousel.item.title]
+type = "string"
+label = "Title"
+
+[carousel.item.description]
+type = "text"
+label = "Description"
+
+[carousel.item.url]
+type = "url"
+label = "Link URL"
+
+[carousel_autoplay]
+type = "boolean"
+label = "Automatically play slides"
+default = true
+group = "carousel"
+
+[carousel_interval]
+type = "integer"
+label = "Seconds between slides"
+default = 6
+min = 3
+max = 30
+group = "carousel"
+
+# --- Layout ---------------------------------------------------------------
+
+[layout]
+type = "select"
+label = "Content width"
+description = "Wide stretches the content column on large screens."
+default = "default"
+group = "layout"
+options = [
+    { value = "default", label = "Default" },
+    { value = "wide", label = "Wide" },
+]
+
+# --- Social ---------------------------------------------------------------
+
+[social_links]
+type = "array"
+label = "Social links"
+description = "Shown in the footer."
+group = "social"
+
+[social_links.item.label]
+type = "string"
+label = "Label"
+
+[social_links.item.url]
+type = "url"
+label = "URL"
+
+# --- Footer ----------------------------------------------------------------
+
+[footer_text]
+type = "text"
+label = "Footer note"
+description = "Optional extra line in the footer."
+default = ""
+group = "footer"

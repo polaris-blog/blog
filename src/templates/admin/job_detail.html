@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ job.name }}{% endblock title %}
+{% block content %}
+<p><a href="/admin/jobs">Jobs</a></p>
+<div class="page-head"><h1 class="job-wrap">{{ job.name }}</h1><span>{{ job.status }}{% if job.paused %} / paused{% endif %}</span></div>
+<div class="actions job-controls">
+{% if job.status != 'running' %}<a class="btn" href="/admin/jobs/{{ job.id }}/run">{{ t(key="admin.action.run_now") }}</a>{% endif %}
+{% if job.status == 'pending' or job.status == 'running' %}
+{% if job.paused %}<a class="btn btn-secondary" href="/admin/jobs/{{ job.id }}/resume">{{ t(key="admin.action.resume") }}</a>{% else %}<a class="btn btn-secondary" href="/admin/jobs/{{ job.id }}/pause">{{ t(key="admin.action.pause") }}</a>{% endif %}
+<a class="btn btn-danger" href="/admin/jobs/{{ job.id }}/cancel">{{ t(key="admin.action.cancel") }}</a>
+{% endif %}
+{% if job.status == 'failed' %}<a class="btn" href="/admin/jobs/{{ job.id }}/retry">{{ t(key="admin.action.retry") }}</a>{% endif %}
+{% if job.status == 'success' or job.status == 'failed' or job.status == 'cancelled' %}<a class="btn btn-danger" href="/admin/jobs/{{ job.id }}/delete">{{ t(key="admin.action.delete") }}</a>{% endif %}
+</div>
+{% if job.cancel_requested and job.status == 'running' %}<p class="flash">{{ t(key="admin.jobs.cancellation_requested") }}</p>{% endif %}
+<dl class="job-meta">
+<dt>{{ t(key="admin.jobs.id") }}</dt><dd>{{ job.id }}</dd><dt>{{ t(key="admin.jobs.type") }}</dt><dd>{{ job.type }}</dd>
+<dt>{{ t(key="admin.jobs.owner") }}</dt><dd>{{ job.owner | default(value="Core") }}</dd>
+<dt>{{ t(key="admin.jobs.th_priority") }}</dt><dd>{{ job.priority }}</dd>
+<dt>{{ t(key="admin.jobs.created") }}</dt><dd>{{ job.created_at | date(format="datetime") }}</dd>
+<dt>{{ t(key="admin.jobs.updated") }}</dt><dd>{{ job.updated_at | date(format="datetime") }}</dd>
+<dt>{{ t(key="admin.jobs.started") }}</dt><dd>{% if job.started_at %}{{ job.started_at | date(format="datetime") }}{% else %}-{% endif %}</dd>
+<dt>{{ t(key="admin.jobs.finished") }}</dt><dd>{% if job.finished_at %}{{ job.finished_at | date(format="datetime") }}{% else %}-{% endif %}</dd>
+<dt>{{ t(key="admin.jobs.th_next_run") }}</dt><dd>{% if job.status == 'pending' %}{{ job.run_at | date(format="datetime") }}{% else %}-{% endif %}</dd>
+<dt>{{ t(key="admin.jobs.cron") }}</dt><dd>{{ job.cron | default(value="Once") }} / {{ job.timezone }}</dd>
+<dt>{{ t(key="admin.jobs.retries") }}</dt><dd>{{ job.retry_count }} / {{ job.max_retries }} ({{ job.retry_strategy }}, {{ job.retry_interval }}s, max {{ job.max_backoff }}s)</dd>
+<dt>{{ t(key="admin.jobs.timeout") }}</dt><dd>{{ job.timeout }}s</dd>
+<dt>{{ t(key="admin.jobs.last_error") }}</dt><dd>{{ job.last_error | default(value="None") }}</dd>
+</dl>
+<details><summary>{{ t(key="admin.jobs.payload") }}</summary><pre class="job-wrap">{{ payload }}</pre></details>
+<h2>{{ t(key="admin.jobs.executions") }}</h2>
+<div class="jobs-table"><table><thead><tr><th>{{ t(key="admin.th.status") }}</th><th>{{ t(key="admin.jobs.th_started") }}</th><th>{{ t(key="admin.jobs.th_finished") }}</th><th>{{ t(key="admin.jobs.th_duration") }}</th><th>{{ t(key="admin.jobs.th_error") }}</th></tr></thead><tbody>
+{% for attempt in attempts %}<tr><td>{{ attempt.status }}</td><td>{{ attempt.started_at | date(format="datetime") }}</td>
+<td>{% if attempt.finished_at %}{{ attempt.finished_at | date(format="datetime") }}{% else %}-{% endif %}</td>
+<td>{% if attempt.finished_at %}{{ attempt.finished_at - attempt.started_at }}s{% else %}-{% endif %}</td>
+<td class="job-wrap">{{ attempt.error | default(value="") }}</td></tr>
+{% else %}<tr><td colspan="5" class="muted">{{ t(key="admin.jobs.no_executions") }}</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock content %}

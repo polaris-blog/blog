@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Backups{% endblock title %}
+{% block content %}
+<h1>{{ t(key="admin.page.backups") }}</h1>
+<p class="muted">
+  Archives live in <code>{{ backup_dir }}</code> (storage: {{ storage_provider }}).
+  Every archive carries a versioned manifest with per-file SHA-256 checksums.
+  Restores verify first, snapshot the current database, and then swap.
+</p>
+
+<div class="panel">
+  <h2>{{ t(key="admin.backups.create_title") }}</h2>
+  <form method="post" action="/admin/backups/create" class="inline-form">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>{{ t(key="admin.backups.kind") }}
+      <select name="kind">
+        <option value="full">{{ t(key="admin.backups.kind_full") }}</option>
+        <option value="database">{{ t(key="admin.backups.kind_database") }}</option>
+        <option value="media">{{ t(key="admin.backups.kind_media") }}</option>
+      </select>
+    </label>
+    <button type="submit" class="btn">{{ t(key="admin.action.create") }}</button>
+  </form>
+</div>
+
+<div class="panel">
+  <h2>{{ t(key="admin.backups.upload_title") }}</h2>
+  <p class="muted">
+    Verify-only checks the archive without importing it. Imports must pass
+    integrity verification first. Max {{ max_upload }}.
+  </p>
+  <form method="post" action="/admin/backups/upload" enctype="multipart/form-data" class="stack">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="file" name="file" accept=".zip" required>
+    <label class="check"><input type="checkbox" name="verify_only" value="1"> {{ t(key="admin.backups.verify_only") }}</label>
+    <button type="submit" class="btn">{{ t(key="admin.action.upload") }}</button>
+  </form>
+</div>
+
+<div class="panel">
+  <h2>{{ t(key="admin.backups.auto_title") }}</h2>
+  <form method="post" action="/admin/backups/schedule" class="stack">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label class="check"><input type="checkbox" class="switch" name="enabled" {% if schedule.enabled %}checked{% endif %}> {{ t(key="admin.backups.enable_auto") }}</label>
+    <div class="form-grid">
+      <label>{{ t(key="admin.backups.interval") }}
+        <input type="number" name="interval_hours" min="1" value="{{ schedule.interval_hours }}" required>
+      </label>
+      <label>{{ t(key="admin.backups.kind") }}
+        <select name="kind">
+          <option value="full" {% if schedule.kind == 'full' %}selected{% endif %}>{{ t(key="admin.backups.kind_full") }}</option>
+          <option value="database" {% if schedule.kind == 'database' %}selected{% endif %}>{{ t(key="admin.backups.kind_database") }}</option>
+          <option value="media" {% if schedule.kind == 'media' %}selected{% endif %}>{{ t(key="admin.backups.kind_media") }}</option>
+        </select>
+      </label>
+      <label>{{ t(key="admin.backups.keep") }}
+        <input type="number" name="keep" min="1" value="{{ schedule.keep }}" required>
+      </label>
+    </div>
+    <button type="submit" class="btn">{{ t(key="admin.action.save") }}</button>
+  </form>
+</div>
+
+<div class="panel">
+  <h2>{{ t(key="admin.backups.stored_title") }}</h2>
+  {% if not backups %}
+  <p class="muted">{{ t(key="admin.backups.no_backups") }}</p>
+  {% else %}
+  <table>
+    <thead>
+      <tr>
+        <th>{{ t(key="admin.backups.th_file") }}</th><th>{{ t(key="admin.backups.th_kind") }}</th><th>{{ t(key="admin.backups.th_created") }}</th><th>{{ t(key="admin.backups.th_by") }}</th><th>Polaris</th>
+        <th>{{ t(key="admin.backups.th_contents") }}</th><th>{{ t(key="admin.media.size") }}</th><th>{{ t(key="admin.backups.th_actions") }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for b in backups %}
+      <tr>
+        <td><code>{{ b.name }}</code></td>
+        <td>{{ b.kind }}</td>
+        {% if b.ok %}
+        <td>{{ b.created }}</td>
+        <td>{{ b.created_by }}</td>
+        <td>{{ b.version }}</td>
+        <td class="muted">
+          {{ b.files }} file(s)
+          {% if b.includes.database %}· db{% endif %}
+          {% if b.includes.media %}· {{ b.media_files }} media{% endif %}
+          {% if b.includes.themes %}· themes{% endif %}
+          {% if b.includes.plugins %}· plugins{% endif %}
+        </td>
+        <td>{{ b.size }}</td>
+        <td class="actions">
+          <a href="/admin/backups/{{ b.name }}/download">{{ t(key="admin.action.download") }}</a>
+          <a href="/admin/backups/{{ b.name }}/verify">{{ t(key="admin.action.verify") }}</a>
+          <a href="/admin/backups/{{ b.name }}/restore">{{ t(key="admin.action.restore") }}…</a>
+          <form method="post" action="/admin/backups/{{ b.name }}/delete"
+                data-confirm="Delete backup '{{ b.name }}'? This cannot be undone.">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <button type="submit" class="btn-danger btn-sm">{{ t(key="admin.action.delete") }}</button>
+          </form>
+        </td>
+        {% else %}
+        <td colspan="6" class="form-error">{{ b.error }}</td>
+        <td>{{ b.size }}</td>
+        <td class="muted">{{ t(key="admin.backups.unusable") }}</td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock content %}

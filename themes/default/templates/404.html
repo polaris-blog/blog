@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-section">
+  <div class="container">
+    <div class="empty-state">
+      <div class="empty-star" aria-hidden="true">✦</div>
+      <p class="headline">404</p>
+      <p>{{ t(key="notfound.text") }}</p>
+      <p><a class="link-arrow" href="/">{{ t(key="notfound.back") }}</a></p>
+    </div>
+  </div>
+</section>
+{% endblock content %}

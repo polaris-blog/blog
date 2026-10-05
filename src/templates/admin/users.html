@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Users{% endblock title %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ t(key="admin.page.users") }}</h1>
+  <a class="btn" href="/admin/users/new">{{ t(key="admin.action.new_user") }}</a>
+</div>
+
+{% if users %}
+<table>
+  <thead>
+    <tr><th>{{ t(key="admin.th.username") }}</th><th>{{ t(key="admin.th.display_name") }}</th><th>{{ t(key="admin.th.email") }}</th><th>{{ t(key="admin.th.role") }}</th><th>{{ t(key="admin.th.joined") }}</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for u in users %}
+    <tr>
+      <td><a href="/admin/users/{{ u.id }}/edit">{{ u.username }}</a>{% if u.is_self %} <span class="muted">{{ t(key="admin.users.you") }}</span>{% endif %}</td>
+      <td>{{ u.display_name }}</td>
+      <td class="muted">{{ u.email }}</td>
+      <td><span class="badge badge-role-{{ u.role }}">{{ t(key="role." ~ u.role) }}</span></td>
+      <td class="muted">{{ u.created }}</td>
+      <td class="actions">
+        <a class="btn btn-secondary btn-sm" href="/admin/users/{{ u.id }}/edit">{{ t(key="admin.action.edit") }}</a>
+        {% if not u.is_self %}
+        <form method="post" action="/admin/users/{{ u.id }}/delete">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button type="submit" class="btn btn-danger btn-sm">{{ t(key="admin.action.delete") }}</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">{{ t(key="admin.users.empty") }}</p>
+{% endif %}
+
+<div class="panel">
+  <h2>{{ t(key="admin.roles.title") }}</h2>
+  <ul class="roles-list">
+    <li><span class="badge badge-role-admin">admin</span><span>{{ t(key="admin.roles.admin") }}</span></li>
+    <li><span class="badge badge-role-editor">editor</span><span>{{ t(key="admin.roles.editor") }}</span></li>
+    <li><span class="badge badge-role-author">author</span><span>{{ t(key="admin.roles.author") }}</span></li>
+  </ul>
+</div>
+{% endblock content %}

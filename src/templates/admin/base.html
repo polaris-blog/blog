@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Dashboard{% endblock title %} · {{ site_title }}</title>
+<link rel="stylesheet" href="/admin/static/style.css">
+<script src="/admin/static/admin.js" defer></script>
+<script src="/admin/static/highlight.js" defer></script>
+{% block head %}{% endblock head %}
+</head>
+<body data-copy-label="{{ t(key='code.copy') }}" data-copied-label="{{ t(key='code.copied') }}">
+<a class="skip-link" href="#main-content">{{ t(key="admin.skip_to_content") }}</a>
+<div class="shell">
+  <aside class="sidebar">
+    <a class="brand" href="/admin">✦ {{ site_title }}</a>
+    <nav class="menu">
+      <a href="/admin" class="{% if active == 'dashboard' %}active{% endif %}">{{ t(key="admin.nav.dashboard") }}</a>
+
+      <span class="menu-group">{{ t(key="admin.group.content") }}</span>
+      <a href="/admin/posts" class="{% if active == 'posts' %}active{% endif %}">{{ t(key="admin.nav.posts") }}</a>
+      <a href="/admin/pages" class="{% if active == 'pages' %}active{% endif %}">{{ t(key="admin.nav.pages") }}</a>
+      <a href="/admin/terms" class="{% if active == 'terms' %}active{% endif %}">{{ t(key="admin.nav.terms") }}</a>
+      <a href="/admin/comments" class="{% if active == 'comments' %}active{% endif %}">{{ t(key="admin.nav.comments") }}</a>
+      <a href="/admin/media" class="{% if active == 'media' %}active{% endif %}">{{ t(key="admin.nav.media") }}</a>
+      <a href="/admin/search" class="{% if active == 'search' %}active{% endif %}">{{ t(key="admin.nav.search") }}</a>
+
+      {% if user.role == 'admin' %}
+      <span class="menu-group">{{ t(key="admin.group.system") }}</span>
+      <a href="/admin/navigation" class="{% if active == 'navigation' %}active{% endif %}">{{ t(key="admin.nav.navigation") }}</a>
+      <a href="/admin/themes" class="{% if active == 'themes' %}active{% endif %}">{{ t(key="admin.nav.themes") }}</a>
+      <a href="/admin/plugins" class="{% if active == 'plugins' %}active{% endif %}">{{ t(key="admin.nav.plugins") }}</a>
+      <a href="/admin/settings" class="{% if active == 'settings' %}active{% endif %}">{{ t(key="admin.nav.settings") }}</a>
+      {% for link in plugin_admin_links %}
+      <a href="{{ link.url }}">{{ link.label }}</a>
+      {% endfor %}
+
+      <span class="menu-group">{{ t(key="admin.group.administration") }}</span>
+      <a href="/admin/backups" class="{% if active == 'backups' %}active{% endif %}">{{ t(key="admin.nav.backups") }}</a>
+      <a href="/admin/jobs" class="{% if active == 'jobs' %}active{% endif %}">{{ t(key="admin.nav.jobs") }}</a>
+      <a href="/admin/users" class="{% if active == 'users' %}active{% endif %}">{{ t(key="admin.nav.users") }}</a>
+      {% endif %}
+    </nav>
+    <div class="sidebar-foot">
+      <a href="/" target="_blank">{{ t(key="admin.action.view_site") }} ↗</a>
+      <a href="/admin/profile">{{ user.display_name }} · {{ user.role }}</a>
+      <form method="post" action="/admin/logout">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <button type="submit" class="linkish">{{ t(key="admin.action.sign_out") }}</button>
+      </form>
+    </div>
+  </aside>
+  <main class="content" id="main-content" tabindex="-1">
+    {% if ok %}<div class="flash flash-ok" role="status">{{ ok }}</div>{% endif %}
+    {% if err %}<div class="flash flash-err" role="alert">{{ err }}</div>{% endif %}
+    {% if form_error %}<div class="form-error" role="alert">{{ form_error }}</div>{% endif %}
+    {% block content %}{% endblock content %}
+  </main>
+</div>
+</body>
+</html>

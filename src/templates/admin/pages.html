@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Pages{% endblock title %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ t(key="admin.page.pages") }}</h1>
+  <a class="btn" href="/admin/pages/new">{{ t(key="admin.action.new_page") }}</a>
+</div>
+
+{% if pages %}
+<table>
+  <thead>
+    <tr><th>{{ t(key="admin.th.title") }}</th><th>{{ t(key="admin.th.slug") }}</th><th>{{ t(key="admin.th.status") }}</th><th>{{ t(key="admin.th.order") }}</th><th>{{ t(key="admin.th.updated") }}</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for p in pages %}
+    <tr>
+      <td><a href="/admin/pages/{{ p.id }}/edit">{{ p.title }}</a></td>
+      <td class="muted">/{{ p.slug }}</td>
+      <td><span class="badge badge-{{ p.status }}">{{ t(key="status." ~ p.status) }}</span></td>
+      <td>{{ p.sort_order }}</td>
+      <td class="muted">{{ p.updated }}</td>
+      <td class="actions">
+        <a class="btn btn-secondary btn-sm" href="/{{ p.slug }}" target="_blank">{{ t(key="admin.action.view") }}</a>
+        {% if p.can_edit %}
+        <a class="btn btn-secondary btn-sm" href="/admin/pages/{{ p.id }}/edit">{{ t(key="admin.action.edit") }}</a>
+        <form method="post" action="/admin/pages/{{ p.id }}/delete">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button type="submit" class="btn btn-danger btn-sm">{{ t(key="admin.action.delete") }}</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">{{ t(key="admin.pages.empty") }}</p>
+{% endif %}
+{% endblock content %}

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="search-header">
+  <h1>{{ t(key="search.title") }}</h1>
+
+  <form class="search-form" method="get" action="/search" role="search">
+    <div class="search-box">
+      <input type="search" name="q" value="{{ search_query }}" placeholder="{{ t(key='search.placeholder') }}"
+             minlength="2" maxlength="100" required>
+      <button type="submit">{{ t(key="search.button") }}</button>
+    </div>
+    <p class="search-sort">
+      {{ t(key="search.sort_by") }}
+      <select name="sort">
+        {% for s in sorts %}
+        <option value="{{ s }}"{% if s == sort %} selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </p>
+  </form>
+</header>
+
+{% if search_query %}
+<p class="post-meta search-summary"><strong>{{ search_total }}</strong> {{ t(key="search.results_for") }} <em>“{{ search_query }}”</em></p>
+{% endif %}
+
+{% for r in results %}
+<article class="post-list-item">
+  <h2><a href="{{ r.url }}">{{ r.title }}</a></h2>
+  <div class="post-meta">
+    {{ r.date }}{% if r.author %} · {{ r.author }}{% endif %}{% if r.category %} · {{ r.category }}{% endif %}
+    · <span class="badge badge-{{ r.type }}">{{ r.type }}</span>
+  </div>
+  <p class="post-excerpt">{{ r.highlight | safe }}</p>
+</article>
+{% endfor %}
+
+{% if search_query and search_total == 0 %}
+<div class="center search-empty">
+  <p><strong>{{ t(key="search.empty_title") }} “{{ search_query }}”</strong></p>
+  <p>{{ t(key="search.empty_hint") }}</p>
+</div>
+{% endif %}
+
+{% if pagination.pages > 1 %}
+<div class="pager">
+  {% if pagination.has_prev %}
+  <a href="/search?{{ search_qs }}&amp;page={{ pagination.prev }}">{{ t(key="pager.previous") }}</a>
+  {% else %}<span></span>{% endif %}
+  <span>{{ t(key="pager.page_of", current=pagination.current, pages=pagination.pages) }}</span>
+  {% if pagination.has_next %}
+  <a href="/search?{{ search_qs }}&amp;page={{ pagination.next }}">{{ t(key="pager.next") }}</a>
+  {% else %}<span></span>{% endif %}
+</div>
+{% endif %}
+{% endblock content %}

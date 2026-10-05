@@ -1,0 +1,56 @@
+[package]
+name = "polaris"
+version = "0.1.0"
+edition = "2024"
+description = "Polaris — a fast, lightweight, secure and extensible blog engine written in Rust"
+license = "MIT OR Apache-2.0"
+repository = "https://example.com/polaris"
+readme = "README.md"
+
+[dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal", "time", "fs", "io-util"] }
+tokio-util = { version = "0.7", default-features = false, features = ["io"] }
+axum = { version = "0.8", default-features = false, features = ["http1", "tokio", "form", "query", "json", "multipart"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = { version = "0.8", features = ["preserve_order"] }
+aes-gcm = "0.10"
+sha2 = "0.10"
+semver = "1"
+zip = { version = "2", default-features = false, features = ["deflate"] }
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-none", "any", "sqlite", "mysql", "postgres"] }
+tera = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+thiserror = "2"
+anyhow = "1"
+chrono = "0.4"
+chrono-tz = "0.10"
+croner = "3"
+futures-util = "0.3"
+clap = { version = "4", features = ["derive"] }
+argon2 = "0.5"
+pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
+rhai = { version = "1", features = ["sync"] }
+flate2 = "1"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "gif", "webp"] }
+quick-xml = "0.37"
+redis = { version = "1.6.0", default-features = false, features = ["aio", "tokio-comp", "connection-manager"], optional = true }
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"
+tempfile = "3"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
+
+[profile.release]
+# Size/perf budget: fat LTO + one codegen unit + stripped symbols.
+# `panic = "abort"` is deliberately NOT set — the scheduler isolates job
+# panics with `catch_unwind` and must keep unwinding available.
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = true
+
+[features]
+redis = ["dep:redis"]

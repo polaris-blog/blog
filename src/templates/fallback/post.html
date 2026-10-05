@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block content %}
+<article class="full">
+  <h1>{{ post.title }}</h1>
+  <div class="post-meta">
+    {{ post.date }} · {{ post.author }}
+    {% if post.category %} · in <a href="/category/{{ post.category.slug }}">{{ post.category.name }}</a>{% endif %}
+    · {{ post.reading_time }} min read
+  </div>
+
+  <div class="post-content">{{ post.content_html | safe }}</div>
+
+  {% if post.tags %}
+  <ul class="tag-list">
+    {% for t in post.tags %}
+    <li><a href="/tag/{{ t.slug }}">#{{ t.name }}</a></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</article>
+
+{% if comments_enabled %}
+<section class="comments" id="comments">
+  <h2>{{ t(key="comments.title") }} ({{ comments | length }})</h2>
+
+  {% for c in comments %}
+  <div class="comment" id="comment-{{ c.id }}" style="--depth: {{ c.depth }}">
+    <div class="comment-meta">
+      {% if c.author_url %}<a href="{{ c.author_url }}" rel="nofollow noopener">{{ c.author }}</a>{% else %}{{ c.author }}{% endif %}
+      · {{ c.date }}
+    </div>
+    <div>{{ c.content }}</div>
+    <p class="reply"><a href="#comment-form" data-reply="{{ c.id }}" data-author="{{ c.author }}" aria-label="{{ t(key='comments.reply_aria', author=c.author) }}" title="{{ t(key='comments.reply') }}">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
+    </a></p>
+  </div>
+  {% endfor %}
+
+  <form class="comment-form" id="comment-form" method="post" action="/comments">
+    <input type="hidden" name="post_id" value="{{ post.id }}">
+    <input type="hidden" name="post_slug" value="{{ post.slug }}">
+    <input type="hidden" name="parent_id" value="" id="comment-parent">
+    <p class="replying-to" id="replying-to" hidden>
+      {{ t(key="comments.replying_to") }} <strong id="replying-to-name"></strong>
+      <button type="button" id="cancel-reply" class="reply-cancel">{{ t(key="comments.cancel") }}</button>
+    </p>
+    <p class="hp" aria-hidden="true">
+      <label>{{ t(key="comments.honeypot") }}<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+    </p>
+    <label for="c-name">{{ t(key="comments.name") }}</label>
+    <input id="c-name" type="text" name="name" required maxlength="80">
+    <label for="c-email">{{ t(key="comments.email") }}</label>
+    <input id="c-email" type="email" name="email" maxlength="255">
+    <label for="c-url">{{ t(key="comments.website") }}</label>
+    <input id="c-url" type="url" name="url" maxlength="255">
+    <label for="c-content">{{ t(key="comments.comment") }}</label>
+    <textarea id="c-content" name="content" required maxlength="5000"></textarea>
+    <button type="submit">{{ t(key="comments.submit") }}</button>
+  </form>
+</section>
+{% endif %}
+{% endblock content %}

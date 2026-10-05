@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<article class="full">
+  <h1>{{ page.title }}</h1>
+  <div class="post-meta">{{ t(key="post.updated", date=page.date) }}</div>
+  <div class="post-content">{{ page.content_html | safe }}</div>
+</article>
+{% endblock content %}

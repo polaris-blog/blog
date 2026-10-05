@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Restore backup{% endblock title %}
+{% block content %}
+<h1>{{ t(key="admin.page.backups") }} · {{ t(key="admin.action.restore") }}</h1>
+
+<div class="panel">
+  <h2>{{ t(key="admin.restore.archive") }}</h2>
+  <ul class="list-plain">
+    <li><span>File</span><span><code>{{ restore.name }}</code></span></li>
+    <li><span>Kind</span><span>{{ restore.kind }}</span></li>
+    <li><span>Created</span><span>{{ restore.created }} (by {{ restore.created_by }})</span></li>
+    <li><span>Polaris</span><span>{{ restore.version }}</span></li>
+    <li><span>Database</span><span>{{ restore.dialect }}{% if restore.dialect != current_dialect %} — INCOMPATIBLE with this instance ({{ current_dialect }}){% endif %}</span></li>
+    <li><span>Files</span><span>{{ restore.files }}</span></li>
+  </ul>
+</div>
+
+<div class="panel form-error">
+  <h2>{{ t(key="admin.restore.replaces_title") }}</h2>
+  <p>
+    Restoring the database <strong>deletes every post, page, comment, user and
+    setting in this instance</strong> and replaces it with the archive's
+    content. A safety snapshot of the current database is created
+    automatically before the restore starts.
+  </p>
+</div>
+
+<form method="post" action="/admin/backups/{{ restore.name }}/restore" class="stack">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <fieldset>
+    <legend>{{ t(key="admin.restore.what") }}</legend>
+    <label class="check">
+      <input type="checkbox" name="database" {% if restore.includes.database %}checked{% else %}disabled{% endif %}>
+      {{ t(key="admin.restore.db_label", avail=(restore.includes.database and t(key="admin.restore.available") or t(key="admin.restore.not_in_archive"))) }}
+    </label>
+    <label class="check">
+      <input type="checkbox" name="media" {% if restore.includes.media %}checked{% else %}disabled{% endif %}>
+      {{ t(key="admin.restore.media_label") }}
+    </label>
+    <label class="check">
+      <input type="checkbox" name="themes" {% if restore.includes.themes %}checked{% else %}disabled{% endif %}>
+      {{ t(key="admin.restore.themes_label") }}
+    </label>
+    <label class="check">
+      <input type="checkbox" name="plugins" {% if restore.includes.plugins %}checked{% else %}disabled{% endif %}>
+      {{ t(key="admin.restore.plugins_label") }}
+    </label>
+  </fieldset>
+  <label>{{ t(key="admin.restore.type_confirm", name=restore.name) }}
+    <input type="text" name="confirm" autocomplete="off" required
+           placeholder="{{ restore.name }}">
+  </label>
+  <button type="submit" class="btn-danger">{{ t(key="admin.action.restore") }}</button>
+  <a href="/admin/backups" class="btn">{{ t(key="admin.action.cancel") }}</a>
+</form>
+{% endblock content %}

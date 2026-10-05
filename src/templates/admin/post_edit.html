@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}{% if is_new %}{{ t(key="admin.action.new_post") }}{% else %}{{ t(key="admin.page.posts") }}{% endif %}{% endblock title %}
+{% block head %}
+<meta name="csrf" content="{{ csrf }}">
+<script src="/admin/static/media.js" defer></script>
+<script src="/static/js/highlight.js" defer></script>
+<script src="/admin/static/editor.js" defer></script>
+{% endblock head %}
+{% block content %}
+<div class="page-head">
+  <h1>{% if is_new %}{{ t(key="admin.action.new_post") }}{% else %}{{ t(key="admin.page.edit_post") }}{% endif %}</h1>
+  {% if not is_new %}
+  <a class="btn btn-secondary" href="/posts/{{ form.slug }}" target="_blank">{{ t(key="admin.action.view_on_site") }}</a>
+  {% endif %}
+</div>
+
+<form method="post"
+      action="{% if is_new %}/admin/posts/new{% else %}/admin/posts/{{ post_id }}/edit{% endif %}"
+      class="stack stack-wide">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+
+  <div class="form-grid">
+    <div class="wide">
+      <label for="f-title">{{ t(key="admin.form.title") }}</label>
+      <input id="f-title" type="text" name="title" value="{{ form.title }}" required maxlength="255">
+    </div>
+    <div>
+      <label for="f-slug">{{ t(key="admin.form.slug") }} <span class="hint">{{ t(key="admin.form.slug_hint") }}</span></label>
+      <input id="f-slug" type="text" name="slug" value="{{ form.slug }}">
+    </div>
+    <div>
+      <label for="f-status">{{ t(key="admin.form.status") }}</label>
+      <select id="f-status" name="status">
+        {% for s in ["draft", "scheduled", "published"] %}
+        <option value="{{ s }}" {% if form.status == s %}selected{% endif %}>{{ t(key="status." ~ s) }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="f-publish-at">{{ t(key="admin.form.publish_at") }} <span class="hint">{{ t(key="admin.form.publish_at_hint") }}</span></label>
+      <input id="f-publish-at" type="datetime-local" name="publish_at" value="{{ form.publish_at }}">
+    </div>
+    <div>
+      <label for="f-category">{{ t(key="admin.form.category") }} <span class="hint">{{ t(key="admin.hint.optional") }}</span></label>
+      <input id="f-category" type="text" name="category" value="{{ form.category }}">
+    </div>
+    <div class="wide">
+      <label for="f-tags">{{ t(key="admin.form.tags") }} <span class="hint">{{ t(key="admin.form.tags_hint") }}</span></label>
+      <input id="f-tags" type="text" name="tags" value="{{ form.tags }}">
+    </div>
+    <div class="wide">
+      <label for="f-featured">{{ t(key="admin.form.featured") }} <span class="hint">{{ t(key="admin.hint.optional") }}</span></label>
+      <input id="f-featured" type="text" name="featured_image" value="{{ form.featured_image }}" maxlength="512" placeholder="/media/image.jpg or https://example.com/image.jpg" aria-describedby="cover-help">
+      <p class="hint" id="cover-help">{{ t(key="admin.form.cover_help") }}</p>
+      <div class="cover-upload" data-cover-controls>
+        <label for="cover-upload">{{ t(key="admin.form.cover_upload") }}</label>
+        <input id="cover-upload" type="file" accept="image/*">
+        <button type="button" class="btn btn-secondary" data-cover-clear>{{ t(key="admin.action.remove_cover") }}</button>
+        <p class="hint" data-cover-status role="status"></p>
+        <img class="cover-preview" data-cover-preview alt="Cover preview" hidden>
+      </div>
+    </div>
+    <div class="wide">
+      <label for="f-summary">{{ t(key="admin.form.summary") }} <span class="hint">{{ t(key="admin.form.summary_hint") }}</span></label>
+      <textarea id="f-summary" name="summary" rows="2">{{ form.summary }}</textarea>
+    </div>
+    <div class="wide">
+      <label for="f-content">{{ t(key="admin.form.content") }}</label>
+      <textarea id="f-content" class="content-editor" name="content">{{ form.content }}</textarea>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit">{{ t(key="admin.action.save_post") }}</button>
+    <a class="btn btn-secondary" href="/admin/posts">{{ t(key="admin.action.cancel") }}</a>
+    <span class="hint">{{ t(key="admin.post.html_hint") }}</span>
+  </div>
+</form>
+{% endblock content %}

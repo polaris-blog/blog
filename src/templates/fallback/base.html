@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% if seo.title %}{{ seo.title }} · {{ site.title }}{% else %}{{ site.title }}{% endif %}</title>
+{% if seo.description %}<meta name="description" content="{{ seo.description }}">{% endif %}
+{% if seo.canonical %}<link rel="canonical" href="{{ seo.canonical }}">{% endif %}
+{% if seo.og_type %}
+<meta property="og:title" content="{% if seo.title %}{{ seo.title }}{% else %}{{ site.title }}{% endif %}">
+<meta property="og:description" content="{% if seo.description %}{{ seo.description }}{% else %}{{ site.description }}{% endif %}">
+<meta property="og:type" content="{{ seo.og_type }}">
+<meta property="og:site_name" content="{{ site.title }}">
+{% if seo.og_image %}<meta property="og:image" content="{{ seo.og_image }}">{% endif %}
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="{% if seo.title %}{{ seo.title }}{% else %}{{ site.title }}{% endif %}">
+{% endif %}
+<link rel="alternate" type="application/rss+xml" title="{{ site.title }}" href="/rss.xml">
+<link rel="alternate" type="application/atom+xml" title="{{ site.title }}" href="/atom.xml">
+<script src="/static/js/theme.js"></script>
+<script src="/static/js/highlight.js" defer></script>
+<style>
+:root { color-scheme: light; --accent: #2563eb; --text: #1f2329; --muted: #6b7280; --border: #e5e7eb; --bg: #ffffff; --bg-soft: #f8fafc; --accent-light: #eff6ff; }
+html.dark {
+  color-scheme: dark;
+  --accent: #60a5fa; --text: #e6e8eb; --muted: #8b929c;
+  --border: #2a303a; --bg: #10141b; --bg-soft: #171c26; --accent-light: rgba(96, 165, 250, .12);
+}
+@media (prefers-color-scheme: dark) {
+  html:not(.dark):not(.light) {
+    color-scheme: dark;
+    --accent: #60a5fa; --text: #e6e8eb; --muted: #8b929c;
+    --border: #2a303a; --bg: #10141b; --bg-soft: #171c26; --accent-light: rgba(96, 165, 250, .12);
+  }
+}
+* { box-sizing: border-box; }
+html { font-size: 16px; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.7;
+}
+.container { max-width: 720px; margin: 0 auto; padding: 0 20px; }
+header.site {
+  display: flex; align-items: baseline; justify-content: space-between;
+  flex-wrap: wrap; gap: 8px;
+  padding: 28px 0 18px;
+  border-bottom: 1px solid var(--border);
+}
+header.site .site-title { font-size: 1.35rem; font-weight: 700; margin: 0; }
+header.site .site-title a { color: var(--text); text-decoration: none; }
+header.site .site-title a:hover { color: var(--accent); }
+header.site nav ul { display: flex; align-items: center; gap: 18px; list-style: none; margin: 0; padding: 0; }
+header.site nav a { color: var(--muted); text-decoration: none; font-size: .95rem; }
+header.site nav a:hover { color: var(--accent); }
+.theme-toggle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; padding: 0;
+  border: 1px solid var(--border); border-radius: 50%;
+  background: var(--bg-soft); color: var(--muted);
+  cursor: pointer; transition: color .18s, border-color .18s, transform .18s;
+}
+.theme-toggle:hover { color: var(--accent); border-color: var(--accent); }
+.theme-toggle:active { transform: scale(.9); }
+.theme-toggle svg { display: block; }
+.theme-toggle .icon-sun { display: none; }
+html.dark .theme-toggle .icon-sun { display: block; }
+html.dark .theme-toggle .icon-moon { display: none; }
+@keyframes fade { from { opacity: 0; } }
+main { animation: fade .45s ease; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+body { transition: background-color .25s ease, color .25s ease; }
+main { padding: 28px 0 40px; min-height: 55vh; }
+footer.site {
+  padding: 24px 0 40px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: .88rem;
+}
+footer.site a { color: var(--muted); }
+article.post-list-item { margin-bottom: 2.4rem; }
+article.post-list-item h2 { margin: 0 0 .35rem; font-size: 1.35rem; line-height: 1.35; }
+article.post-list-item h2 a { color: var(--text); text-decoration: none; }
+article.post-list-item h2 a:hover { color: var(--accent); }
+.post-meta { color: var(--muted); font-size: .88rem; margin-bottom: .6rem; }
+.post-meta a { color: var(--muted); text-decoration: none; border-bottom: 1px dotted var(--muted); }
+.post-excerpt { margin: 0 0 .5rem; }
+.read-more { font-size: .92rem; }
+article.full h1 { font-size: 1.7rem; line-height: 1.3; margin: 0 0 .5rem; }
+article.full .post-content img { max-width: 100%; height: auto; }
+article.full .post-content pre {
+  overflow-x: auto; padding: 14px 16px; border-radius: 8px;
+  background: var(--bg-soft); border: 1px solid var(--border); font-size: .88rem;
+}
+article.full .post-content code { font-size: .9em; background: var(--bg-soft); padding: .15em .4em; border-radius: 4px; }
+article.full .post-content pre code { background: none; padding: 0; }
+/* Syntax highlight palette (highlight.js) — light tokens on the soft
+   surface, dark-theme overrides below. */
+article.full .hl-com { color: #6a737d; font-style: italic; }
+article.full .hl-str { color: #0a3069; }
+article.full .hl-kw { color: #cf222e; }
+article.full .hl-num { color: #0550ae; }
+article.full .hl-fn { color: #8250df; }
+html.dark article.full .hl-com { color: #8b949e; }
+html.dark article.full .hl-str { color: #a5d6ff; }
+html.dark article.full .hl-kw { color: #ff7b72; }
+html.dark article.full .hl-num { color: #79c0ff; }
+html.dark article.full .hl-fn { color: #d2a8ff; }
+/* Code block chrome: language badge + copy button. */
+article.full .codeblock { position: relative; margin: 1.2em 0; }
+article.full .codeblock pre { margin: 0; }
+article.full .code-lang {
+  position: absolute; top: 6px; right: 52px;
+  font-size: 10px; letter-spacing: .4px; text-transform: uppercase;
+  color: var(--muted); pointer-events: none; user-select: none;
+}
+article.full .code-copy {
+  position: absolute; top: 4px; right: 4px; padding: 2px 8px;
+  border: 1px solid var(--border); border-radius: 5px;
+  background: var(--bg); color: var(--text);
+  font-size: 11px; line-height: 1.5; cursor: pointer;
+  opacity: 0; transition: opacity .15s ease;
+}
+article.full .codeblock:hover .code-copy,
+article.full .code-copy:focus-visible,
+article.full .code-copy.copied { opacity: 1; }
+article.full .code-copy.copied { color: #1a7f37; border-color: #1a7f37; }
+html.dark article.full .code-copy.copied { color: #4ade80; border-color: #4ade80; }
+article.full .post-content blockquote {
+  margin: 1em 0; padding: .2em 1em;
+  border-left: 3px solid var(--border); color: var(--muted);
+}
+.tag-list { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; margin: 1rem 0; }
+.tag-list a {
+  display: inline-block; padding: 2px 10px; border-radius: 999px;
+  background: var(--bg-soft); color: var(--muted); font-size: .84rem; text-decoration: none;
+}
+.tag-list a:hover { color: var(--accent); }
+.pager { display: flex; justify-content: space-between; gap: 12px; margin-top: 2.2rem; }
+.pager a { color: var(--accent); text-decoration: none; }
+.pager a:hover { text-decoration: underline; }
+/* Search */
+.search-header h1 { font-size: 1.6rem; margin: 0 0 1rem; }
+.search-box {
+  display: flex; align-items: center; gap: 4px;
+  border: 1px solid var(--border); border-radius: 999px;
+  padding: 4px 4px 4px 16px; background: var(--bg-soft);
+}
+.search-box:focus-within { border-color: var(--accent); }
+.search-box input[type="search"] {
+  flex: 1; min-width: 0; border: none; background: transparent;
+  padding: 8px 10px; font: inherit; color: inherit;
+}
+.search-box input:focus { outline: none; }
+.search-box button {
+  border: none; border-radius: 999px; padding: 8px 20px;
+  background: var(--accent); color: #fff; font: inherit; font-weight: 600; cursor: pointer;
+}
+.search-sort { font-size: .88rem; color: var(--muted); margin: .7rem 0 0; }
+.search-sort select {
+  font: inherit; border: 1px solid var(--border); border-radius: 999px;
+  padding: 5px 10px; background: var(--bg); color: inherit;
+  text-transform: capitalize; cursor: pointer; margin-left: 4px;
+}
+.search-summary { margin-bottom: 1.6rem; }
+.search-summary em { font-style: normal; font-weight: 600; }
+.badge {
+  font-size: .74rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em;
+  border: 1px solid var(--border); border-radius: 999px; padding: 1px 9px;
+}
+mark { background: var(--accent-light); color: var(--accent); padding: 0 2px; border-radius: 3px; }
+.comments { margin-top: 2.8rem; }
+.comments h2 { font-size: 1.2rem; border-bottom: 1px solid var(--border); padding-bottom: .4rem; }
+.comment { margin: 1.2rem 0 1.2rem calc(var(--depth, 0) * 2rem); padding: .9rem 1rem; border: 1px solid var(--border); border-radius: 8px; position: relative; }
+.comment .comment-meta { font-size: .86rem; color: var(--muted); margin-bottom: .3rem; }
+.comment .comment-meta a { color: var(--muted); }
+.comment .reply { position: absolute; top: .9rem; right: 1rem; margin: 0; }
+.comment .reply a {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: 50%;
+  color: var(--muted); transition: background .18s ease, color .18s ease;
+}
+.comment .reply a:hover { background: var(--bg-soft); color: var(--accent); }
+.replying-to { margin: 0; font-size: .86rem; color: var(--muted); }
+.reply-cancel { background: none; border: none; padding: 0; color: var(--accent); font: inherit; cursor: pointer; }
+form.comment-form { display: flex; flex-direction: column; gap: 10px; margin-top: 1.6rem; }
+form.comment-form label { font-size: .88rem; color: var(--muted); }
+form.comment-form input, form.comment-form textarea {
+  font: inherit; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; width: 100%;
+}
+form.comment-form textarea { min-height: 110px; resize: vertical; }
+form.comment-form button {
+  align-self: flex-start; font: inherit; padding: 8px 18px;
+  background: var(--accent); color: #fff; border: none; border-radius: 6px; cursor: pointer;
+}
+.hp { position: absolute; left: -9999px; }
+.center { text-align: center; }
+.notfound { padding: 4rem 0; }
+.notfound h1 { font-size: 5rem; margin: 0; color: var(--border); }
+@media (max-width: 600px) {
+  header.site { flex-direction: column; }
+  .comment { margin-left: calc(var(--depth, 0) * 1rem); }
+}
+</style>
+</head>
+<body data-copy-label="{{ t(key='code.copy') }}" data-copied-label="{{ t(key='code.copied') }}">
+<div class="container">
+  <header class="site">
+    <h1 class="site-title"><a href="/">{{ site.title }}</a></h1>
+    <nav>
+      <ul>
+        {% if nav_home %}<li><a href="/">{{ nav_home.label }}</a></li>{% endif %}
+        {% for p in nav_pages %}
+        <li><a href="/{{ p.slug }}">{{ p.title }}</a></li>
+        {% endfor %}
+        {% for item in plugin_nav %}
+        <li><a href="{{ item.url }}">{{ item.label }}</a></li>
+        {% endfor %}
+        {% if custom_nav %}
+        {% for item in custom_nav %}
+        <li><a href="{{ item.url }}">{{ item.label }}</a></li>
+        {% endfor %}
+        {% endif %}
+        {% if nav_rss %}<li><a href="{{ nav_rss.url }}">{{ nav_rss.label }}</a></li>{% endif %}
+        <li>
+          <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+            <svg class="icon-moon" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+              <path fill="currentColor" d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>
+            </svg>
+            <svg class="icon-sun" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+              <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    d="M12 4V2m0 20v-2m8-8h2M2 12h2m13.7-5.7 1.4-1.4M4.9 19.1l1.4-1.4m0-11.4L4.9 4.9m14.2 14.2-1.4-1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/>
+            </svg>
+          </button>
+        </li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    {% block content %}{% endblock content %}
+  </main>
+
+  <footer class="site">
+    <p>{% if site.description %}{{ site.description }} · {% endif %}Powered by <a href="https://github.com/polaris">Polaris</a> · &copy; {{ current_year }} {{ site.title }}</p>
+  </footer>
+</div>
+{% if json_ld %}
+<script type="application/ld+json">{{ json_ld }}</script>
+{% endif %}
+</body>
+</html>

@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}{{ cfg_title }}{% endblock title %}
+{% block content %}
+<h1>{{ cfg_title }}</h1>
+<p><a href="{{ back_url }}">&larr; Back</a></p>
+
+<form method="post" action="" class="stack">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+
+  {% for g in form.groups %}
+  <div class="panel">
+    <h2>{{ g.label }}</h2>
+    <div class="form-grid">
+      {% for f in g.fields %}
+      {% if f.visible %}
+      <div class="{% if f.input == 'textarea' or f.input == 'array' or f.input == 'multiselect' or f.type == 'textarea' or f.type == 'text' %}wide{% endif %}">
+
+        {% if f.input == 'checkbox' %}
+        <label class="check">
+          <input type="hidden" name="{{ f.key }}" value="false">
+          <input type="checkbox" class="switch" name="{{ f.key }}" value="true" {% if f.checked %}checked{% endif %}>
+          {{ f.label }}{% if f.required %} <span class="req">*</span>{% endif %}
+        </label>
+        {% if f.description %}<p class="hint">{{ f.description }}</p>{% endif %}
+        {% if f.restart %}<p class="hint">⚠ Requires a restart to take effect.</p>{% endif %}
+
+        {% elif f.input == 'select' %}
+        <label for="cf-{{ f.key }}">{{ f.label }}{% if f.required %} <span class="req">*</span>{% endif %}</label>
+        <select id="cf-{{ f.key }}" name="{{ f.key }}">
+          {% if not f.required %}<option value="" {% if not f.value %}selected{% endif %}>— default —</option>{% endif %}
+          {% for o in f.options %}
+          <option value="{{ o.value }}" {% if o.selected %}selected{% endif %}>{{ o.label }}</option>
+          {% endfor %}
+        </select>
+        {% if f.description %}<p class="hint">{{ f.description }}</p>{% endif %}
+        {% if f.restart %}<p class="hint">⚠ Requires a restart to take effect.</p>{% endif %}
+
+        {% elif f.input == 'multiselect' %}
+        <label for="cf-{{ f.key }}">{{ f.label }}{% if f.required %} <span class="req">*</span>{% endif %}</label>
+        <input type="hidden" name="__multi_{{ f.key }}" value="1">
+        <select id="cf-{{ f.key }}" name="{{ f.key }}" multiple size="{{ f.options.length }}">
+          {% for o in f.options %}
+          <option value="{{ o.value }}" {% if o.selected %}selected{% endif %}>{{ o.label }}</option>
+          {% endfor %}
+        </select>
+        <p class="hint">Hold Ctrl / Cmd to select multiple.</p>
+        {% if f.description %}<p class="hint">{{ f.description }}</p>{% endif %}
+
+        {% elif f.input == 'textarea' or f.input == 'array' %}
+        <label for="cf-{{ f.key }}">{{ f.label }}{% if f.required %} <span class="req">*</span>{% endif %}</label>
+        <textarea id="cf-{{ f.key }}" name="{{ f.key }}" rows="{% if f.input == 'array' %}5{% else %}3{% endif %}" placeholder="{% if f.is_secret %}unchanged{% else %}{{ f.description }}{% endif %}">{{ f.value }}</textarea>
+        {% if f.input == 'array' %}<p class="hint">JSON array of objects: [{% for k in f.item_fields %}"{{ k }}": …{% if not loop.last %}, {% endif %}{% endfor %}]</p>{% endif %}
+        {% if f.description and not f.is_secret %}<p class="hint">{{ f.description }}</p>{% endif %}
+        {% if f.is_secret and f.has_value %}<p class="hint">A value is set — leave blank to keep it.</p>{% endif %}
+        {% if f.restart %}<p class="hint">⚠ Requires a restart to take effect.</p>{% endif %}
+
+        {% elif f.input == 'color' %}
+        <label for="cf-{{ f.key }}">{{ f.label }}{% if f.required %} <span class="req">*</span>{% endif %}</label>
+        <div class="config-color-control">
+          <input id="cf-{{ f.key }}" type="color" name="{{ f.key }}" value="{% if f.value %}{{ f.value }}{% else %}#0071e3{% endif %}">
+          <code>{{ f.value }}</code>
+        </div>
+        {% if f.description %}<p class="hint">{{ f.description }}</p>{% endif %}
+        {% if f.restart %}<p class="hint">⚠ Requires a restart to take effect.</p>{% endif %}
+
+        {% else %}
+        <label for="cf-{{ f.key }}">{{ f.label }}{% if f.required %} <span class="req">*</span>{% endif %}</label>
+        <input id="cf-{{ f.key }}" type="{{ f.input }}" name="{{ f.key }}" value="{{ f.value }}"
+               {% if f.min %}min="{{ f.min }}"{% endif %}{% if f.max %}max="{{ f.max }}"{% endif %}
+               {% if f.required and not f.is_secret %}required{% endif %}
+               {% if f.is_secret %}autocomplete="new-password" placeholder="{% if f.has_value %}unchanged{% else %}{{ f.description }}{% endif %}"{% endif %}>
+        {% if f.description and not f.is_secret %}<p class="hint">{{ f.description }}</p>{% endif %}
+        {% if f.is_secret %}<p class="hint">Stored encrypted{% if f.has_value %} — a value is set, leave blank to keep it{% endif %}.</p>{% endif %}
+        {% if f.restart %}<p class="hint">⚠ Requires a restart to take effect.</p>{% endif %}
+        {% endif %}
+
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+
+  <div class="form-actions">
+    <button type="submit">{{ t(key="admin.settings.save") }}</button>
+    <span class="hint">{{ t(key="admin.config.save_hint") }}</span>
+  </div>
+</form>
+{% endblock content %}

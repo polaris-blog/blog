@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Themes{% endblock title %}
+{% block head %}
+<meta name="csrf" content="{{ csrf }}">
+<script src="/admin/static/extensions.js" defer></script>
+{% endblock head %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ t(key="admin.page.themes") }}</h1>
+  <a class="btn btn-secondary btn-sm" href="/admin/extensions/logs">{{ t(key="admin.action.install_log") }} ↗</a>
+</div>
+
+{% if theme_is_fallback %}
+<div class="flash flash-err">
+  No theme directory was found — the built-in fallback templates are in use.
+  Upload a theme ZIP below and activate it.
+</div>
+{% endif %}
+
+{% if themes %}
+<div class="theme-grid">
+  {% for t in themes %}
+  <div class="theme-card {% if t.is_active_theme %}theme-active{% endif %}">
+    <div class="theme-head">
+      <strong>{% if t.manifest.name %}{{ t.manifest.name }}{% else %}{{ t.dir }}{% endif %}</strong>
+      {% if t.status == 'broken' %}
+      <span class="badge badge-draft">{{ t(key="status.broken") }}</span>
+      {% elif t.is_active_theme %}
+      <span class="badge">{{ t(key="status.active") }}</span>
+      {% else %}
+      <span class="badge badge-draft">{{ t(key="status.inactive") }}</span>
+      {% endif %}
+    </div>
+    {% if t.status == 'broken' %}
+    <p class="form-error">{{ t.error }}</p>
+    {% else %}
+    <p class="muted">{{ t.manifest.description }}</p>
+    <p class="muted theme-meta">
+      v{{ t.manifest.version }} · {{ t.manifest.author }} · {{ t.manifest.license }}
+    </p>
+    {% if t.manifest.requires_polaris %}
+    <p class="muted theme-meta">{{ t(key="admin.themes.requires") }} {{ t.manifest.requires_polaris }}</p>
+    {% endif %}
+    {% endif %}
+    <div class="theme-actions">
+      {% if t.status != 'broken' and not t.is_active_theme %}
+      <form method="post" action="/admin/themes/activate">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="name" value="{{ t.dir }}">
+        <button type="submit" class="btn btn-sm">{{ t(key="admin.action.activate") }}</button>
+      </form>
+      {% endif %}
+      {% if t.has_settings %}
+      <a class="btn btn-secondary btn-sm" href="/admin/themes/{{ t.dir }}/settings">Settings</a>
+      {% endif %}
+      {% if not t.is_active_theme %}
+      <form method="post" action="/admin/extensions/uninstall" class="confirm-remove"
+            data-confirm="Uninstall theme '{{ t.dir }}'? Its files are removed; plugin data is untouched.">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="kind" value="theme">
+        <input type="hidden" name="id" value="{{ t.dir }}">
+        <button type="submit" class="btn btn-danger btn-sm">{{ t(key="admin.action.uninstall") }}</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="muted">{{ t(key="admin.themes.none") }}</p>
+{% endif %}
+
+<div class="panel ext-upload" data-ext-upload>
+  <h2>{{ t(key="admin.themes.upload_title") }}</h2>
+  <p class="muted">
+    Install a theme from a <code>.zip</code> package (offline — nothing is downloaded).
+    The package needs a single root directory containing <code>theme.toml</code>.
+    A new theme is <strong>not activated automatically</strong> — activate it above once installed.
+  </p>
+  <form method="post" action="/admin/extensions/upload" enctype="multipart/form-data">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="return_to" value="themes">
+    <div class="ext-drop-zone" data-drop-zone tabindex="0" role="button"
+         aria-label="Drop theme ZIP here or select a file">
+      <svg class="ext-drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 9 12 4 17 9"/>
+        <line x1="12" y1="4" x2="12" y2="16"/>
+      </svg>
+      <strong>{{ t(key="admin.themes.drop") }}</strong>
+      <span class="muted">{{ t(key="admin.action.or") }}</span>
+      <label class="btn btn-secondary btn-sm" for="theme-package-input">{{ t(key="admin.action.select_file") }}</label>
+      <input id="theme-package-input" type="file" name="package" accept=".zip,application/zip"
+             class="visually-hidden" data-package-input>
+      <p class="muted ext-file-name" data-file-name hidden></p>
+    </div>
+    <div class="ext-upload-options">
+      <label class="inline-check" title="Skip the Polaris version compatibility check">
+        <input type="checkbox" class="switch" name="force"> {{ t(key="admin.plugins.force") }}
+      </label>
+      <label class="inline-check" title="Allow installing an older version than the current one">
+        <input type="checkbox" class="switch" name="confirm_downgrade"> {{ t(key="admin.plugins.downgrade") }}
+      </label>
+      <span class="spacer"></span>
+      <button type="submit" class="btn" data-upload-btn disabled>{{ t(key="admin.action.upload") }}</button>
+    </div>
+    <div class="ext-progress" data-progress hidden><div class="ext-progress-fill"></div></div>
+    <p class="ext-result ext-result-err" data-error hidden></p>
+  </form>
+</div>
+{% endblock content %}

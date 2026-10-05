@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Comments{% endblock title %}
+{% block content %}
+<h1>{{ t(key="admin.page.comments") }}</h1>
+
+<div class="tabs">
+  <a href="/admin/comments" class="{% if status_filter == '' %}active{% endif %}">{{ t(key="admin.tab.all") }}</a>
+  <a href="/admin/comments?status=pending" class="{% if status_filter == 'pending' %}active{% endif %}">{{ t(key="admin.tab.pending") }} ({{ count_pending }})</a>
+  <a href="/admin/comments?status=approved" class="{% if status_filter == 'approved' %}active{% endif %}">{{ t(key="admin.tab.approved") }} ({{ count_approved }})</a>
+  <a href="/admin/comments?status=spam" class="{% if status_filter == 'spam' %}active{% endif %}">{{ t(key="admin.tab.spam") }} ({{ count_spam }})</a>
+</div>
+
+{% if comments %}
+<div class="comment-list">
+  {% for c in comments %}
+  <div class="comment-item">
+    <div class="comment-head">
+      <strong>{{ c.author }}</strong>
+      <span class="muted">{{ c.email }}</span>
+      {% if c.post_slug %}
+      <a href="/posts/{{ c.post_slug }}" target="_blank">{{ c.post_title }}</a>
+      {% else %}
+      <span class="muted">{{ c.post_title }}</span>
+      {% endif %}
+      <span class="badge badge-{{ c.status }}">{{ t(key="status." ~ c.status) }}</span>
+      <span class="muted">{{ c.created }}</span>
+    </div>
+    <p class="comment-body">{{ c.content }}</p>
+    <div class="comment-actions">
+      {% if c.status != 'approved' %}
+      <form method="post" action="/admin/comments/{{ c.id }}/status">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="status" value="approved">
+        <button type="submit" class="btn btn-sm">{{ t(key="admin.action.approve") }}</button>
+      </form>
+      {% endif %}
+      {% if c.status != 'spam' %}
+      <form method="post" action="/admin/comments/{{ c.id }}/status">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="status" value="spam">
+        <button type="submit" class="btn btn-secondary btn-sm">{{ t(key="admin.action.mark_spam") }}</button>
+      </form>
+      {% endif %}
+      {% if c.status != 'pending' %}
+      <form method="post" action="/admin/comments/{{ c.id }}/status">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="status" value="pending">
+        <button type="submit" class="btn btn-secondary btn-sm">{{ t(key="admin.action.unapprove") }}</button>
+      </form>
+      {% endif %}
+      <form method="post" action="/admin/comments/{{ c.id }}/delete">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <button type="submit" class="btn btn-danger btn-sm">{{ t(key="admin.action.delete") }}</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if pages > 1 %}
+<div class="pager">
+  {% if current_page > 1 %}
+  <a class="btn btn-secondary btn-sm" href="/admin/comments?status={{ status_filter }}&page={{ current_page - 1 }}">&larr; Newer</a>
+  {% endif %}
+  <span class="muted">Page {{ current_page }} / {{ pages }}</span>
+  {% if current_page < pages %}
+  <a class="btn btn-secondary btn-sm" href="/admin/comments?status={{ status_filter }}&page={{ current_page + 1 }}">Older &rarr;</a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<p class="muted">{{ t(key="admin.comments.empty_tabs") }}</p>
+{% endif %}
+{% endblock content %}

@@ -1,0 +1,153 @@
+name: Release
+
+# Triggered by pushing a version tag:  git tag v0.1.0 && git push origin v0.1.0
+# Builds 6 targets (Windows/macOS/Linux × x86_64/arm64), compresses with UPX
+# where supported, attaches archives + SHA256SUMS to the GitHub release.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  BIN: polaris
+
+jobs:
+  build:
+    name: build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux — static musl binaries, run anywhere without dependencies.
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            archive: tar.gz
+            upx: true
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-24.04-arm
+            archive: tar.gz
+            upx: true
+          # macOS — built natively per arch (macos-13 = Intel, macos-14+ = Apple
+          # Silicon). UPX is intentionally skipped: compressed Mach-O binaries
+          # are killed by modern macOS code signing/runtime protections.
+          - target: x86_64-apple-darwin
+            os: macos-13
+            archive: tar.gz
+            upx: false
+          - target: aarch64-apple-darwin
+            os: macos-14
+            archive: tar.gz
+            upx: false
+          # Windows — ARM64 cross-compiles on the x64 runner (the windows
+          # image ships the MSVC ARM64 toolset; libsqlite3-sys builds from
+          # source through cc). UPX: only x64 — keep the ARM64 PE as-is.
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            archive: zip
+            upx: true
+          - target: aarch64-pc-windows-msvc
+            os: windows-latest
+            archive: zip
+            upx: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal --no-self-update
+          rustup default stable
+          rustup target add ${{ matrix.target }}
+
+      - name: Install musl toolchain (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+
+      - name: Install UPX (Windows)
+        if: matrix.upx && runner.os == 'Windows'
+        run: choco install upx --no-progress
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Build release binary
+        run: cargo build --locked --release --target ${{ matrix.target }}
+
+      - name: Compress binary with UPX
+        if: matrix.upx
+        run: upx --best --lzma target/${{ matrix.target }}/release/${{ env.BIN }}${{ runner.os == 'Windows' && '.exe' || '' }}
+
+      - name: Package (tar.gz)
+        if: matrix.archive == 'tar.gz'
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          NAME="${BIN}-${VERSION}-${{ matrix.target }}"
+          mkdir -p dist
+          cp "target/${{ matrix.target }}/release/${BIN}" "dist/${BIN}"
+          for f in README.md polaris.toml.example LICENSE*; do
+            [ -f "$f" ] && cp "$f" dist/
+          done
+          tar -czf "${NAME}.tar.gz" -C dist .
+          sha256sum "${NAME}.tar.gz" > "checksums-${{ matrix.target }}.txt"
+          echo "ARCHIVE=${NAME}.tar.gz" >> "$GITHUB_ENV"
+
+      - name: Package (zip)
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        run: |
+          $version = $env:GITHUB_REF_NAME
+          $name = "${env:BIN}-${version}-${{ matrix.target }}"
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/${env:BIN}.exe" "dist/${env:BIN}.exe"
+          Copy-Item README.md, polaris.toml.example dist/
+          Compress-Archive -Path dist/* -DestinationPath "${name}.zip"
+          $hash = (Get-FileHash "${name}.zip" -Algorithm SHA256).Hash.ToLower()
+          "$hash  ${name}.zip" | Out-File -Encoding ascii "checksums-${{ matrix.target }}.txt"
+          "ARCHIVE=${name}.zip" | Out-File -Append -Encoding ascii $env:GITHUB_ENV
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.target }}
+          path: |
+            ${{ env.ARCHIVE }}
+            checksums.txt
+          if-no-files-found: error
+
+  release:
+    name: publish GitHub release
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all archives
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: release-*
+          merge-multiple: true
+
+      - name: Merge checksums
+        run: |
+          cd artifacts
+          cat checksums-*.txt 2>/dev/null | sort -k2 > SHA256SUMS || cat checksums.txt > SHA256SUMS
+          rm -f checksums*.txt
+          cat SHA256SUMS
+
+      - name: Attach archives to the release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/*.tar.gz
+            artifacts/*.zip
+            artifacts/SHA256SUMS
+          generate_release_notes: true

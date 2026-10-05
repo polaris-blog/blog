@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Profile{% endblock title %}
+{% block content %}
+<h1>{{ t(key="admin.page.profile") }}</h1>
+
+<form method="post" action="/admin/profile" class="stack">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="panel">
+    <h2>{{ t(key="admin.profile.account") }}</h2>
+    <div class="form-grid">
+      <div>
+        <label>{{ t(key="admin.form.username") }}</label>
+        <input type="text" value="{{ p_username }}" disabled>
+      </div>
+      <div>
+        <label for="f-display">{{ t(key="admin.form.display_name") }} <span class="hint">{{ t(key="admin.form.display_hint") }}</span></label>
+        <input id="f-display" type="text" name="display_name" value="{{ p_display_name }}" maxlength="120">
+      </div>
+      <div>
+        <label for="f-email">{{ t(key="admin.form.email") }} <span class="hint">{{ t(key="admin.hint.optional") }}</span></label>
+        <input id="f-email" type="email" name="email" value="{{ p_email }}" maxlength="255">
+      </div>
+      <div class="wide">
+        <label for="f-bio">{{ t(key="admin.form.bio") }} <span class="hint">{{ t(key="admin.hint.optional") }}</span></label>
+        <textarea id="f-bio" name="bio" rows="3" maxlength="500">{{ p_bio }}</textarea>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button type="submit">{{ t(key="admin.profile.save") }}</button>
+    </div>
+  </div>
+</form>
+
+<form method="post" action="/admin/profile/password" class="stack">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="panel">
+    <h2>{{ t(key="admin.profile.change_password") }}</h2>
+    <div class="form-grid">
+      <div>
+        <label for="f-cur">{{ t(key="admin.profile.current_password") }}</label>
+        <input id="f-cur" type="password" name="current" required autocomplete="current-password">
+      </div>
+      <div>
+        <label for="f-new">{{ t(key="admin.profile.new_password") }} <span class="hint">{{ t(key="admin.profile.new_password_hint") }}</span></label>
+        <input id="f-new" type="password" name="password" required minlength="8" autocomplete="new-password">
+      </div>
+      <div>
+        <label for="f-conf">{{ t(key="admin.profile.confirm_password") }}</label>
+        <input id="f-conf" type="password" name="confirm" required minlength="8" autocomplete="new-password">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn-secondary">{{ t(key="admin.profile.change_password") }}</button>
+      <span class="hint">{{ t(key="admin.profile.password_hint") }}</span>
+    </div>
+  </div>
+</form>
+{% endblock content %}

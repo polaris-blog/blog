@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Jobs{% endblock title %}
+{% block content %}
+<div class="page-head"><h1>{{ t(key="admin.page.jobs") }}</h1><a class="btn btn-secondary" href="/admin/jobs">{{ t(key="admin.action.refresh") }}</a></div>
+{% if not scheduler_enabled %}<p class="flash">{{ t(key="admin.jobs.scheduler_disabled") }}</p>{% endif %}
+<nav class="tabs" aria-label="Job status">
+  <a href="/admin/jobs?limit={{ limit_filter }}{% if type_filter %}&amp;type={{ type_filter | urlencode }}{% endif %}" class="{% if status_filter == '' %}active{% endif %}">{{ t(key="admin.tab.all") }}</a>
+  {% for status in ['pending', 'running', 'success', 'failed', 'cancelled'] %}
+  <a href="/admin/jobs?status={{ status }}&amp;limit={{ limit_filter }}{% if type_filter %}&amp;type={{ type_filter | urlencode }}{% endif %}" class="{% if status_filter == status %}active{% endif %}">{{ t(key="status." ~ status) }}</a>
+  {% endfor %}
+</nav>
+<div class="jobs-table">
+<table><thead><tr><th>{{ t(key="admin.jobs.th_name") }}</th><th>{{ t(key="admin.jobs.th_status") }}</th><th>{{ t(key="admin.jobs.th_priority") }}</th><th>{{ t(key="admin.jobs.th_next_run") }}</th><th>{{ t(key="admin.jobs.th_last_finished") }}</th></tr></thead><tbody>
+{% for job in jobs %}
+<tr>
+  <td><a href="/admin/jobs/{{ job.id }}">{{ job.name }}</a><br><span class="muted">{{ job.type }}</span></td>
+  <td>{{ t(key="status." ~ job.status) }}{% if job.paused %} / {{ t(key="admin.jobs.paused") }}{% endif %}{% if job.cancel_requested and job.status == 'running' %} / {{ t(key="admin.jobs.cancelling") }}{% endif %}</td>
+  <td>{{ job.priority }}</td>
+  <td>{% if job.status == 'pending' %}{{ job.run_at | date(format="datetime") }}{% else %}-{% endif %}</td>
+  <td>{% if job.finished_at %}{{ job.finished_at | date(format="datetime") }}{% else %}-{% endif %}</td>
+</tr>
+{% else %}<tr><td colspan="5" class="muted">{{ t(key="admin.jobs.empty") }}</td></tr>{% endfor %}
+</tbody></table>
+</div>
+{% if next_cursor %}<div class="pager"><a href="/admin/jobs?before={{ next_cursor }}&amp;limit={{ limit_filter }}{% if type_filter %}&amp;type={{ type_filter | urlencode }}{% endif %}{% if status_filter %}&amp;status={{ status_filter }}{% endif %}">{{ t(key="admin.jobs.older") }}</a></div>{% endif %}
+{% endblock content %}

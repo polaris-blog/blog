@@ -1,0 +1,16 @@
+id = "example"
+name = "example"
+version = "1.0.0"
+author = "Polaris"
+description = "Example plugin demonstrating hooks, events, routes, nav and template filters"
+license = "MIT"
+permissions = ["posts.read", "posts.write"]
+
+[routes]
+"/plugins/example/archive" = "route_archive"
+
+[admin_routes]
+"/plugins/example/status" = "route_status"
+
+[filters]
+"star" = "filter_star"

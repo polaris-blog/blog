@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-section">
+  <div class="container">
+    <article class="post-full">
+      <header class="post-header">
+        {% if post.category %}<p class="post-eyebrow"><a href="/category/{{ post.category.slug }}">{{ post.category.name }}</a></p>{% endif %}
+        <h1>{{ post.title }}</h1>
+        <div class="post-meta">
+          <time datetime="{{ post.datetime }}">{{ post.date }}</time>
+          <span>{{ post.author }}</span>
+          <span>{{ post.reading_time }} min read</span>
+        </div>
+      </header>
+
+      <div class="post-body" data-highlight>{{ post.content_html | safe }}</div>
+
+      {% if post.tags %}
+      <ul class="tag-list">
+        {% for t in post.tags %}
+        <li><a href="/tag/{{ t.slug }}">{{ t.name }}</a></li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </article>
+
+    {% if comments_enabled %}
+    <section class="comments" id="comments">
+      <h2>{{ t(key="comments.title") }} <span class="comment-count">{{ comments | length }}</span></h2>
+
+      {% for c in comments %}
+      <div class="comment" id="comment-{{ c.id }}" style="--depth: {{ c.depth }}">
+        <div class="comment-avatar" aria-hidden="true">{{ c.author | truncate_chars(n=1) | upper }}</div>
+        <div class="comment-body">
+          <div class="comment-meta">
+            <span class="comment-author">
+              {% if c.author_url %}<a href="{{ c.author_url }}" rel="nofollow noopener">{{ c.author }}</a>{% else %}{{ c.author }}{% endif %}
+            </span>
+            <time>{{ c.date }}</time>
+          </div>
+          <div class="comment-text">{{ c.content }}</div>
+          <p class="comment-actions"><a href="#comment-form" data-reply="{{ c.id }}" data-author="{{ c.author }}" aria-label="{{ t(key='comments.reply_aria', author=c.author) }}" title="{{ t(key='comments.reply') }}">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
+          </a></p>
+        </div>
+      </div>
+      {% endfor %}
+
+      <form class="comment-form" id="comment-form" method="post" action="/comments">
+        <h3>{{ t(key="comments.leave") }}</h3>
+        <input type="hidden" name="post_id" value="{{ post.id }}">
+        <input type="hidden" name="post_slug" value="{{ post.slug }}">
+        <input type="hidden" name="parent_id" value="" id="comment-parent">
+        <p class="replying-to" id="replying-to" hidden>
+          {{ t(key="comments.replying_to") }} <strong id="replying-to-name"></strong>
+          <button type="button" id="cancel-reply" class="reply-cancel">{{ t(key="comments.cancel") }}</button>
+        </p>
+        <p class="hp" aria-hidden="true">
+          <label>{{ t(key="comments.honeypot") }}<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+        </p>
+        <div class="form-row">
+          <div class="form-field">
+            <label for="c-name">{{ t(key="comments.name") }}</label>
+            <input id="c-name" type="text" name="name" required maxlength="80">
+          </div>
+          <div class="form-field">
+            <label for="c-email">{{ t(key="comments.email") }}</label>
+            <input id="c-email" type="email" name="email" maxlength="255">
+          </div>
+        </div>
+        <div class="form-field">
+          <label for="c-url">{{ t(key="comments.website") }}</label>
+          <input id="c-url" type="url" name="url" maxlength="255">
+        </div>
+        <div class="form-field">
+          <label for="c-content">{{ t(key="comments.comment") }}</label>
+          <textarea id="c-content" name="content" required maxlength="5000" rows="5"></textarea>
+        </div>
+        <button type="submit">{{ t(key="comments.submit") }}</button>
+      </form>
+    </section>
+    {% endif %}
+  </div>
+</section>
+{% endblock content %}

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Categories &amp; Tags{% endblock title %}
+{% block content %}
+<h1>{{ t(key="admin.page.terms") }}</h1>
+
+
+<div class="panel">
+  <h2>{{ t(key="admin.terms.categories") }}</h2>
+  {% if categories %}
+  <table>
+    <thead><tr><th>{{ t(key="admin.terms.name") }}</th><th>{{ t(key="admin.th.slug") }}</th><th>{{ t(key="admin.terms.th_posts") }}</th><th></th></tr></thead>
+    <tbody>
+      {% for t in categories %}
+      <tr>
+        <td>{{ t.name }}</td>
+        <td class="muted">/category/{{ t.slug }}</td>
+        <td>{{ t.count }}</td>
+        <td class="actions">
+          <form method="post" action="/admin/terms/{{ t.id }}/delete">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <button type="submit" class="btn btn-danger btn-sm">{{ t(key="admin.action.delete") }}</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No categories yet — they are created automatically when you assign one to a post.</p>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <h2>{{ t(key="admin.terms.tags") }}</h2>
+  {% if tags %}
+  <table>
+    <thead><tr><th>{{ t(key="admin.terms.name") }}</th><th>{{ t(key="admin.th.slug") }}</th><th>{{ t(key="admin.terms.th_posts") }}</th><th></th></tr></thead>
+    <tbody>
+      {% for t in tags %}
+      <tr>
+        <td>{{ t.name }}</td>
+        <td class="muted">/tag/{{ t.slug }}</td>
+        <td>{{ t.count }}</td>
+        <td class="actions">
+          <form method="post" action="/admin/terms/{{ t.id }}/delete">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <button type="submit" class="btn btn-danger btn-sm">{{ t(key="admin.action.delete") }}</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No tags yet.</p>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <h2>{{ t(key="admin.terms.create_title") }}</h2>
+  <form method="post" action="/admin/terms/create" class="stack">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="form-grid">
+      <div>
+        <label for="f-kind">{{ t(key="admin.terms.kind") }}</label>
+        <select id="f-kind" name="kind">
+          <option value="category" {% if new_kind != 'tag' %}selected{% endif %}>Category</option>
+          <option value="tag" {% if new_kind == 'tag' %}selected{% endif %}>Tag</option>
+        </select>
+      </div>
+      <div>
+        <label for="f-name">{{ t(key="admin.terms.name") }}</label>
+        <input id="f-name" type="text" name="name" required maxlength="100">
+      </div>
+    </div>
+    <div><button type="submit">{{ t(key="admin.action.create") }}</button></div>
+  </form>
+  <p class="hint">Terms are also created automatically when you save a post with a category or tags.</p>
+</div>
+{% endblock content %}

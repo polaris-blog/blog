@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in · Polaris</title>
+<link rel="stylesheet" href="/admin/static/style.css">
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-card">
+    <h1>✦ Polaris</h1>
+    <p class="sub">{{ t(key="admin.login.subtitle") }}</p>
+    {% if error %}<div class="login-error">{{ error }}</div>{% endif %}
+    <form method="post" action="/admin/login">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="next" value="{{ next }}">
+      <div>
+        <label for="f-username">{{ t(key="admin.login.username") }}</label>
+        <input id="f-username" type="text" name="username" required autofocus autocomplete="username">
+      </div>
+      <div>
+        <label for="f-password">{{ t(key="admin.login.password") }}</label>
+        <input id="f-password" type="password" name="password" required autocomplete="current-password">
+      </div>
+      <button type="submit">{{ t(key="admin.login.sign_in") }}</button>
+    </form>
+    <p class="foot">{{ t(key="admin.login.foot") }}</p>
+  </div>
+</div>
+</body>
+</html>

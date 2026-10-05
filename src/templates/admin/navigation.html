@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Navigation{% endblock title %}
+{% block head %}
+<script src="/admin/static/navigation.js" defer></script>
+{% endblock head %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ t(key="admin.page.navigation") }}</h1>
+    <p class="muted">Edit the public top bar: rename or hide built-in entries, manage your custom links.</p>
+  </div>
+</div>
+
+<form method="post" action="/admin/navigation" class="stack navigation-form">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="panel">
+    <h2>{{ t(key="admin.navigation.system_title") }}</h2>
+    <p class="hint">{{ t(key="admin.navigation.system_hint") }}</p>
+    <ul class="nav-system-list">
+      {% for item in system_nav %}
+      <li class="nav-system-row">
+        <label class="nav-sys-toggle">
+          <input type="checkbox" class="switch" name="sys_enabled" value="{{ item.url }}" {% if not item.hidden %}checked{% endif %}
+                 aria-label="Show {{ item.label }}">
+        </label>
+        <input class="nav-sys-label-input" type="text" name="sys_label" value="{{ item.label_override }}"
+               maxlength="80" placeholder="{{ item.label }}" aria-label="Label for {{ item.label }}">
+        <span class="badge nav-badge-{{ item.source }}">{% if item.source == "system" %}{{ t(key="admin.badge.system") }}{% elif item.source == "page" %}{{ t(key="admin.badge.page") }}{% elif item.source == "plugin" %}{{ t(key="admin.badge.plugin") }}{% else %}{{ t(key="admin.badge.theme") }}{% endif %}</span>
+        <span class="nav-system-url">{{ item.url }}</span>
+        <input type="hidden" name="sys_url" value="{{ item.url }}">
+      </li>
+      {% endfor %}
+    </ul>
+    <p class="hint">{{ t(key="admin.navigation.manage_html") | safe }}</p>
+  </div>
+
+  <div class="panel">
+    <h2>{{ t(key="admin.navigation.custom_title") }}</h2>
+    <p class="hint">{{ t(key="admin.navigation.custom_hint") }}</p>
+    <ul class="nav-edit-list" id="nav-edit-list">
+      {% for row in nav_rows %}
+      <li class="nav-edit-row">
+        <div class="nav-row-controls">
+          <button type="button" class="nav-row-btn" data-nav-move="up" title="{{ t(key="admin.navigation.move_up") }}" aria-label="{{ t(key="admin.navigation.move_up") }}">&#8593;</button>
+          <button type="button" class="nav-row-btn" data-nav-move="down" title="{{ t(key="admin.navigation.move_down") }}" aria-label="{{ t(key="admin.navigation.move_down") }}">&#8595;</button>
+        </div>
+        <div class="nav-row-field">
+          <span class="nav-field-name">Label</span>
+          <input type="text" name="label" value="{{ row.label }}" maxlength="80" placeholder="About" aria-label="{{ t(key="admin.navigation.label_aria") }}">
+        </div>
+        <div class="nav-row-field">
+          <span class="nav-field-name">URL</span>
+          <input type="text" name="url" value="{{ row.url }}" maxlength="500" placeholder="/about or https://example.com" aria-label="URL">
+        </div>
+        <div class="nav-row-controls">
+          <button type="button" class="nav-row-btn nav-row-remove" data-nav-remove title="Remove" aria-label="Remove">&#10005;</button>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    <p class="hint" id="nav-empty" {% if not nav_rows %}hidden{% endif %}>{{ t(key="admin.navigation.no_links") }}</p>
+    <button type="button" class="btn btn-secondary" id="nav-add-row">+ Add link</button>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit">{{ t(key="admin.navigation.save") }}</button>
+    <a class="btn btn-secondary" href="/admin">Cancel</a>
+  </div>
+</form>
+
+<template id="nav-row-template">
+  <li class="nav-edit-row">
+    <div class="nav-row-controls">
+      <button type="button" class="nav-row-btn" data-nav-move="up" title="{{ t(key="admin.navigation.move_up") }}" aria-label="{{ t(key="admin.navigation.move_up") }}">&#8593;</button>
+      <button type="button" class="nav-row-btn" data-nav-move="down" title="{{ t(key="admin.navigation.move_down") }}" aria-label="{{ t(key="admin.navigation.move_down") }}">&#8595;</button>
+    </div>
+    <div class="nav-row-field">
+      <span class="nav-field-name">Label</span>
+      <input type="text" name="label" maxlength="80" placeholder="About" aria-label="{{ t(key="admin.navigation.label_aria") }}">
+    </div>
+    <div class="nav-row-field">
+      <span class="nav-field-name">URL</span>
+      <input type="text" name="url" maxlength="500" placeholder="/about or https://example.com" aria-label="URL">
+    </div>
+    <div class="nav-row-controls">
+      <button type="button" class="nav-row-btn nav-row-remove" data-nav-remove title="Remove" aria-label="Remove">&#10005;</button>
+    </div>
+  </li>
+</template>
+{% endblock content %}

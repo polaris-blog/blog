@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}{% if is_new %}New page{% else %}Edit page{% endif %}{% endblock title %}
+{% block head %}
+<meta name="csrf" content="{{ csrf }}">
+<script src="/admin/static/media.js" defer></script>
+<script src="/static/js/highlight.js" defer></script>
+<script src="/admin/static/editor.js" defer></script>
+{% endblock head %}
+{% block content %}
+<div class="page-head">
+  <h1>{% if is_new %}{{ t(key="admin.page.new_page") }}{% else %}{{ t(key="admin.page.edit_page") }}{% endif %}</h1>
+  {% if not is_new %}
+  <a class="btn btn-secondary" href="/{{ form.slug }}" target="_blank">{{ t(key="admin.action.view_on_site") }}</a>
+  {% endif %}
+</div>
+
+<form method="post"
+      action="{% if is_new %}/admin/pages/new{% else %}/admin/pages/{{ page_id }}/edit{% endif %}"
+      class="stack stack-wide">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+
+  <div class="form-grid">
+    <div class="wide">
+      <label for="f-title">{{ t(key="admin.form.title") }}</label>
+      <input id="f-title" type="text" name="title" value="{{ form.title }}" required maxlength="255">
+    </div>
+    <div>
+      <label for="f-slug">{{ t(key="admin.form.slug") }} <span class="hint">{{ t(key="admin.form.slug_page_hint") }}</span></label>
+      <input id="f-slug" type="text" name="slug" value="{{ form.slug }}">
+    </div>
+    <div>
+      <label for="f-status">{{ t(key="admin.form.status") }}</label>
+      <select id="f-status" name="status">
+        {% for s in ["draft", "published"] %}
+        <option value="{{ s }}" {% if form.status == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="f-order">{{ t(key="admin.form.order") }} <span class="hint">{{ t(key="admin.form.order_hint") }}</span></label>
+      <input id="f-order" type="number" name="sort_order" value="{{ form.sort_order }}">
+    </div>
+    <div class="wide">
+      <label for="f-summary">{{ t(key="admin.form.summary") }} <span class="hint">{{ t(key="admin.hint.optional") }}</span></label>
+      <textarea id="f-summary" name="summary" rows="2">{{ form.summary }}</textarea>
+    </div>
+    <div class="wide">
+      <label for="f-content">{{ t(key="admin.form.content") }}</label>
+      <textarea id="f-content" class="content-editor" name="content">{{ form.content }}</textarea>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit">{{ t(key="admin.action.save_page") }}</button>
+    <a class="btn btn-secondary" href="/admin/pages">{{ t(key="admin.action.cancel") }}</a>
+  </div>
+</form>
+{% endblock content %}

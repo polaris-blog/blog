@@ -1,0 +1,188 @@
+# Polaris configuration
+#
+# Precedence: polaris.toml < POLARIS_* environment variables < CLI arguments
+# Example: POLARIS_SERVER_PORT=8080 polaris serve --port 9090  ->  port 9090
+#
+# Everything below is optional — sensible defaults apply. Values here are
+# only defaults; runtime settings changed in the admin UI are stored in the
+# database and override this file.
+
+[server]
+host = "127.0.0.1"
+port = 3000
+
+[database]
+# driver: sqlite | mysql | postgres
+driver = "sqlite"
+# sqlite: a file path or sqlite: URL (created automatically, WAL mode)
+# mysql:   mysql://user:pass@host:3306/polaris
+# postgres: postgres://user:pass@host:5432/polaris
+url = "data/polaris.db"
+max_connections = 10
+min_connections = 0
+# Run pending migrations automatically on startup
+auto_migrate = true
+
+[site]
+title = "Polaris"
+description = "A fast, lightweight blog powered by Polaris"
+# Used for canonical URLs, RSS and sitemap. Leave empty to derive from
+# the request Host header.
+base_url = ""
+posts_per_page = 10
+
+[theme]
+# Directory name under themes/ — switch at runtime in the admin UI
+active = "default"
+dir = "themes"
+
+[plugin]
+dir = "plugins"
+
+[comments]
+enabled = true
+# Hold new comments for moderation instead of publishing immediately
+moderate = true
+
+[security]
+# Empty: generate and persist a random instance key on first startup.
+# Or supply a stable random key (openssl rand -hex 32); CHANGE_ME is rejected.
+# Keep a secure copy separately: portable backups exclude this key.
+secret = ""
+# Hours until an admin session expires
+session_ttl_hours = 72
+# Exact IPs of reverse proxies that append X-Forwarded-For; empty ignores it.
+# For a local nginx/Caddy proxy: ["127.0.0.1", "::1"]. No CIDR ranges.
+trusted_proxies = []
+
+[cache]
+enabled = true
+# "memory" or "redis" (requires cargo build --release --features redis)
+driver = "memory"
+
+[cache.redis]
+url = "redis://127.0.0.1:6379"
+# REQUIRED when driver = "redis". Choose a stable, unique site/environment ID.
+# Instances of the same site share this value; different sites must not.
+# Allowed: 1–128 ASCII letters, digits, '.', '_' and '-'.
+namespace = ""
+
+[search]
+enabled = true
+# "auto" uses the database's native full-text engine:
+#   sqlite -> FTS5, mysql -> FULLTEXT, postgres -> tsvector/GIN
+provider = "auto"
+default_per_page = 10
+max_per_page = 50
+# Queries shorter than this are ignored (also guards /api/search/suggest)
+minimum_query_length = 2
+suggestion_limit = 10
+highlight = true
+# Text-search language config for PostgreSQL ("simple" disables stemming)
+language = "simple"
+
+[search.weights]
+# Relative ranking weight per field (higher = more important)
+title = 5.0
+excerpt = 3.0
+tags = 3.0
+category = 2.0
+author = 1.0
+content = 1.0
+
+[search.cache]
+enabled = true
+# Seconds; content changes invalidate immediately, TTL is just a safety net
+ttl = 60
+
+[search.analytics]
+# Privacy first: only normalized query text + aggregate counters are stored
+# (never IPs, user agents or identities). Off by default.
+enabled = false
+
+[media]
+enabled = true
+
+[media.storage]
+# "local" (default, zero dependencies) — files under data/media/YYYY/MM/
+provider = "local"
+dir = "data/media"
+
+[media.upload]
+# Global cap for a single upload; per-kind limits below
+max_file_size = "20MB"
+# Reuse the existing record when an upload's SHA-256 already exists
+deduplicate = true
+# Extra extensions to allow beyond the built-in whitelist (no magic-byte
+# verification possible; served as application/octet-stream)
+# extra_types = ["doc", "docx"]
+
+[media.upload.limits]
+image = "20MB"
+video = "500MB"
+audio = "100MB"
+document = "50MB"
+archive = "50MB"
+other = "20MB"
+
+[media.images]
+generate_thumbnails = true
+# "" keeps the source format; "webp"/"jpeg"/"png" re-encodes raster uploads
+# (GIF is never converted — animation would be lost)
+preferred_format = ""
+
+# Only the sizes present here are generated (set one to 0 to disable it)
+[media.images.sizes]
+thumb = 240
+small = 480
+medium = 960
+large = 1920
+
+[media.images.quality]
+jpeg = 85
+webp = 85
+
+[media.exif]
+# Re-encode JPEG uploads without EXIF (GPS, camera serial, device info are
+# dropped; orientation is baked into the pixels first)
+strip = true
+
+[media.svg]
+enabled = true
+# Strict allow-list sanitizer (scripts, event handlers and external
+# references removed; upload rejected when sanitization fails)
+sanitize = true
+
+[media.cdn]
+# Serve media URLs from an absolute base URL instead of /media/*
+enabled = false
+url = ""
+
+# ---------------------------------------------------------------------------
+[backup]
+# Where backup archives live (local provider)
+dir = "data/backups"
+# Staging area for in-progress archives and uploaded backups
+tmp_dir = "data/tmp/backups"
+# Cap for an uploaded backup archive
+max_upload_size = "2GB"
+# Sum of uncompressed entry sizes inside an archive (zip-bomb guard)
+max_uncompressed_size = "4GB"
+max_files = 20000
+# Retention for scheduled backups (newest N kept)
+keep_auto = 5
+
+[backup.auto]
+# Scheduled backups are checked once per minute while the server runs and
+# are configurable at runtime from Admin → Backups (stored in the database)
+enabled = false
+interval_hours = 24
+# full | database | media
+kind = "full"
+keep = 5
+[scheduler]
+enabled = true
+workers = 4
+poll_interval = 1 # seconds
+default_timeout = 300 # seconds
+max_retries = 3

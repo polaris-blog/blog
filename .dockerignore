@@ -1,0 +1,15 @@
+# Build artifacts & local state
+target
+data
+data-demo
+*.log
+*.db
+*.db-shm
+*.db-wal
+
+# VCS & CI
+.git
+.github
+
+# Editor / OS noise
+.DS_Store

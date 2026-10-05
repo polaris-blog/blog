@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en" {% if theme.config.dark_mode == false %}class="no-dark"{% endif %}>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% if seo.title %}{{ seo.title }} · {{ site.title }}{% else %}{{ site.title }}{% endif %}</title>
+{% if seo.description %}<meta name="description" content="{{ seo.description }}">{% endif %}
+{% if seo.canonical %}<link rel="canonical" href="{{ seo.canonical }}">{% endif %}
+{% if seo.og_type %}
+<meta property="og:title" content="{% if seo.title %}{{ seo.title }}{% else %}{{ site.title }}{% endif %}">
+<meta property="og:description" content="{% if seo.description %}{{ seo.description }}{% else %}{{ site.description }}{% endif %}">
+<meta property="og:type" content="{{ seo.og_type }}">
+<meta property="og:site_name" content="{{ site.title }}">
+{% if seo.og_image %}<meta property="og:image" content="{{ seo.og_image }}">{% endif %}
+<meta name="twitter:card" content="summary">
+{% endif %}
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="/static/css/style.css">
+<script src="/static/js/theme.js"></script>
+<script src="/static/js/highlight.js" defer></script>
+{% if theme.config.accent_color %}<style>:root { --accent: {{ theme.config.accent_color }}; }</style>{% endif %}
+<link rel="alternate" type="application/rss+xml" title="{{ site.title }}" href="/rss.xml">
+<link rel="alternate" type="application/atom+xml" title="{{ site.title }}" href="/atom.xml">
+</head>
+<body {% if theme.config.layout == 'wide' %}class="layout-wide"{% endif %} data-copy-label="{{ t(key='code.copy') }}" data-copied-label="{{ t(key='code.copied') }}">
+
+{# Glass navigation — 48px translucent bar that floats above every section. #}
+<nav class="globalnav" aria-label="{{ t(key="a11y.primary_nav") }}">
+  <div class="globalnav-content">
+    <a class="globalnav-logo" href="/" aria-label="{{ site.title }} — home">✦</a>
+    <ul class="globalnav-list">
+      {% if nav_home %}<li><a href="/">{{ nav_home.label }}</a></li>{% endif %}
+      {% for p in nav_pages %}
+      <li><a href="/{{ p.slug }}">{{ p.title }}</a></li>
+      {% endfor %}
+      {% for item in plugin_nav %}
+      <li><a href="{{ item.url }}">{{ item.label }}</a></li>
+      {% endfor %}
+      {% if custom_nav %}
+      {% for item in custom_nav %}
+      <li><a href="{{ item.url }}">{{ item.label }}</a></li>
+      {% endfor %}
+      {% endif %}
+      {% if nav_rss %}<li><a href="{{ nav_rss.url }}">{{ nav_rss.label }}</a></li>{% endif %}
+    </ul>
+    <form class="globalnav-search" action="/search" method="get" role="search">
+      <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">
+        <path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
+              d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0z"/>
+      </svg>
+      <input type="search" name="q" placeholder="{{ t(key='search.button') }}" aria-label="{{ t(key='search.title') }}"
+             minlength="2" maxlength="100" autocomplete="off">
+    </form>
+    {% if theme.config.dark_mode != false %}
+    <button type="button" class="theme-toggle" id="theme-toggle" aria-label="{{ t(key="a11y.toggle_appearance") }}">
+      <svg class="icon-moon" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+        <path fill="currentColor" d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>
+      </svg>
+      <svg class="icon-sun" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+        <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              d="M12 4V2m0 20v-2m8-8h2M2 12h2m13.7-5.7 1.4-1.4M4.9 19.1l1.4-1.4m0-11.4L4.9 4.9m14.2 14.2-1.4-1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/>
+      </svg>
+    </button>
+    {% endif %}
+  </div>
+</nav>
+
+<main>
+  {% block content %}{% endblock content %}
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <p class="footer-links">
+      <a href="/">{{ t(key="footer.home") }}</a>
+      <a href="/rss.xml">{{ t(key="footer.rss") }}</a>
+      <a href="/atom.xml">{{ t(key="footer.atom") }}</a>
+      {% if theme.config.social_links %}
+      {% for link in theme.config.social_links %}
+      <a href="{{ link.url }}" rel="me">{{ link.label }}</a>
+      {% endfor %}
+      {% endif %}
+      <a href="/admin">{{ t(key="footer.admin") }}</a>
+    </p>
+    <p>
+      {{ t(key="footer.copyright") }} © {{ current_year }} {{ site.title }}.
+      {% if site.description %}{{ site.description }}.{% endif %}
+      Powered by <a href="https://github.com/polaris">Polaris</a>.
+    </p>
+    {% if theme.config.footer_text %}<p>{{ theme.config.footer_text }}</p>{% endif %}
+  </div>
+</footer>
+
+{% if json_ld %}
+<script type="application/ld+json">{{ json_ld }}</script>
+{% endif %}
+</body>
+</html>

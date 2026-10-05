@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}Media{% endblock title %}
+{% block head %}
+<meta name="csrf" content="{{ csrf }}">
+<meta name="media-folder" content="{{ folder_filter }}">
+<script src="/admin/static/media.js" defer></script>
+{% endblock head %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ t(key="admin.page.media") }} <span class="muted">({{ total }} · {{ stats_bytes }})</span></h1>
+  <div class="head-actions">
+    {% if can_manage_folders %}
+    <details class="dropdown">
+      <summary class="btn btn-secondary">{{ t(key="admin.media.new_folder") }}</summary>
+      <form method="post" action="/admin/media/folder/create" class="dropdown-body">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="text" name="name" placeholder="{{ t(key='admin.media.folder_name') }}" required maxlength="80">
+        <button type="submit" class="btn btn-sm">{{ t(key="admin.action.create") }}</button>
+      </form>
+    </details>
+    {% endif %}
+    <label class="btn" for="media-file-input" title="Upload files (or drag &amp; drop / paste)">{{ t(key="admin.action.upload") }}</label>
+    <input id="media-file-input" type="file" multiple class="visually-hidden">
+  </div>
+</div>
+
+<noscript>
+<form method="post" action="/admin/media/upload" enctype="multipart/form-data" class="media-noscript">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="hidden" name="folder_id" value="{{ folder_filter }}">
+  <input type="file" name="file" multiple required>
+  <button type="submit" class="btn btn-sm">{{ t(key="admin.action.upload") }}</button>
+</form>
+</noscript>
+
+<form method="get" action="/admin/media" class="media-toolbar" data-media-library>
+  <div class="media-search">
+    <svg class="media-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    <input type="search" name="search" value="{{ search }}"
+           placeholder="{{ t(key='admin.media.search_placeholder') }}" aria-label="{{ t(key='admin.media.search_placeholder') }}">
+    {% if search %}
+    <a class="media-search-clear" href="/admin/media?{{ qs_noview }}view={{ view }}"
+       title="{{ t(key="admin.media.clear_search") }}" aria-label="{{ t(key="admin.media.clear_search") }}">×</a>
+    {% endif %}
+  </div>
+  <select name="type">
+    <option value="">{{ t(key="admin.media.all_types") }}</option>
+    {% for k in ["image", "video", "audio", "document", "archive", "other"] %}
+    <option value="{{ k }}" {% if kind_filter == k %}selected{% endif %}>{{ k }}</option>
+    {% endfor %}
+  </select>
+  <select name="sort">
+    <option value="newest" {% if sort == 'newest' %}selected{% endif %}>{{ t(key="admin.media.newest") }}</option>
+    <option value="oldest" {% if sort == 'oldest' %}selected{% endif %}>{{ t(key="admin.media.oldest") }}</option>
+    <option value="name" {% if sort == 'name' %}selected{% endif %}>{{ t(key="admin.media.name") }}</option>
+    <option value="size" {% if sort == 'size' %}selected{% endif %}>{{ t(key="admin.media.size") }}</option>
+  </select>
+  <input type="hidden" name="folder" value="{{ folder_filter }}">
+  <input type="hidden" name="tag" value="{{ tag_filter }}">
+  <input type="hidden" name="view" value="{{ view }}">
+  <button type="submit" class="btn btn-secondary btn-sm">{{ t(key="admin.action.apply") }}</button>
+  <span class="spacer"></span>
+  <a class="btn btn-secondary btn-sm" href="/admin/media?{{ qs_noview }}view={% if view == 'grid' %}list{% else %}grid{% endif %}"
+     >{% if view == 'grid' %}{{ t(key="admin.media.list_view") }}{% else %}{{ t(key="admin.media.grid_view") }}{% endif %}</a>
+</form>
+
+<div class="tabs">
+  <a href="/admin/media?{{ qs_folders }}"
+     class="{% if folder_filter == 'all' %}active{% endif %}">{{ t(key="admin.tab.all") }}</a>
+  <a href="/admin/media?{{ qs_folders }}folder=unfiled" class="{% if folder_filter == 'unfiled' %}active{% endif %}">{{ t(key="admin.media.unfiled") }}</a>
+  {% for f in folders %}
+  <a href="/admin/media?{{ qs_folders }}folder={{ f.id }}" class="{% if folder_filter == f.id|string %}active{% endif %}">
+    {{ f.name }} <span class="muted">({{ f.count | default(value=0) }})</span>
+  </a>
+  {% endfor %}
+</div>
+
+{% if tags %}
+<div class="media-tagbar">
+  {% for t in tags %}
+  <a href="/admin/media?{{ qs_tags }}tag={{ t.0 }}"
+     class="chip {% if tag_filter == t.0 %}chip-active{% endif %}">{{ t.0 }} <span class="muted">{{ t.1 }}</span></a>
+  {% endfor %}
+</div>
+{% endif %}
+
+<form method="post" action="/admin/media/batch" class="media-batch">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="hidden" name="folder_id" value="{% if folder_filter == 'all' or folder_filter == 'unfiled' %}{% else %}{{ folder_filter }}{% endif %}">
+  <div class="batch-bar" data-batch-bar hidden>
+    <label class="inline-check"><input type="checkbox" data-select-all> {{ t(key="admin.media.select_all") }}</label>
+    <span class="batch-count muted"></span>
+    <span class="spacer"></span>
+    <select name="action" required>
+      <option value="move">{{ t(key="admin.media.move_to_folder") }}</option>
+      <option value="tag">{{ t(key="admin.media.set_tags") }}</option>
+      <option value="delete">{{ t(key="admin.action.delete") }}</option>
+    </select>
+    <select name="target" data-batch-folder disabled>
+      <option value="">{{ t(key="admin.media.no_folder") }}</option>
+      {% for f in folders %}
+      <option value="{{ f.id }}">{{ f.name }}</option>
+      {% endfor %}
+    </select>
+    <input type="text" name="tags" placeholder="{{ t(key="admin.media.tags_placeholder") }}" data-batch-tags disabled>
+    <label class="inline-check" data-batch-force hidden>
+      <input type="checkbox" name="force" value="on"> {{ t(key="admin.media.delete_anyway") }}
+    </label>
+    <button type="submit" class="btn btn-danger btn-sm">{{ t(key="admin.action.apply") }}</button>
+  </div>
+
+  {% if items %}
+  {% if view == 'list' %}
+  <table class="media-table">
+    <thead>
+      <tr><th></th><th>{{ t(key="admin.media.file") }}</th><th>{{ t(key="admin.media.type") }}</th><th>{{ t(key="admin.media.size") }}</th><th>{{ t(key="admin.media.dimensions") }}</th><th>{{ t(key="admin.media.folder") }}</th><th>{{ t(key="admin.media.by") }}</th><th>{{ t(key="admin.media.refs") }}</th><th>{{ t(key="admin.media.created") }}</th></tr>
+    </thead>
+    <tbody>
+      {% for m in items %}
+      <tr>
+        <td><input type="checkbox" name="ids" value="{{ m.id }}"></td>
+        <td class="media-cell-name">
+          <a href="/admin/media/{{ m.id }}" class="media-name-link">
+            {% if m.is_image %}<img class="media-row-thumb" src="{{ m.thumb_url }}" alt="" loading="lazy">
+            {% else %}<span class="tile-icon tile-{{ m.kind }}" aria-hidden="true"></span>{% endif %}
+            <span>{{ m.filename }}</span>
+          </a>
+          {% if m.has_references %}<span class="badge badge-published">{{ t(key="admin.media.in_use") }}</span>{% endif %}
+        </td>
+        <td class="muted">{{ t(key="media.kind." ~ m.kind) }}</td>
+        <td class="muted">{{ m.size_human }}</td>
+        <td class="muted">{% if m.dimensions %}{{ m.dimensions }}{% else %}—{% endif %}</td>
+        <td class="muted">{{ m.folder_name | default(value="") }}</td>
+        <td class="muted">{{ m.uploaded_by_name | default(value="") }}</td>
+        <td class="muted">{{ m.ref_count | default(value=0) }}</td>
+        <td class="muted">{{ m.created }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="media-grid">
+    {% for m in items %}
+    <div class="media-tile">
+      <label class="tile-select"><input type="checkbox" name="ids" value="{{ m.id }}"></label>
+      <a class="tile-thumb" href="/admin/media/{{ m.id }}" title="{{ m.filename }}">
+        {% if m.is_image %}
+        <img src="{{ m.thumb_url }}" alt="{{ m.alt }}" loading="lazy">
+        {% else %}
+        <span class="tile-icon tile-{{ m.kind }}" aria-hidden="true"></span>
+        {% endif %}
+        {% if m.has_references %}<span class="tile-flag">{{ t(key="admin.media.in_use") }}</span>{% endif %}
+      </a>
+      <div class="tile-meta">
+        <a class="tile-name" href="/admin/media/{{ m.id }}">{{ m.filename }}</a>
+        <span class="muted">{{ m.size_human }}{% if m.dimensions %} · {{ m.dimensions }}{% endif %}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% else %}
+  <p class="muted">{{ t(key="admin.media.empty") }}</p>
+  {% endif %}
+</form>
+
+{% if pages > 1 %}
+<div class="pager">
+  {% if current_page > 1 %}
+  <a href="/admin/media?{{ qs }}page={{ current_page - 1 }}">{{ t(key="admin.pager.prev") }}</a>
+  {% endif %}
+  <span class="muted">{{ t(key="admin.pager.page_of", current=current_page, pages=pages) }}</span>
+  {% if current_page < pages %}
+  <a href="/admin/media?{{ qs }}page={{ current_page + 1 }}">{{ t(key="admin.pager.next") }}</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock content %}

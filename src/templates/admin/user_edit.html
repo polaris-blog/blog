@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}{% if is_new %}New user{% else %}Edit user{% endif %}{% endblock title %}
+{% block content %}
+<h1>{% if is_new %}{{ t(key="admin.page.new_user") }}{% else %}{{ t(key="admin.page.edit_user") }}{% endif %}</h1>
+
+<form method="post"
+      action="{% if is_new %}/admin/users/new{% else %}/admin/users/{{ user_id }}/edit{% endif %}"
+      class="stack">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+
+  <div class="form-grid">
+    {% if is_new %}
+    <div>
+      <label for="f-username">{{ t(key="admin.form.username") }}</label>
+      <input id="f-username" type="text" name="username" value="{{ form.username }}" required maxlength="64" pattern="[A-Za-z0-9_.-]+">
+    </div>
+    <div>
+      <label for="f-email">{{ t(key="admin.form.email") }} <span class="hint">{{ t(key="admin.hint.optional") }}</span></label>
+      <input id="f-email" type="email" name="email" value="{{ form.email }}" maxlength="255">
+    </div>
+    <div>
+      <label for="f-password">{{ t(key="admin.form.password") }}</label>
+      <input id="f-password" type="password" name="password" required minlength="8" autocomplete="new-password">
+    </div>
+    {% else %}
+    <div>
+      <label>{{ t(key="admin.form.username") }}</label>
+      <input type="text" value="{{ form.username }}" disabled>
+    </div>
+    <div>
+      <label for="f-email">{{ t(key="admin.form.email") }} <span class="hint">{{ t(key="admin.hint.optional") }}</span></label>
+      <input id="f-email" type="email" name="email" value="{{ form.email }}" maxlength="255">
+    </div>
+    {% endif %}
+    <div>
+      <label for="f-role">{{ t(key="admin.form.role") }}</label>
+      <select id="f-role" name="role">
+        {% for r in ["author", "editor", "admin"] %}
+        <option value="{{ r }}" {% if form.role == r %}selected{% endif %}>{{ t(key="role." ~ r) }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="f-display">{{ t(key="admin.form.display_name") }} <span class="hint">{{ t(key="admin.hint.optional") }}</span></label>
+      <input id="f-display" type="text" name="display_name" value="{{ form.display_name }}" maxlength="120">
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit">{% if is_new %}{{ t(key="admin.action.create_user") }}{% else %}{{ t(key="admin.action.save_user") }}{% endif %}</button>
+    <a class="btn btn-secondary" href="/admin/users">{{ t(key="admin.action.cancel") }}</a>
+    {% if not is_new %}
+    <span class="hint">{{ t(key="admin.profile.password_note") }}</span>
+    {% endif %}
+  </div>
+</form>
+{% endblock content %}

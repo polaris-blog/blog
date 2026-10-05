@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Search{% endblock title %}
+{% block content %}
+<section class="page-section">
+  <div class="container">
+    <header class="search-hero">
+      <h1>{{ t(key="search.title") }}</h1>
+      <p class="search-hero-sub">{{ t(key="search.subtitle") }}</p>
+
+      <form class="search-form" method="get" action="/search" role="search">
+        <div class="search-box">
+          <svg class="search-icon" viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">
+            <path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                  d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0z"/>
+          </svg>
+          <input type="search" name="q" value="{{ search_query }}" placeholder="{{ t(key='search.placeholder') }}"
+                 minlength="2" maxlength="100" required>
+          <button type="submit">{{ t(key="search.button") }}</button>
+        </div>
+        <label class="search-sort">
+          <span>{{ t(key="search.sort_by") }}</span>
+          <select name="sort">
+            {% for s in sorts %}
+            <option value="{{ s }}"{% if s == sort %} selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </form>
+    </header>
+
+    {% if search_query %}
+    <p class="search-summary">
+      <strong>{{ search_total }}</strong> {{ t(key="search.results_for") }} <em class="search-term">“{{ search_query }}”</em>
+    </p>
+    {% endif %}
+
+    {% for r in results %}
+    <article class="post-card search-card">
+      <div class="post-card-body">
+        <p class="post-card-eyebrow">
+          <time datetime="{{ r.datetime }}">{{ r.date }}</time>
+          {% if r.author %} · <span>{{ r.author }}</span>{% endif %}
+          {% if r.category %} · <span>{{ r.category }}</span>{% endif %}
+          <span class="badge">{{ r.type }}</span>
+        </p>
+        <h2 class="post-card-title"><a href="{{ r.url }}">{{ r.title }}</a></h2>
+        {% if r.highlight %}<p class="post-card-excerpt">{{ r.highlight | safe }}</p>{% endif %}
+        <div class="post-card-meta">
+          <a class="link-arrow" href="{{ r.url }}">{{ t(key="search.open") }}</a>
+        </div>
+      </div>
+    </article>
+    {% endfor %}
+
+    {% if search_query and search_total == 0 %}
+    <div class="empty-state search-empty">
+      <div class="empty-star" aria-hidden="true">⌕</div>
+      <p class="headline">{{ t(key="search.empty_title") }} <em>“{{ search_query }}”</em></p>
+      <p class="muted">{{ t(key="search.empty_hint") }}</p>
+    </div>
+    {% endif %}
+
+    {% if pagination.pages > 1 %}
+    <nav class="pager" aria-label="{{ t(key="a11y.search_results") }}">
+      {% if pagination.has_prev %}
+      <a href="/search?{{ search_qs }}&amp;page={{ pagination.prev }}">{{ t(key="pager.previous") }}</a>
+      {% else %}<span></span>{% endif %}
+      <span>{{ t(key="pager.page_of", current=pagination.current, pages=pagination.pages) }}</span>
+      {% if pagination.has_next %}
+      <a href="/search?{{ search_qs }}&amp;page={{ pagination.next }}">{{ t(key="pager.next") }}</a>
+      {% else %}<span></span>{% endif %}
+    </nav>
+    {% endif %}
+  </div>
+</section>
+{% endblock content %}

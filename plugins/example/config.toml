@@ -1,0 +1,7 @@
+# Example plugin file-level defaults.
+# Values here sit between the schema defaults and the database (admin UI):
+#   schema default  →  this file  →  database  →  environment
+# Only flat, schema-declared keys are honoured.
+
+tagline = "Demo plugin for Polaris"
+append_signature = true

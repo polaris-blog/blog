@@ -1,0 +1,64 @@
+# Example plugin — configuration schema.
+#
+# Polaris generates the settings page (Plugins → example → Settings) from this
+# file, validates input and stores values under the `plugin.example` namespace
+# (secrets encrypted at rest). The script reads effective values via
+# config_get / config_get_bool / config_get_int and the init(config) hook.
+#
+# Priority (later wins): schema default → config.toml → database (admin UI)
+# → environment (POLARIS_PLUGIN_EXAMPLE_<KEY>).
+
+[groups.general]
+label = "General"
+
+[tagline]
+type = "string"
+label = "Tagline"
+description = "Logged when the plugin initializes."
+default = "Demo plugin for Polaris"
+group = "general"
+
+[append_signature]
+type = "boolean"
+label = "Append signature"
+description = "Add a signature line under every rendered post."
+default = true
+group = "general"
+
+[show_archive_nav]
+type = "boolean"
+label = "Archive nav item"
+description = "Add an Archive link to the site navigation."
+default = true
+group = "general"
+
+[groups.styling]
+label = "Styling"
+
+[star_char]
+type = "string"
+label = "Star character"
+description = "Wrapped around text by the `star` template filter."
+default = "✦"
+group = "styling"
+
+[groups.advanced]
+label = "Advanced"
+
+[api_key]
+type = "api_key"
+label = "Demo API key"
+description = "Demonstrates sensitive handling: encrypted at rest, masked in the UI, never exposed to templates."
+group = "advanced"
+
+[log_level]
+type = "select"
+label = "Log level"
+default = "info"
+group = "advanced"
+restart = true
+options = [
+    { value = "debug", label = "Debug" },
+    { value = "info", label = "Info" },
+    { value = "warn", label = "Warning" },
+]

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Posts{% endblock title %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ t(key="admin.page.posts") }} <span class="muted">({{ total }})</span></h1>
+  <a class="btn" href="/admin/posts/new">{{ t(key="admin.action.new_post") }}</a>
+</div>
+
+<div class="tabs">
+  <a href="/admin/posts" class="{% if status_filter == '' %}active{% endif %}">{{ t(key="admin.tab.all") }}</a>
+  <a href="/admin/posts?status=draft" class="{% if status_filter == 'draft' %}active{% endif %}">{{ t(key="admin.tab.drafts") }} ({{ count_draft }})</a>
+  <a href="/admin/posts?status=scheduled" class="{% if status_filter == 'scheduled' %}active{% endif %}">{{ t(key="admin.tab.scheduled") }} ({{ count_scheduled }})</a>
+  <a href="/admin/posts?status=published" class="{% if status_filter == 'published' %}active{% endif %}">{{ t(key="admin.tab.published") }} ({{ count_published }})</a>
+</div>
+
+{% if posts %}
+<table>
+  <thead>
+    <tr><th>{{ t(key="admin.th.title") }}</th><th>{{ t(key="admin.th.status") }}</th><th>{{ t(key="admin.th.author") }}</th><th>{{ t(key="admin.th.category") }}</th><th>{{ t(key="admin.th.updated") }}</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for p in posts %}
+    <tr>
+      <td><a href="/admin/posts/{{ p.id }}/edit">{{ p.title }}</a><br>
+          <span class="muted">/posts/{{ p.slug }}</span></td>
+      <td><span class="badge badge-{{ p.status }}">{{ t(key="status." ~ p.status) }}</span></td>
+      <td>{{ p.author }}</td>
+      <td>{{ p.category }}</td>
+      <td class="muted">{{ p.updated }}</td>
+      <td class="actions">
+        <a class="btn btn-secondary btn-sm" href="/posts/{{ p.slug }}" target="_blank">{{ t(key="admin.action.view") }}</a>
+        {% if p.can_edit %}
+        <a class="btn btn-secondary btn-sm" href="/admin/posts/{{ p.id }}/edit">{{ t(key="admin.action.edit") }}</a>
+        <form method="post" action="/admin/posts/{{ p.id }}/delete">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button type="submit" class="btn btn-danger btn-sm">{{ t(key="admin.action.delete") }}</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">{{ t(key="admin.posts.empty") }}</p>
+{% endif %}
+
+{% if pages > 1 %}
+<div class="pager">
+  {% if current_page > 1 %}
+  <a href="/admin/posts?{% if status_filter %}status={{ status_filter }}&amp;{% endif %}page={{ current_page - 1 }}">{{ t(key="admin.pager.prev") }}</a>
+  {% endif %}
+  <span class="muted">{{ t(key="admin.pager.page_of", current=current_page, pages=pages) }}</span>
+  {% if current_page < pages %}
+  <a href="/admin/posts?{% if status_filter %}status={{ status_filter }}&amp;{% endif %}page={{ current_page + 1 }}">{{ t(key="admin.pager.next") }}</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock content %}

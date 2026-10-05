@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock title %}
+{% block content %}
+<h1>{{ t(key="admin.page.dashboard") }}</h1>
+
+<div class="cards">
+  <div class="card"><div class="num">{{ posts_published }}</div><div class="lbl">{{ t(key="admin.dash.published") }}</div></div>
+  <div class="card"><div class="num">{{ posts_draft }}</div><div class="lbl">{{ t(key="admin.dash.drafts") }}</div></div>
+  <div class="card"><div class="num">{{ posts_scheduled }}</div><div class="lbl">{{ t(key="admin.dash.scheduled") }}</div></div>
+  <div class="card"><div class="num">{{ comments_pending }}</div><div class="lbl">{{ t(key="admin.dash.pending_comments") }}</div></div>
+  <div class="card"><div class="num">{{ comments_approved }}</div><div class="lbl">{{ t(key="admin.dash.approved_comments") }}</div></div>
+  <div class="card"><div class="num">{{ users_total }}</div><div class="lbl">{{ t(key="admin.dash.users") }}</div></div>
+</div>
+
+<div class="panel">
+  <h2>{{ t(key="admin.dash.system") }}</h2>
+  <ul class="list-plain">
+    <li><span>{{ t(key="admin.dash.theme") }}</span><span>{{ theme_name }}</span></li>
+    <li><span>{{ t(key="admin.dash.database") }}</span><span>{{ db_dialect }}</span></li>
+    <li><span>{{ t(key="admin.dash.uptime") }}</span><span>{{ uptime }}</span></li>
+    <li><span>{{ t(key="admin.dash.version") }}</span><span>Polaris {{ version }}</span></li>
+  </ul>
+</div>
+
+<div class="panel">
+  <h2>{{ t(key="admin.dash.recent_posts") }}</h2>
+  {% if recent_posts %}
+  <ul class="list-plain">
+    {% for p in recent_posts %}
+    <li>
+      <span><a href="/admin/posts/{{ p.id }}/edit">{{ p.title }}</a>
+        <span class="badge badge-{{ p.status }}">{{ t(key="status." ~ p.status) }}</span></span>
+      <span class="muted">{{ p.updated }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">{{ t(key="admin.dash.no_posts_html") | safe }}</p>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <h2>{{ t(key="admin.dash.recent_comments") }}</h2>
+  {% if recent_comments %}
+  <ul class="list-plain">
+    {% for c in recent_comments %}
+    <li>
+      <span>{{ c.author }} {{ t(key="admin.dash.on") }} “{{ c.post_title }}” — {{ c.excerpt }}
+        <span class="badge badge-{{ c.status }}">{{ t(key="status." ~ c.status) }}</span></span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">{{ t(key="admin.dash.no_comments") }}</p>
+  {% endif %}
+</div>
+{% endblock content %}

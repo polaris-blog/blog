@@ -1,0 +1,21 @@
+[2m2026-09-26T11:52:48.564564Z[0m [32m INFO[0m [2mpolaris::db::migrate[0m[2m:[0m migration applied [3mversion[0m[2m=[0m1 [3mname[0m[2m=[0m"init" [3mdialect[0m[2m=[0m"sqlite"
+[2m2026-09-26T11:52:48.580401Z[0m [32m INFO[0m [2mpolaris::db::migrate[0m[2m:[0m migration applied [3mversion[0m[2m=[0m2 [3mname[0m[2m=[0m"search" [3mdialect[0m[2m=[0m"sqlite"
+[2m2026-09-26T11:52:48.601941Z[0m [32m INFO[0m [2mpolaris::db::migrate[0m[2m:[0m migration applied [3mversion[0m[2m=[0m3 [3mname[0m[2m=[0m"media" [3mdialect[0m[2m=[0m"sqlite"
+[2m2026-09-26T11:52:48.618979Z[0m [32m INFO[0m [2mpolaris::db::migrate[0m[2m:[0m migration applied [3mversion[0m[2m=[0m4 [3mname[0m[2m=[0m"extensions" [3mdialect[0m[2m=[0m"sqlite"
+[2m2026-09-26T11:52:48.637534Z[0m [32m INFO[0m [2mpolaris::db::migrate[0m[2m:[0m migration applied [3mversion[0m[2m=[0m5 [3mname[0m[2m=[0m"scheduler" [3mdialect[0m[2m=[0m"sqlite"
+[2m2026-09-26T11:52:48.700305Z[0m [32m INFO[0m [2mpolaris::extension::installer[0m[2m:[0m registered pre-existing extension [3mkind[0m[2m=[0m"theme" [3mextension[0m[2m=[0m"default" [3mversion[0m[2m=[0m1.1.0
+[2m2026-09-26T11:52:48.713919Z[0m [32m INFO[0m [2mpolaris::extension::installer[0m[2m:[0m registered pre-existing extension [3mkind[0m[2m=[0m"plugin" [3mextension[0m[2m=[0m"example" [3mversion[0m[2m=[0m1.0.0
+[2m2026-09-26T11:52:48.714143Z[0m [32m INFO[0m [2mpolaris::state[0m[2m:[0m registered pre-existing extensions [3mcount[0m[2m=[0m2
+[2m2026-09-26T11:52:48.716460Z[0m [32m INFO[0m [2mpolaris::cache[0m[2m:[0m cache backend: memory [3mmax_entries[0m[2m=[0m4096
+[2m2026-09-26T11:52:49.008299Z[0m [32m INFO[0m [2mpolaris[0m[2m:[0m ✦ polaris listening — press Ctrl-C to stop [3maddr[0m[2m=[0m127.0.0.1:3100 [3mdb[0m[2m=[0m"sqlite" [3mtheme[0m[2m=[0m"default" [3mstartup_ms[0m[2m=[0m516
+[2m2026-09-26T11:52:49.009434Z[0m [32m INFO[0m [2mpolaris::scheduler::service[0m[2m:[0m scheduler started [3mworkers[0m[2m=[0m4
+[2m2026-09-26T11:52:51.502684Z[0m [32m INFO[0m [2mpolaris::http[0m[2m:[0m request [3mmethod[0m[2m=[0mGET [3mpath[0m[2m=[0m/admin [3mstatus[0m[2m=[0m303 [3mms[0m[2m=[0m0
+[2m2026-09-26T11:52:52.747461Z[0m [32m INFO[0m [2mpolaris::http[0m[2m:[0m request [3mmethod[0m[2m=[0mGET [3mpath[0m[2m=[0m/admin/setup [3mstatus[0m[2m=[0m200 [3mms[0m[2m=[0m1216
+[2m2026-09-26T11:54:28.911908Z[0m [32m INFO[0m [2mpolaris::http[0m[2m:[0m request [3mmethod[0m[2m=[0mGET [3mpath[0m[2m=[0m/ [3mstatus[0m[2m=[0m200 [3mms[0m[2m=[0m20
+[2m2026-09-26T11:54:29.809405Z[0m [32m INFO[0m [2mpolaris::http[0m[2m:[0m request [3mmethod[0m[2m=[0mGET [3mpath[0m[2m=[0m/favicon.ico [3mstatus[0m[2m=[0m404 [3mms[0m[2m=[0m0
+[2m2026-09-26T11:54:58.983571Z[0m [32m INFO[0m [2mpolaris::http[0m[2m:[0m request [3mmethod[0m[2m=[0mGET [3mpath[0m[2m=[0m/setup [3mstatus[0m[2m=[0m404 [3mms[0m[2m=[0m12
+[2m2026-09-26T11:55:05.044884Z[0m [32m INFO[0m [2mpolaris::http[0m[2m:[0m request [3mmethod[0m[2m=[0mGET [3mpath[0m[2m=[0m/admin/setup [3mstatus[0m[2m=[0m200 [3mms[0m[2m=[0m10
+[2m2026-09-26T11:55:10.016574Z[0m [32m INFO[0m [2mpolaris::http::admin[0m[2m:[0m environment configuration saved by the setup wizard [3mdb[0m[2m=[0m"sqlite" [3mcache[0m[2m=[0m"memory"
+[2m2026-09-26T11:55:10.022579Z[0m [32m INFO[0m [2mpolaris::http[0m[2m:[0m request [3mmethod[0m[2m=[0mPOST [3mpath[0m[2m=[0m/admin/setup [3mstatus[0m[2m=[0m200 [3mms[0m[2m=[0m15
+[2m2026-09-26T14:18:19.888169Z[0m [32m INFO[0m [2mpolaris::scheduler::service[0m[2m:[0m scheduler stopped
+[2m2026-09-26T14:18:19.893491Z[0m [32m INFO[0m [2mpolaris[0m[2m:[0m bye

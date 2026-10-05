@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Extension log{% endblock title %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ t(key="admin.logs.title") }}</h1>
+  <div class="head-actions">
+    <a class="btn btn-secondary btn-sm {% if filter_kind == '' %}btn-active{% endif %}"
+       href="/admin/extensions/logs">{{ t(key="admin.tab.all") }}</a>
+    <a class="btn btn-secondary btn-sm {% if filter_kind == 'theme' %}btn-active{% endif %}"
+       href="/admin/extensions/logs?kind=theme">{{ t(key="admin.nav.themes") }}</a>
+    <a class="btn btn-secondary btn-sm {% if filter_kind == 'plugin' %}btn-active{% endif %}"
+       href="/admin/extensions/logs?kind=plugin">{{ t(key="admin.nav.plugins") }}</a>
+  </div>
+</div>
+
+{% if logs %}
+<table>
+  <thead>
+    <tr><th>{{ t(key="admin.logs.th_time") }}</th><th>{{ t(key="admin.logs.th_actor") }}</th><th>{{ t(key="admin.logs.th_action") }}</th><th>{{ t(key="admin.logs.th_extension") }}</th><th>{{ t(key="admin.logs.th_version") }}</th><th>{{ t(key="admin.logs.th_result") }}</th><th>{{ t(key="admin.logs.th_detail") }}</th></tr>
+  </thead>
+  <tbody>
+    {% for l in logs %}
+    <tr>
+      <td class="muted">{{ l.time }}</td>
+      <td>{{ l.actor }}</td>
+      <td>{{ l.action }}</td>
+      <td>
+        {{ l.ext_id }}
+        <span class="badge {% if l.kind == 'theme' %}badge-published{% else %}badge-draft{% endif %}">{{ t(key="admin.badge." ~ l.kind) }}</span>
+      </td>
+      <td class="muted">{{ l.version }}</td>
+      <td>
+        {% if l.result == 'success' %}
+        <span class="badge badge-published">{{ t(key="status.success") }}</span>
+        {% else %}
+        <span class="badge">{{ t(key="status.failed") }}</span>
+        {% endif %}
+      </td>
+      <td class="muted">{{ l.detail }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">{{ t(key="admin.logs.empty") }}</p>
+{% endif %}
+{% endblock content %}

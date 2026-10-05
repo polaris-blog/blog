@@ -1,0 +1,93 @@
+name: Rust CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_BUILD_JOBS: 2
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt --component clippy
+          rustup default stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --locked --all-targets --all-features -- -D warnings
+      - run: cargo test --locked --all-features
+      - run: cargo build --locked --release
+
+  redis:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      redis:
+        image: redis:7.4-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+      - name: Test Redis sharing and recovery
+        env:
+          POLARIS_TEST_REDIS_URL: redis://127.0.0.1:6379
+        run: cargo test --locked --features redis --lib redis_live -- --ignored --nocapture
+
+  databases:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        database: [postgres, mysql]
+    services:
+      postgres:
+        image: ${{ matrix.database == 'postgres' && 'postgres:16' || '' }}
+        env:
+          POSTGRES_USER: polaris
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: polaris_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U polaris -d polaris_test"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+      mysql:
+        image: ${{ matrix.database == 'mysql' && 'mysql:8.4' || '' }}
+        env:
+          MYSQL_ROOT_PASSWORD: ci-only-root-password
+          MYSQL_DATABASE: polaris_test
+          MYSQL_USER: polaris
+          MYSQL_PASSWORD: ci-only-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 --silent"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+      - name: Test database contracts
+        env:
+          POLARIS_TEST_DATABASE_DRIVER: ${{ matrix.database }}
+          POLARIS_TEST_DATABASE_URL: ${{ matrix.database == 'postgres' && 'postgres://polaris:ci-only-password@127.0.0.1:5432/polaris_test' || 'mysql://polaris:ci-only-password@127.0.0.1:3306/polaris_test?ssl-mode=disabled' }}
+        run: cargo test --locked --test database_matrix -- --nocapture

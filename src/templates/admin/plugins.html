@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Plugins{% endblock title %}
+{% block head %}
+<meta name="csrf" content="{{ csrf }}">
+<script src="/admin/static/extensions.js" defer></script>
+{% endblock head %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ t(key="admin.page.plugins") }}</h1>
+  <a class="btn btn-secondary btn-sm" href="/admin/extensions/logs">{{ t(key="admin.action.install_log") }} ↗</a>
+</div>
+
+{% if plugins %}
+<div class="theme-grid">
+  {% for p in plugins %}
+  <div class="theme-card {% if p.is_enabled_plugin %}theme-active{% endif %}">
+    <div class="theme-head">
+      <strong>{{ p.manifest.name }}</strong>
+      {% if p.status == 'broken' %}
+      <span class="badge badge-draft">{{ t(key="status.broken") }}</span>
+      {% elif p.is_enabled_plugin %}
+      <span class="badge">{{ t(key="status.enabled") }}</span>
+      {% else %}
+      <span class="badge badge-draft">{{ t(key="status.disabled") }}</span>
+      {% endif %}
+    </div>
+    {% if p.status == 'broken' %}
+    <p class="form-error">{{ p.error }}</p>
+    {% else %}
+    <p class="muted">{{ p.manifest.description }}</p>
+    <p class="muted theme-meta">
+      v{{ p.manifest.version }} · {{ p.manifest.author }} · {{ p.manifest.license }}
+    </p>
+    {% if p.manifest.requires_polaris %}
+    <p class="muted theme-meta">{{ t(key="admin.plugins.requires") }} {{ p.manifest.requires_polaris }}</p>
+    {% endif %}
+    {% if p.manifest.permissions %}
+    <p class="muted theme-meta" title="{{ t(key="admin.plugins.perm_title") }}">
+      {{ t(key="admin.plugins.permissions") }} {{ p.manifest.permissions | join(sep=", ") }}
+    </p>
+    {% endif %}
+    {% endif %}
+    <div class="theme-actions">
+      {% if p.status != 'broken' %}
+      <form method="post" action="/admin/plugins/toggle" class="plugin-toggle">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="name" value="{{ p.dir }}">
+        {% if p.is_enabled_plugin %}
+        <input type="hidden" name="action" value="disable">
+        <button type="submit" class="plugin-switch is-on" aria-pressed="true"
+                aria-label="Disable {{ p.manifest.name }}" title="{{ t(key="admin.plugins.disable_title") }}">
+          <span class="plugin-switch-knob"></span>
+        </button>
+        {% else %}
+        <input type="hidden" name="action" value="enable">
+        <button type="submit" class="plugin-switch" aria-pressed="false"
+                aria-label="Enable {{ p.manifest.name }}" title="{{ t(key="admin.plugins.enable_title") }}">
+          <span class="plugin-switch-knob"></span>
+        </button>
+        {% endif %}
+      </form>
+      {% endif %}
+      {% if p.has_settings %}
+      <a class="btn btn-secondary btn-sm" href="/admin/plugins/settings/{{ p.dir }}">{{ t(key="admin.action.settings") }}</a>
+      {% endif %}
+      <form method="post" action="/admin/extensions/uninstall" class="confirm-remove"
+            data-confirm="Uninstall plugin '{{ p.dir }}' AND drop its database tables? This cannot be undone.">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="kind" value="plugin">
+        <input type="hidden" name="id" value="{{ p.dir }}">
+        <input type="hidden" name="remove_data" value="on">
+        <button type="submit" class="btn btn-danger btn-sm">{{ t(key="admin.action.uninstall") }}</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="muted">{{ t(key="admin.plugins.none") }}</p>
+{% endif %}
+
+<div class="panel ext-upload" data-ext-upload>
+  <h2>{{ t(key="admin.plugins.upload_title") }}</h2>
+  <p class="muted">
+    Install a plugin from a <code>.zip</code> package (offline — nothing is downloaded).
+    The package needs a single root directory containing <code>plugin.toml</code> and its
+    entry script. A new plugin is installed <strong>disabled</strong> — review its declared
+    permissions, then enable it above.
+  </p>
+  <form method="post" action="/admin/extensions/upload" enctype="multipart/form-data">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="return_to" value="plugins">
+    <div class="ext-drop-zone" data-drop-zone tabindex="0" role="button"
+         aria-label="Drop plugin ZIP here or select a file">
+      <svg class="ext-drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 9 12 4 17 9"/>
+        <line x1="12" y1="4" x2="12" y2="16"/>
+      </svg>
+      <strong>{{ t(key="admin.plugins.drop") }}</strong>
+      <span class="muted">{{ t(key="admin.action.or") }}</span>
+      <label class="btn btn-secondary btn-sm" for="plugin-package-input">{{ t(key="admin.action.select_file") }}</label>
+      <input id="plugin-package-input" type="file" name="package" accept=".zip,application/zip"
+             class="visually-hidden" data-package-input>
+      <p class="muted ext-file-name" data-file-name hidden></p>
+    </div>
+    <div class="ext-upload-options">
+      <label class="inline-check" title="{{ t(key="admin.plugins.force_title") }}">
+        <input type="checkbox" class="switch" name="force"> {{ t(key="admin.plugins.force") }}
+      </label>
+      <label class="inline-check" title="Allow installing an older version than the current one">
+        <input type="checkbox" class="switch" name="confirm_downgrade"> {{ t(key="admin.plugins.downgrade") }}
+      </label>
+      <span class="spacer"></span>
+      <button type="submit" class="btn" data-upload-btn disabled>{{ t(key="admin.action.upload") }}</button>
+    </div>
+    <div class="ext-progress" data-progress hidden><div class="ext-progress-fill"></div></div>
+    <p class="ext-result ext-result-err" data-error hidden></p>
+  </form>
+</div>
+{% endblock content %}

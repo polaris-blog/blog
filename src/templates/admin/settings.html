@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock title %}
+{% block content %}
+<h1>{{ t(key="admin.page.settings") }}</h1>
+
+<form method="post" action="/admin/settings" class="stack">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+
+  <div class="panel">
+    <h2>{{ t(key="admin.settings.site_group") }}</h2>
+    <div class="form-grid">
+      <div class="wide">
+        <label for="f-title">{{ t(key="admin.settings.site_title") }}</label>
+        <input id="f-title" type="text" name="site_title" value="{{ site_title }}" required maxlength="120">
+      </div>
+      <div class="wide">
+        <label for="f-desc">{{ t(key="admin.settings.description") }} <span class="hint">{{ t(key="admin.settings.description_hint") }}</span></label>
+        <textarea id="f-desc" name="site_description" rows="2" maxlength="300">{{ site_description }}</textarea>
+      </div>
+      <div class="wide">
+        <label for="f-base">{{ t(key="admin.settings.base_url") }} <span class="hint">{{ t(key="admin.settings.base_url_hint") }}</span></label>
+        <input id="f-base" type="url" name="site_base_url" value="{{ site_base_url }}" placeholder="https://example.com">
+      </div>
+      <div>
+        <label for="f-per">{{ t(key="admin.settings.posts_per_page") }}</label>
+        <input id="f-per" type="number" name="posts_per_page" value="{{ posts_per_page }}" min="1" max="100">
+      </div>
+      <div>
+        <label for="f-locale">{{ t(key="admin.settings.language") }}</label>
+        <select id="f-locale" name="site_locale">
+          <option value="en" {% if site_locale == 'en' %}selected{% endif %}>English</option>
+          <option value="zh-CN" {% if site_locale == 'zh-CN' %}selected{% endif %}>简体中文</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>{{ t(key="admin.settings.comments_group") }}</h2>
+    <div class="form-grid">
+      <div>
+        <label class="check">
+          <input type="checkbox" class="switch" name="comments_enabled" {% if comments_enabled %}checked{% endif %}>
+          {{ t(key="admin.settings.enable_comments") }}
+        </label>
+      </div>
+      <div>
+        <label class="check">
+          <input type="checkbox" class="switch" name="comments_moderate" {% if comments_moderate %}checked{% endif %}>
+          {{ t(key="admin.settings.moderate") }}
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit">{{ t(key="admin.settings.save") }}</button>
+    <span class="hint">{{ t(key="admin.settings.save_hint") }}</span>
+  </div>
+</form>
+{% endblock content %}

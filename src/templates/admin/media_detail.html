@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}{{ m.filename }}{% endblock title %}
+{% block head %}
+<meta name="csrf" content="{{ csrf }}">
+<script src="/admin/static/media.js" defer></script>
+{% endblock head %}
+{% block content %}
+<div class="page-head">
+  <h1 class="media-detail-title">{{ m.filename }}</h1>
+  <div class="head-actions">
+    <a class="btn btn-secondary" href="{{ back_url }}">{{ t(key="admin.media.library") }}</a>
+    <a class="btn btn-secondary" href="{{ m.url }}" target="_blank">{{ t(key="search.open") }} ↗</a>
+    <a class="btn btn-secondary" href="{{ m.download_url }}">{{ t(key="admin.action.download") }}</a>
+  </div>
+</div>
+
+<div class="media-detail">
+  <div class="media-preview panel">
+    {% if m.is_image %}
+    <img src="{{ m.url }}" alt="{{ m.alt | default(value=m.filename) }}" loading="lazy">
+    {% elif m.kind == 'video' %}
+    <video controls preload="metadata" src="{{ m.url }}"></video>
+    {% elif m.kind == 'audio' %}
+    <audio controls preload="metadata" src="{{ m.url }}"></audio>
+    {% else %}
+    <div class="media-preview-fallback">
+      <span class="tile-icon tile-{{ m.kind }}" aria-hidden="true"></span>
+      <span class="muted">{{ m.mime_type }}</span>
+    </div>
+    {% endif %}
+
+    <dl class="info-list">
+      <dt>{{ t(key="admin.media.original_filename") }}</dt><dd>{{ original }}</dd>
+      <dt>{{ t(key="admin.media.type") }}</dt><dd>{{ m.mime_type }}</dd>
+      <dt>{{ t(key="admin.media.size") }}</dt><dd>{{ m.size_human }} ({{ m.size }} bytes)</dd>
+      {% if m.dimensions %}
+      <dt>{{ t(key="admin.media.dimensions") }}</dt><dd>{{ m.dimensions }}</dd>
+      {% endif %}
+      {% if m.duration %}
+      <dt>{{ t(key="admin.media.duration") }}</dt><dd>{{ m.duration }} s</dd>
+      {% endif %}
+      <dt>{{ t(key="admin.media.hash") }}</dt><dd class="mono hash" title="{{ m.hash }}">SHA-256 {{ m.hash }}</dd>
+      <dt>{{ t(key="admin.media.by") }}</dt><dd>{{ m.uploaded_by_name | default(value="—") }}</dd>
+      <dt>{{ t(key="admin.media.created") }}</dt><dd>{{ m.created }}</dd>
+      <dt>{{ t(key="admin.media.storage_key") }}</dt><dd class="mono">{{ m.storage_key }}</dd>
+    </dl>
+
+    <div class="url-row">
+      <label for="media-url">{{ t(key="admin.media.url") }}</label>
+      <div class="url-controls">
+        <input id="media-url" class="mono" type="text" readonly value="{{ m.url }}" data-copy-target>
+        <button type="button" class="btn btn-secondary btn-sm" data-copy-btn>{{ t(key="admin.media.copy") }}</button>
+      </div>
+    </div>
+    {% if m.srcset %}
+    <div class="url-row">
+      <label for="media-srcset">srcset</label>
+      <div class="url-controls">
+        <input id="media-srcset" class="mono" type="text" readonly value="{{ m.srcset }}" data-copy-target>
+        <button type="button" class="btn btn-secondary btn-sm" data-copy-btn>Copy</button>
+      </div>
+    </div>
+    {% endif %}
+    {% if m.thumbnails %}
+    <p class="hint">Sizes: original{% for t in m.thumbnails %}, {{ t }}{% endfor %}</p>
+    {% endif %}
+
+    <div class="media-refs">
+      <h2>{{ t(key="admin.media.references") }}</h2>
+      {% if references %}
+      <ul>
+        {% for r in references %}
+        <li><span class="badge">{{ r.ref_type }}</span>
+          {% if r.slug %}
+          <a href="{% if r.ref_type == 'post' %}/posts/{{ r.slug }}{% else %}/{{ r.slug }}{% endif %}" target="_blank">
+            {% if r.title %}{{ r.title }}{% else %}{{ r.slug }}{% endif %}
+          </a>
+          {% else %}
+          #{{ r.ref_id }}
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      <p class="hint">{{ t(key="admin.media.refs_force_hint") }}</p>
+      {% else %}
+      <p class="muted">{{ t(key="admin.media.not_referenced") }}</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="media-edit">
+  {% if can_modify %}
+  <form method="post" action="/admin/media/{{ m.id }}" class="panel stack">
+    <h2>{{ t(key="admin.media.metadata") }}</h2>
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <div class="form-grid">
+        <div class="wide">
+          <label for="f-filename">{{ t(key="admin.media.file") }}</label>
+          <input id="f-filename" type="text" name="filename" value="{{ m.filename }}" maxlength="255" required>
+        </div>
+        <div class="wide">
+          <label for="f-title">{{ t(key="admin.form.title") }}</label>
+          <input id="f-title" type="text" name="title" value="{{ title }}" maxlength="255">
+        </div>
+        <div class="wide">
+          <label for="f-alt">{{ t(key="admin.media.alt_text") }} <span class="hint">{{ t(key="admin.media.alt_hint") }}</span></label>
+          <input id="f-alt" type="text" name="alt" value="{{ alt }}" maxlength="500">
+        </div>
+        <div class="wide">
+          <label for="f-caption">{{ t(key="admin.media.caption") }}</label>
+          <input id="f-caption" type="text" name="caption" value="{{ caption }}" maxlength="500">
+        </div>
+        <div class="wide">
+          <label for="f-description">{{ t(key="admin.media.description") }}</label>
+          <textarea id="f-description" name="description" rows="3">{{ description }}</textarea>
+        </div>
+        <div>
+          <label for="f-folder">{{ t(key="admin.media.folder") }}</label>
+          <select id="f-folder" name="folder_id">
+            <option value="" {% if not m.folder_id %}selected{% endif %}>{{ t(key="admin.media.no_folder") }}</option>
+            {% for f in folders %}
+            <option value="{{ f.id }}" {% if m.folder_id == f.id %}selected{% endif %}>{{ f.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="f-tags">Tags <span class="hint">(comma separated)</span></label>
+          <input id="f-tags" type="text" name="tags" value="{{ tags_str }}">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit">{{ t(key="admin.action.save") }}</button>
+      </div>
+    </form>
+
+    <form method="post" action="/admin/media/{{ m.id }}/copy" class="panel stack">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <h2>{{ t(key="admin.action.duplicate") }}</h2>
+      <p class="hint">{{ t(key="admin.media.duplicate_hint") }}</p>
+      <button type="submit" class="btn btn-secondary">{{ t(key="admin.action.duplicate") }}</button>
+    </form>
+
+    <form method="post" action="/admin/media/{{ m.id }}/delete" class="panel stack media-delete">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <h2>{{ t(key="admin.action.delete") }}</h2>
+      {% if ref_count > 0 %}
+      <p class="hint">{{ t(key="admin.media.refs_delete_hint", count=ref_count) }}</p>
+      <label class="inline-check"><input type="checkbox" name="force" value="on"> {{ t(key="admin.media.delete_anyway") }}</label>
+      {% endif %}
+      <button type="submit" class="btn btn-danger">{{ t(key="admin.action.delete") }}</button>
+    </form>
+    {% else %}
+    <div class="panel">
+      <h2>{{ t(key="admin.media.read_only") }}</h2>
+      <p class="muted">{{ t(key="admin.media.read_only_hint") }}</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock content %}

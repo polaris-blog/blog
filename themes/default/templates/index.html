@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block content %}
+
+{# Hero — full-bleed black billboard: 56px headline, one-line descriptor,
+   one filled CTA and one pill CTA, exactly the Apple launch-module shape. #}
+<section class="hero">
+  <div class="container">
+    <h1 class="hero-headline">{{ site.title }}</h1>
+    {% if site.description %}<p class="hero-sub">{{ site.description }}</p>{% endif %}
+  </div>
+</section>
+
+{% if theme.config.carousel and pagination.current == 1 %}
+<section class="carousel-section" aria-label="{{ t(key="a11y.featured_section") }}">
+  <div class="container">
+    <div class="carousel" data-carousel data-interval="{{ theme.config.carousel_interval | default(value=6) }}" data-autoplay="{{ theme.config.carousel_autoplay | default(value=true) }}" role="region" aria-roledescription="carousel" aria-label="{{ t(key="a11y.featured_slides") }}" tabindex="0">
+      <div class="carousel-track">
+        {% for slide in theme.config.carousel %}
+        <article class="carousel-slide{% if loop.first %} is-active{% endif %}" data-carousel-slide role="group" aria-roledescription="slide" aria-label="{{ loop.index }} of {{ theme.config.carousel | length }}"{% if loop.first %} aria-current="true"{% endif %}>
+          {% if slide.url %}<a class="carousel-slide-link" href="{{ slide.url }}">{% endif %}
+          <img src="{{ slide.image }}" alt="{{ slide.title | default(value='') }}" loading="{% if loop.first %}eager{% else %}lazy{% endif %}">
+          <div class="carousel-slide-caption">
+            {% if slide.title %}<h2>{{ slide.title }}</h2>{% endif %}
+            {% if slide.description %}<p>{{ slide.description }}</p>{% endif %}
+          </div>
+          {% if slide.url %}</a>{% endif %}
+        </article>
+        {% endfor %}
+      </div>
+      {% if theme.config.carousel | length > 1 %}
+      <button class="carousel-control carousel-prev" type="button" data-carousel-prev aria-label="{{ t(key="a11y.prev_slide") }}">‹</button>
+      <button class="carousel-control carousel-next" type="button" data-carousel-next aria-label="{{ t(key="a11y.next_slide") }}">›</button>
+      <div class="carousel-dots" role="group" aria-label="{{ t(key="a11y.choose_slide") }}">
+        {% for slide in theme.config.carousel %}
+        <button type="button" class="carousel-dot{% if loop.first %} is-active{% endif %}" data-carousel-dot="{{ loop.index0 }}" aria-label="{{ t(key="a11y.slide_n", n=loop.index) }}" aria-pressed="{% if loop.first %}true{% else %}false{% endif %}"></button>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{# Post tiles — product grid on the light gray field. #}
+<section class="section section-gray" id="posts">
+  <div class="container">
+    {% if posts %}
+    <h2 class="section-heading">{{ t(key="home.latest") }}</h2>
+    <p class="section-heading-sub">{{ t(key="home.latest_sub", site=site.title) }}</p>
+
+    <div class="post-grid">
+      {% for post in posts %}
+      <article class="post-card">
+        <a href="{{ post.url }}" class="post-card-media" tabindex="-1" aria-hidden="true">
+          {% if post.cover_image or post.featured_image %}
+          <img src="{% if post.cover_image %}{{ post.cover_image }}{% else %}{{ post.featured_image }}{% endif %}" alt="" loading="lazy">
+          {% else %}
+          <span class="post-card-media-fallback">✦</span>
+          {% endif %}
+        </a>
+        <div class="post-card-body">
+          <p class="post-card-eyebrow">
+            {% if post.category %}<a href="/category/{{ post.category.slug }}">{{ post.category.name }}</a>{% else %}{{ t(key="post.uncategorized") }}{% endif %}
+            · <time datetime="{{ post.datetime }}">{{ post.date }}</time>
+          </p>
+          <h3 class="post-card-title"><a href="{{ post.url }}">{{ post.title }}</a></h3>
+          {% if post.excerpt %}<p class="post-card-excerpt">{{ post.excerpt }}</p>{% endif %}
+          <div class="post-card-meta">
+            <span>{{ post.author }}</span>
+            <span>{{ post.reading_time }} {{ t(key="post.min_read") }}</span>
+            <a class="link-arrow" href="{{ post.url }}">{{ t(key="post.read_more") }}</a>
+          </div>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+
+    {% if pagination.pages > 1 %}
+    <nav class="pager" aria-label="{{ t(key="a11y.pagination") }}">
+      {% if pagination.has_prev %}
+      <a href="{{ pagination_base }}/page/{{ pagination.prev }}">{{ t(key="pager.newer") }}</a>
+      {% else %}<span></span>{% endif %}
+      <span>{{ t(key="pager.page_of", current=pagination.current, pages=pagination.pages) }}</span>
+      {% if pagination.has_next %}
+      <a href="{{ pagination_base }}/page/{{ pagination.next }}">{{ t(key="pager.older") }}</a>
+      {% else %}<span></span>{% endif %}
+    </nav>
+    {% endif %}
+    {% else %}
+    <h2 class="section-heading">{{ t(key="home.empty_title") }}</h2>
+    <p class="section-heading-sub">{{ t(key="home.empty_sub_html") | safe }}</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock content %}

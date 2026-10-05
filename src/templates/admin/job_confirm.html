@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Confirm {{ action }}{% endblock title %}
+{% block content %}
+<h1>{{ t(key="admin.jobs.confirm", action=action) }}</h1>
+<p class="job-wrap">{{ job.name }} ({{ job.type }})</p>
+{% if action == 'delete' %}<p>{{ t(key="admin.jobs.confirm_delete_note") }}</p>{% endif %}
+{% if action == 'run' or action == 'retry' %}<p>{{ t(key="admin.jobs.confirm_run_note") }}</p>{% endif %}
+<form method="post" action="/admin/jobs/{{ job.id }}/{{ action }}">
+<input type="hidden" name="csrf" value="{{ csrf }}">
+<input type="hidden" name="confirm" value="{{ job.id }}">
+<button class="btn {% if action == 'delete' or action == 'cancel' %}btn-danger{% endif %}" type="submit">{{ t(key="admin.jobs.confirm", action=action) }}</button>
+<a class="btn btn-secondary" href="/admin/jobs/{{ job.id }}">{{ t(key="admin.jobs.back") }}</a>
+</form>
+{% endblock content %}
