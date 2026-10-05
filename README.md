@@ -34,14 +34,14 @@ $ ./polaris serve
 ## Install
 
 Prebuilt binaries are attached to every [release](https://github.com/polaris-blog/blog/releases)
-for six targets — Linux (static musl, UPX-compressed), macOS and Windows, each in
-x86_64 and arm64. Every archive has a SHA-256 checksum in `SHA256SUMS`.
+for five targets — Linux (static musl, UPX-compressed) and Windows in x86_64
+and arm64, plus macOS Apple Silicon. Every archive has a SHA-256 checksum in
+`SHA256SUMS`.
 
 | Download | Target | Notes |
 |---|---|---|
 | `polaris-vX.Y.Z-x86_64-unknown-linux-musl.tar.gz` | Linux x86_64 | static, no runtime deps |
 | `polaris-vX.Y.Z-aarch64-unknown-linux-musl.tar.gz` | Linux arm64 | static, no runtime deps |
-| `polaris-vX.Y.Z-x86_64-apple-darwin.tar.gz` | macOS Intel | |
 | `polaris-vX.Y.Z-aarch64-apple-darwin.tar.gz` | macOS Apple Silicon | |
 | `polaris-vX.Y.Z-x86_64-pc-windows-msvc.zip` | Windows x86_64 | UPX-compressed |
 | `polaris-vX.Y.Z-aarch64-pc-windows-msvc.zip` | Windows arm64 | |

@@ -33,13 +33,10 @@ jobs:
             os: ubuntu-24.04-arm
             archive: tar.gz
             upx: true
-          # macOS — built natively per arch (macos-13 = Intel, macos-14+ = Apple
-          # Silicon). UPX is intentionally skipped: compressed Mach-O binaries
-          # are killed by modern macOS code signing/runtime protections.
-          - target: x86_64-apple-darwin
-            os: macos-13
-            archive: tar.gz
-            upx: false
+          # macOS — Apple Silicon native runner (macos-14+). Intel macOS is
+          # not built: macos-13 runners are no longer available. UPX is
+          # intentionally skipped: compressed Mach-O binaries are killed by
+          # modern macOS code signing/runtime protections.
           - target: aarch64-apple-darwin
             os: macos-14
             archive: tar.gz
