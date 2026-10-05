@@ -61,7 +61,10 @@ jobs:
           platforms: ${{ matrix.platform }}
           push: true
           provenance: false
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE }}:buildcache
+          # Push by digest: the ref must NOT carry a tag — tagged refs
+          # conflict with push-by-digest mode. Version/latest/edge tags are
+          # applied later by the merge job's imagetools create.
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE }}
           cache-from: type=gha,scope=${{ matrix.platform }}
           cache-to: type=gha,scope=${{ matrix.platform }},mode=max
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
