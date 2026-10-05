@@ -1,8 +1,28 @@
+# Build
 /target
+/dist
+
+# Runtime data (SQLite databases, WAL sidecars, media, backups, uploads)
 /data
-polaris.toml
+/data-demo
 *.db
 *.db-shm
 *.db-wal
+
+# Logs
+*.log
+
+# Internal design & developer docs (kept out of the public repository)
+/design.md
+/docs/
+
+# Local config (keep polaris.toml.example tracked)
+polaris.toml
+
+# Editor / OS
 .idea
 .vscode
+.DS_Store
+
+# Local demo instance (config + its data-demo/ directory)
+/polaris-demo.toml

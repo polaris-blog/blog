@@ -195,7 +195,7 @@ themes/default/
 - Missing templates fall back to an embedded default, so partial themes work.
 - Template context is plain data (site, seo, posts, pagination, …) — templates cannot touch the filesystem, database or OS.
 
-See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#themes) for the full template context and filter list.
+The full template context and filter list is documented in `docs/DEVELOPMENT.md`.
 
 ## Media library
 
@@ -248,7 +248,7 @@ before_post_delete   after_post_delete     user_login (event)
 nav()                init(config)
 ```
 
-Enable at runtime: **Admin → Plugins → Enable**, or `polaris plugin enable example`. Full API: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#plugins).
+Enable at runtime: **Admin → Plugins → Enable**, or `polaris plugin enable example`. Full API: `docs/DEVELOPMENT.md`.
 
 ## REST API
 
@@ -271,7 +271,7 @@ Reads are public; writes require an authenticated session (or `Authorization: Be
 - **XSS**: Markdown output is sanitized (raw HTML stripped, `javascript:`/`data:` links neutralized); all template output is escaped unless explicitly trusted.
 - **SQL injection**: parameterized queries only, across all three databases.
 - **Path traversal**: static file serving and theme/plugin installers validate paths.
-- Still: put Polaris behind HTTPS in production (see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)).
+- Still: put Polaris behind HTTPS in production (see `docs/DEPLOYMENT.md`).
 
 ## Docker
 
@@ -313,9 +313,11 @@ it in a ~20 MB runtime image.
 
 ## Documentation
 
-- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) — architecture, theme API, plugin API, testing
-- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — binary, systemd, Docker, reverse proxy, backups, hardening
-- [docs/TODO.md](docs/TODO.md) — implementation priorities, completed reliability work and verification status
+Developer docs live in the working tree and are not part of the public repository:
+
+- `docs/DEVELOPMENT.md` — architecture, theme API, plugin API, testing
+- `docs/DEPLOYMENT.md` — binary, systemd, Docker, reverse proxy, backups, hardening
+- `docs/SCHEDULER.md`, `docs/DETAIL_OPTIMIZATION.md`, `docs/TODO.md` — internals, tuning, roadmap
 
 ## Development
 
