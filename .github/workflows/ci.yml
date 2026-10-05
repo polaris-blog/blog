@@ -2,6 +2,9 @@ name: Rust CI
 
 on:
   push:
+    # Branch pushes only — tag pushes of already-tested commits must not
+    # trigger a redundant CI run.
+    branches: ["**"]
   pull_request:
 
 permissions:

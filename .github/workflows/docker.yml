@@ -17,6 +17,12 @@ permissions:
   contents: read
   packages: write
 
+# One image build per commit: releasing (tag push) cancels the redundant
+# `edge` build of the same commit when both land together.
+concurrency:
+  group: docker-${{ github.sha }}
+  cancel-in-progress: true
+
 env:
   REGISTRY: ghcr.io
   IMAGE: ${{ github.repository }}
