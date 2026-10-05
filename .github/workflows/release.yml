@@ -138,11 +138,19 @@ jobs:
           pattern: release-*
           merge-multiple: true
 
-      - name: Merge checksums
+      - name: Merge checksums and validate archives
         run: |
           cd artifacts
-          cat checksums-*.txt 2>/dev/null | sort -k2 > SHA256SUMS || cat checksums.txt > SHA256SUMS
-          rm -f checksums*.txt
+          ls -la
+          cat checksums-*.txt > SHA256SUMS
+          rm -f checksums-*.txt
+          # Fail fast instead of uploading a 0-byte asset: every archive
+          # listed must exist and be non-empty.
+          [ -s SHA256SUMS ] || { echo "checksums merge produced nothing"; exit 1; }
+          while IFS= read -r line; do
+            file="${line#*  }"
+            [ -s "$file" ] || { echo "EMPTY OR MISSING ARCHIVE: $file"; exit 1; }
+          done < SHA256SUMS
           cat SHA256SUMS
 
       - name: Attach archives to the release
