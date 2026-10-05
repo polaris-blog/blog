@@ -51,7 +51,9 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          # PAT with write:packages — a repo secret, sidestepping the
+          # GITHUB_TOKEN package-permission quirks on GHCR.
+          password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Build and push by digest
         id: build
@@ -102,7 +104,9 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          # PAT with write:packages — a repo secret, sidestepping the
+          # GITHUB_TOKEN package-permission quirks on GHCR.
+          password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Compute tags
         id: meta
