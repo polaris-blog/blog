@@ -92,12 +92,6 @@ jobs:
             [ -f "$f" ] && cp "$f" dist/
           done
           tar -czf "${NAME}.tar.gz" -C dist .
-          # macOS ships BSD coreutils: `shasum -a 256`, not GNU `sha256sum`.
-          if command -v sha256sum >/dev/null 2>&1; then
-            sha256sum "${NAME}.tar.gz" > "checksums-${{ matrix.target }}.txt"
-          else
-            shasum -a 256 "${NAME}.tar.gz" > "checksums-${{ matrix.target }}.txt"
-          fi
           echo "ARCHIVE=${NAME}.tar.gz" >> "$GITHUB_ENV"
 
       - name: Package (zip)
@@ -110,17 +104,15 @@ jobs:
           Copy-Item "target/${{ matrix.target }}/release/${env:BIN}.exe" "dist/${env:BIN}.exe"
           Copy-Item README.md, polaris.toml.example dist/
           Compress-Archive -Path dist/* -DestinationPath "${name}.zip"
-          $hash = (Get-FileHash "${name}.zip" -Algorithm SHA256).Hash.ToLower()
-          "$hash  ${name}.zip" | Out-File -Encoding ascii "checksums-${{ matrix.target }}.txt"
           "ARCHIVE=${name}.zip" | Out-File -Append -Encoding ascii $env:GITHUB_ENV
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.target }}
-          path: |
-            ${{ env.ARCHIVE }}
-            checksums.txt
+          # Checksums are (re)computed by the release job over the downloaded
+          # archives — no per-job checksum files to ferry around.
+          path: ${{ env.ARCHIVE }}
           if-no-files-found: error
 
   release:
@@ -138,19 +130,16 @@ jobs:
           pattern: release-*
           merge-multiple: true
 
-      - name: Merge checksums and validate archives
+      - name: Generate checksums and validate archives
         run: |
           cd artifacts
           ls -la
-          cat checksums-*.txt > SHA256SUMS
-          rm -f checksums-*.txt
-          # Fail fast instead of uploading a 0-byte asset: every archive
-          # listed must exist and be non-empty.
-          [ -s SHA256SUMS ] || { echo "checksums merge produced nothing"; exit 1; }
-          while IFS= read -r line; do
-            file="${line#*  }"
-            [ -s "$file" ] || { echo "EMPTY OR MISSING ARCHIVE: $file"; exit 1; }
-          done < SHA256SUMS
+          # Fail fast instead of uploading a 0-byte asset.
+          for f in *.tar.gz *.zip; do
+            [ -s "$f" ] || { echo "EMPTY OR MISSING ARCHIVE: $f"; exit 1; }
+          done
+          # Checksums are computed here, on the exact files being released.
+          sha256sum *.tar.gz *.zip > SHA256SUMS
           cat SHA256SUMS
 
       - name: Attach archives to the release
