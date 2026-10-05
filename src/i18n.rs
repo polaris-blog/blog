@@ -57,7 +57,7 @@ pub fn normalize(locale: &str) -> String {
 
 /// Apply the startup locale from the settings store.
 pub fn init(locale: Option<&str>) {
-    set_locale(&locale.unwrap_or(DEFAULT_LOCALE));
+    set_locale(locale.unwrap_or(DEFAULT_LOCALE));
 }
 
 pub fn set_locale(locale: &str) {
