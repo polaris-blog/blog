@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ t(key="setup.title") }} · Polaris</title>
 <link rel="stylesheet" href="/admin/static/style.css">
+<script src="/admin/static/setup.js" defer></script>
 <style>
   .setup-fields { display: none; }
   .setup-fields.visible { display: block; }
@@ -38,27 +39,30 @@
           {% endfor %}
         </select>
       </div>
-      <div class="setup-fields" data-fields="sqlite">
+      <!-- Field-group visibility is server-rendered (the driver saved in the
+           configuration carries the `visible` class), the external setup.js
+           only keeps groups in sync on change. -->
+      <div class="setup-fields{% if v_db_driver == 'sqlite' %} visible{% endif %}" data-fields="sqlite">
         <label for="sqlite-path">{{ t(key="setup.db_sqlite_file") }}</label>
         <input id="sqlite-path" type="text" name="sqlite_path" value="{{ v_sqlite_path }}" placeholder="data/polaris.db">
       </div>
-      <div class="setup-fields" data-fields="mysql postgres">
+      <div class="setup-fields{% if v_db_driver == 'mysql' or v_db_driver == 'postgres' %} visible{% endif %}" data-fields="mysql postgres">
         <label for="db-host">{{ t(key="setup.db_host") }}</label>
         <input id="db-host" type="text" name="db_host" value="{{ v_db_host }}">
       </div>
-      <div class="setup-fields" data-fields="mysql postgres">
+      <div class="setup-fields{% if v_db_driver == 'mysql' or v_db_driver == 'postgres' %} visible{% endif %}" data-fields="mysql postgres">
         <label for="db-port">{{ t(key="setup.db_port") }}</label>
         <input id="db-port" type="text" name="db_port" value="{{ v_db_port }}">
       </div>
-      <div class="setup-fields" data-fields="mysql postgres">
+      <div class="setup-fields{% if v_db_driver == 'mysql' or v_db_driver == 'postgres' %} visible{% endif %}" data-fields="mysql postgres">
         <label for="db-user">{{ t(key="setup.db_user") }}</label>
         <input id="db-user" type="text" name="db_user" value="{{ v_db_user }}">
       </div>
-      <div class="setup-fields" data-fields="mysql postgres">
+      <div class="setup-fields{% if v_db_driver == 'mysql' or v_db_driver == 'postgres' %} visible{% endif %}" data-fields="mysql postgres">
         <label for="db-password">{{ t(key="setup.db_password") }}</label>
         <input id="db-password" type="password" name="db_password" autocomplete="new-password">
       </div>
-      <div class="setup-fields" data-fields="mysql postgres">
+      <div class="setup-fields{% if v_db_driver == 'mysql' or v_db_driver == 'postgres' %} visible{% endif %}" data-fields="mysql postgres">
         <label for="db-name">{{ t(key="setup.db_name") }}</label>
         <input id="db-name" type="text" name="db_name" value="{{ v_db_name }}">
       </div>
@@ -72,11 +76,11 @@
           <option value="redis" {% if v_cache_driver == 'redis' %}selected{% endif %}>Redis</option>
         </select>
       </div>
-      <div class="setup-fields" data-fields="redis">
+      <div class="setup-fields{% if v_cache_driver == 'redis' %} visible{% endif %}" data-fields="redis">
         <label for="redis-url">{{ t(key="setup.redis_url") }}</label>
         <input id="redis-url" type="text" name="redis_url" value="{{ v_redis_url }}" placeholder="redis://127.0.0.1:6379">
       </div>
-      <div class="setup-fields" data-fields="redis">
+      <div class="setup-fields{% if v_cache_driver == 'redis' %} visible{% endif %}" data-fields="redis">
         <label for="redis-namespace">{{ t(key="setup.redis_namespace") }}</label>
         <input id="redis-namespace" type="text" name="redis_namespace" value="{{ v_redis_namespace }}">
       </div>
@@ -120,30 +124,5 @@
     <p class="foot">{{ t(key="admin.login.foot") }}</p>
   </div>
 </div>
-<script>
-  // Show only the fields relevant to the selected database / cache driver.
-  (function () {
-    "use strict";
-    var driver = document.getElementById("db-driver");
-    var cache = document.getElementById("cache-driver");
-    function sync() {
-      var dbValue = driver ? driver.value : "";
-      var cacheValue = cache ? cache.value : "";
-      document.querySelectorAll("[data-fields]").forEach(function (el) {
-        var targets = (el.getAttribute("data-fields") || "").split(" ");
-        var visible;
-        if (targets[0] === "redis") {
-          visible = cacheValue === "redis";
-        } else {
-          visible = targets.indexOf(dbValue) !== -1;
-        }
-        el.classList.toggle("visible", visible);
-      });
-    }
-    if (driver) driver.addEventListener("change", sync);
-    if (cache) cache.addEventListener("change", sync);
-    sync();
-  })();
-</script>
 </body>
 </html>

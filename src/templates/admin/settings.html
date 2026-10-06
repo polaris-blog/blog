@@ -53,6 +53,34 @@
     </div>
   </div>
 
+  <div class="panel">
+    <h2>{{ t(key="admin.settings.cache_group") }}</h2>
+    <div class="form-grid">
+      <div>
+        <label class="check">
+          <input type="checkbox" class="switch" name="cache_enabled" {% if cache_enabled %}checked{% endif %}>
+          {{ t(key="setup.cache_enable") }}
+        </label>
+      </div>
+      <div>
+        <label for="f-cache-driver">{{ t(key="admin.settings.cache_driver") }}</label>
+        <select id="f-cache-driver" name="cache_driver">
+          <option value="memory" {% if cache_driver == 'memory' %}selected{% endif %}>{{ t(key="setup.cache_memory") }}</option>
+          <option value="redis" {% if cache_driver == 'redis' %}selected{% endif %}>Redis</option>
+        </select>
+      </div>
+      <div class="wide">
+        <label for="f-redis-url">{{ t(key="admin.settings.cache_redis_url") }}</label>
+        <input id="f-redis-url" type="text" name="cache_redis_url" value="{{ cache_redis_url }}" placeholder="redis://127.0.0.1:6379">
+      </div>
+      <div>
+        <label for="f-redis-ns">{{ t(key="admin.settings.cache_redis_namespace") }}</label>
+        <input id="f-redis-ns" type="text" name="cache_redis_namespace" value="{{ cache_redis_namespace }}" maxlength="128">
+      </div>
+    </div>
+    <p class="hint">{{ t(key="admin.settings.cache_restart_hint") }}</p>
+  </div>
+
   <div class="form-actions">
     <button type="submit">{{ t(key="admin.settings.save") }}</button>
     <span class="hint">{{ t(key="admin.settings.save_hint") }}</span>

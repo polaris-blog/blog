@@ -40,6 +40,10 @@ pub fn router(app: App) -> Router<App> {
             get(crate::http::static_files::admin_highlight_js),
         )
         .route(
+            "/admin/static/setup.js",
+            get(crate::http::static_files::admin_setup_js),
+        )
+        .route(
             "/admin/static/media.js",
             get(crate::http::static_files::admin_media_js),
         )
@@ -2552,6 +2556,29 @@ async fn settings_page(
     ctx.insert("comments_enabled", &app.comments_enabled());
     ctx.insert("comments_moderate", &app.comments_moderate());
     ctx.insert("site_locale", &crate::i18n::locale());
+    // Cache: runtime settings override the file configuration; edits apply
+    // on restart (the cache backend is built at startup).
+    ctx.insert(
+        "cache_enabled",
+        &app.settings
+            .get_bool("cache.enabled", app.config.cache.enabled),
+    );
+    ctx.insert(
+        "cache_driver",
+        &app.settings
+            .get_str("cache.driver", &app.config.cache.driver)
+            .to_ascii_lowercase(),
+    );
+    ctx.insert(
+        "cache_redis_url",
+        &app.settings
+            .get_str("cache.redis.url", &app.config.cache.redis.url),
+    );
+    ctx.insert(
+        "cache_redis_namespace",
+        &app.settings
+            .get_str("cache.redis.namespace", &app.config.cache.redis.namespace),
+    );
     let body = templates::render_admin("settings.html", &ctx)?;
     Ok(Html(body).into_response())
 }
@@ -2573,6 +2600,14 @@ struct SettingsForm {
     comments_moderate: String,
     #[serde(default)]
     site_locale: String,
+    #[serde(default)]
+    cache_enabled: String,
+    #[serde(default)]
+    cache_driver: String,
+    #[serde(default)]
+    cache_redis_url: String,
+    #[serde(default)]
+    cache_redis_namespace: String,
 }
 
 async fn settings_save(
@@ -2603,6 +2638,35 @@ async fn settings_save(
             "Base URL must start with http:// or https://.",
         ));
     }
+    // Cache settings: validated here, applied on restart (the cache backend
+    // is built at startup). The namespace must stay a safe identifier.
+    let cache_driver = form.cache_driver.trim().to_ascii_lowercase();
+    if !cache_driver.is_empty() && cache_driver != "memory" && cache_driver != "redis" {
+        return Ok(redirect_err(
+            "/admin/settings",
+            "Cache driver must be memory or redis.",
+        ));
+    }
+    let redis_url = form.cache_redis_url.trim().to_string();
+    if cache_driver == "redis" && redis_url.is_empty() {
+        return Ok(redirect_err(
+            "/admin/settings",
+            "Redis URL is required when the cache driver is redis.",
+        ));
+    }
+    let redis_namespace = form.cache_redis_namespace.trim().to_string();
+    if !redis_namespace.is_empty()
+        && (redis_namespace.len() > 128
+            || !redis_namespace
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.')))
+    {
+        return Ok(redirect_err(
+            "/admin/settings",
+            "Cache namespace must contain 1-128 ASCII letters, digits, '.', '_' or '-'.",
+        ));
+    }
+
     let values: HashMap<String, String> = [
         ("site.title".to_string(), form.site_title.trim().to_string()),
         (
@@ -2623,6 +2687,13 @@ async fn settings_save(
             "site.locale".to_string(),
             crate::i18n::normalize(&form.site_locale),
         ),
+        (
+            "cache.enabled".to_string(),
+            (form.cache_enabled == "on").to_string(),
+        ),
+        ("cache.driver".to_string(), cache_driver),
+        ("cache.redis.url".to_string(), redis_url),
+        ("cache.redis.namespace".to_string(), redis_namespace),
     ]
     .into_iter()
     .collect();

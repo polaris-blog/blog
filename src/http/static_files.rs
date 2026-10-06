@@ -236,6 +236,15 @@ pub async fn admin_highlight_js(req_headers: HeaderMap) -> Response {
     )
 }
 
+/// Setup wizard driver-switching script.
+pub async fn admin_setup_js(req_headers: HeaderMap) -> Response {
+    embedded_asset(
+        crate::templates::ADMIN_SETUP_JS,
+        "text/javascript; charset=utf-8",
+        &req_headers,
+    )
+}
+
 /// Embedded admin media script (upload/drag-drop/paste/batch toolbar).
 pub async fn admin_media_js(req_headers: HeaderMap) -> Response {
     embedded_asset(

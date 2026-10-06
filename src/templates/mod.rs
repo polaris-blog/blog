@@ -160,6 +160,10 @@ pub const ADMIN_NAVIGATION_JS: &str = include_str!("admin/navigation.js");
 /// `textarea.content-editor` fields, served at `/admin/static/editor.js`.
 pub const ADMIN_EDITOR_JS: &str = include_str!("admin/editor.js");
 
+/// Setup wizard driver-switching script (shows only the fields relevant to
+/// the selected database/cache driver), served at `/admin/static/setup.js`.
+pub const ADMIN_SETUP_JS: &str = include_str!("admin/setup.js");
+
 /// Built-in theme script served at `/static/js/theme.js` when the active
 /// theme does not ship its own copy (covers the embedded fallback theme;
 /// inline scripts are blocked by the CSP).

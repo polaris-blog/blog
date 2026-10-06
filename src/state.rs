@@ -216,10 +216,41 @@ impl AppState {
         let settings = Settings::from_map(repositories::settings::all(&db).await?);
         // Site-wide UI language for theme/admin template rendering.
         crate::i18n::init(settings.get("site.locale").as_deref());
+        // Runtime cache settings (Admin → Settings) override the file
+        // configuration, applied on restart like every other setting.
+        let mut cache_cfg = cfg.cache.clone();
+        if let Some(v) = settings.get("cache.enabled") {
+            cache_cfg.enabled = v == "true";
+        }
+        if let Some(v) = settings.get("cache.driver") {
+            let d = v.trim();
+            if d.eq_ignore_ascii_case("memory") || d.eq_ignore_ascii_case("redis") {
+                cache_cfg.driver = d.to_string();
+            }
+        }
+        if let Some(v) = settings.get("cache.redis.url") {
+            let u = v.trim();
+            if !u.is_empty() {
+                cache_cfg.redis.url = u.to_string();
+            }
+        }
+        if let Some(v) = settings.get("cache.redis.namespace") {
+            let n = v.trim();
+            if !n.is_empty() {
+                cache_cfg.redis.namespace = n.to_string();
+            }
+        }
+        if let Err(e) = cache_cfg.validate() {
+            tracing::warn!(
+                error = %e,
+                "runtime cache settings are invalid — falling back to the file configuration"
+            );
+            cache_cfg = cfg.cache.clone();
+        }
         // First-run detection: the setup wizard is offered until a user exists.
         let needs_setup = repositories::users::count(&db).await.unwrap_or(0) == 0;
 
-        let cache = CacheManager::build(&cfg.cache).await;
+        let cache = CacheManager::build(&cache_cfg).await;
         let active = settings.get_str("theme.active", &cfg.theme.active);
         let enabled_plugins = settings.plugins_enabled();
 
