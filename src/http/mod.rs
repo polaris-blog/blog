@@ -113,14 +113,32 @@ pub fn router(app: App) -> Router {
 // Middleware
 // ---------------------------------------------------------------------------
 
-/// First-run UX: a fresh instance with no user account redirects every
-/// public page to the setup wizard instead of rendering an empty blog.
-/// `/admin/*` already redirects through `admin_auth_mw`.
+/// First-run UX: a fresh instance with no user account redirects the
+/// content-rendering pages to the setup wizard instead of rendering an empty
+/// blog. `/admin/*` already redirects through `admin_auth_mw`; machine and
+/// asset routes (plugins, media, feeds, static files) are never redirected.
 async fn setup_redirect_mw(State(app): State<App>, req: Request, next: Next) -> Response {
-    if app.needs_setup() {
+    if app.needs_setup() && is_setup_redirect_target(req.uri().path()) {
         return Redirect::to("/admin/setup").into_response();
     }
     next.run(req).await
+}
+
+/// Content pages that a visitor of a fresh instance should not see —
+/// everything except the machine/asset routes.
+fn is_setup_redirect_target(path: &str) -> bool {
+    !path.starts_with("/plugins/")
+        && !path.starts_with("/media/")
+        && !path.starts_with("/static/")
+        && !matches!(
+            path,
+            "/favicon.ico"
+                | "/rss.xml"
+                | "/atom.xml"
+                | "/sitemap.xml"
+                | "/robots.txt"
+                | "/comments"
+        )
 }
 
 async fn security_headers_mw(req: Request, next: Next) -> Response {

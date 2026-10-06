@@ -744,8 +744,8 @@ async fn fresh_instance_redirects_public_pages_to_setup() {
     let router = polaris::http::router(app.clone());
     assert!(app.needs_setup(), "no user account exists yet");
 
-    // Every public page leads to the setup wizard on a fresh instance.
-    for path in ["/", "/rss.xml", "/some-missing-page"] {
+    // Every content page leads to the setup wizard on a fresh instance...
+    for path in ["/", "/some-missing-page"] {
         let resp = get(&router, path).await;
         assert_eq!(resp.status(), StatusCode::SEE_OTHER, "GET {path}");
         assert_eq!(
@@ -754,6 +754,10 @@ async fn fresh_instance_redirects_public_pages_to_setup() {
             "GET {path} redirects to setup"
         );
     }
+
+    // ...while machine routes keep working (feeds render an empty site).
+    let resp = get(&router, "/rss.xml").await;
+    assert_eq!(resp.status(), StatusCode::OK, "feeds are not redirected");
 }
 
 #[tokio::test]
