@@ -273,7 +273,8 @@ async fn admin_login_flow() {
     assert_eq!(resp.status(), StatusCode::OK);
     assert!(set_cookie(&resp, "polaris_session").is_none());
 
-    // Missing CSRF cookie → rejected.
+    // The stateless signed token works WITHOUT any cookie (robustness in
+    // real browsers): correct credentials + token → session.
     let req = Request::builder()
         .method("POST")
         .uri("/admin/login")
@@ -281,6 +282,21 @@ async fn admin_login_flow() {
         .extension(local_addr(40011))
         .body(Body::from(format!(
             "username=admin&password=password123&csrf={csrf}"
+        )))
+        .unwrap();
+    let resp = send(&router, req).await;
+    assert_eq!(resp.status(), StatusCode::SEE_OTHER);
+    assert!(set_cookie(&resp, "polaris_session").is_some());
+
+    // A tampered token is rejected even with valid credentials.
+    let req = Request::builder()
+        .method("POST")
+        .uri("/admin/login")
+        .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+        .extension(local_addr(40011))
+        .body(Body::from(format!(
+            "username=admin&password=password123&csrf={}x",
+            &csrf[..csrf.len() - 1]
         )))
         .unwrap();
     let resp = send(&router, req).await;

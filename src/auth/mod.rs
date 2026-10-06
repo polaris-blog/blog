@@ -229,6 +229,77 @@ pub fn login_csrf_ok(headers: &HeaderMap, form_token: &str) -> bool {
 }
 
 // ---------------------------------------------------------------------------
+// Stateless CSRF tokens (pre-session forms)
+//
+// The double-submit cookie pair above breaks in real browser environments:
+// stale cookies across container swaps, duplicate cookies from multi-host
+// testing, proxies that strip cookies. The signed token below depends only
+// on the form itself — an expiry stamp plus a digest bound to the instance
+// secret — so either check passing is sufficient.
+// ---------------------------------------------------------------------------
+
+const FORM_TOKEN_TTL: i64 = 1800;
+
+/// A stateless CSRF token for a pre-session form: `{expiry}.{digest}`.
+pub fn form_token(scope: &str, secret: &str) -> String {
+    let expiry = time::now() + FORM_TOKEN_TTL;
+    format!("{expiry}.{}", form_token_digest(scope, expiry, secret))
+}
+
+/// Validate a stateless CSRF token: well-formed, unexpired, digest matches
+/// for the scope. Constant-time comparison on the digest.
+pub fn form_token_ok(scope: &str, secret: &str, token: &str) -> bool {
+    let Some((expiry, mac)) = token.split_once('.') else {
+        return false;
+    };
+    let Ok(expiry) = expiry.parse::<i64>() else {
+        return false;
+    };
+    if time::now() > expiry {
+        return false;
+    }
+    cookies::ct_eq(&form_token_digest(scope, expiry, secret), mac)
+}
+
+fn form_token_digest(scope: &str, expiry: i64, secret: &str) -> String {
+    use sha2::{Digest, Sha256};
+    let mut h = Sha256::new();
+    h.update(secret.as_bytes());
+    h.update(b"polaris-csrf:");
+    h.update(scope.as_bytes());
+    h.update(expiry.to_le_bytes());
+    h.finalize().iter().map(|b| format!("{b:02x}")).collect()
+}
+
+#[cfg(test)]
+mod form_token_tests {
+    use super::*;
+
+    #[test]
+    fn form_token_roundtrip_and_rejection() {
+        let token = form_token("setup", "secret");
+        assert!(form_token_ok("setup", "secret", &token), "valid token");
+        // Wrong scope, secret, or tampered payload are rejected.
+        assert!(!form_token_ok("login", "secret", &token), "scope bound");
+        assert!(!form_token_ok("setup", "other", &token), "secret bound");
+        assert!(
+            !form_token_ok("setup", "secret", &format!("{token}x")),
+            "tampered token rejected"
+        );
+        assert!(
+            !form_token_ok("setup", "secret", "123.abc"),
+            "garbage token rejected"
+        );
+        // Expired token rejected.
+        let expired = {
+            let expiry = time::now() - 10;
+            format!("{expiry}.{}", form_token_digest("setup", expiry, "secret"))
+        };
+        assert!(!form_token_ok("setup", "secret", &expired), "expired token");
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Login form
 // ---------------------------------------------------------------------------
 

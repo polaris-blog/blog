@@ -224,7 +224,8 @@ async fn login_page(app: &App, error: &str) -> Response {
     if app.needs_setup() && repositories::users::count(&app.db).await.unwrap_or(0) == 0 {
         return Redirect::to("/admin/setup").into_response();
     }
-    let csrf = cookies::random_token(32);
+    // Stateless signed token: survives stale/missing cookies in real browsers.
+    let csrf = auth::form_token("login", &app.config.security.secret);
     let mut ctx = Context::new();
     ctx.insert("csrf", &csrf);
     ctx.insert("error", &crate::i18n::tr_or(error));
@@ -256,7 +257,11 @@ async fn login_submit(
     headers: HeaderMap,
     Form(form): Form<auth::LoginForm>,
 ) -> Response {
-    if !auth::login_csrf_ok(&headers, &form.csrf) {
+    // Either check passing is sufficient: the double-submit cookie pair, or
+    // the stateless signed token embedded in the form.
+    if !auth::login_csrf_ok(&headers, &form.csrf)
+        && !auth::form_token_ok("login", &app.config.security.secret, &form.csrf)
+    {
         return login_page(&app, "Invalid or expired form token — please try again.").await;
     }
     let ip =
@@ -384,7 +389,7 @@ fn setup_page(
     saved: bool,
     values: &HashMap<String, String>,
 ) -> Response {
-    let csrf = cookies::random_token(32);
+    let csrf = auth::form_token("setup", &app.config.security.secret);
     let locale = crate::i18n::locale();
     let mut ctx = Context::new();
     ctx.insert("csrf", &csrf);
@@ -551,7 +556,9 @@ async fn setup_submit(
 
     let tr = |key: &str| crate::i18n::translate(&crate::i18n::locale(), key);
 
-    if !auth::login_csrf_ok(&headers, &form.csrf) {
+    if !auth::login_csrf_ok(&headers, &form.csrf)
+        && !auth::form_token_ok("setup", &app.config.security.secret, &form.csrf)
+    {
         let msg = tr("setup.error.csrf");
         return Ok(setup_page(&app, "env", &msg, false, &HashMap::new()));
     }
