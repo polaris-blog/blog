@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/polaris-blog/blog/actions/workflows/ci.yml/badge.svg)](https://github.com/polaris-blog/blog/actions/workflows/ci.yml)
 [![Release](https://github.com/polaris-blog/blog/actions/workflows/release.yml/badge.svg)](https://github.com/polaris-blog/blog/releases)
-[![Docker](https://github.com/polaris-blog/blog/actions/workflows/docker.yml/badge.svg)](https://github.com/polaris-blog/blog/pkgs/container/blog)
+[![Docker Image](https://img.shields.io/github/v/release/polaris-blog/blog?label=GHCR&logo=docker&logoColor=white)](https://github.com/polaris-blog/blog/pkgs/container/blog)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-MIT)
 
 Polaris is a dynamic blog system shipped as a **single binary**. Drop it on a low-end VPS, a NAS, a home server — anywhere — and run it. No Node.js, no npm, no Redis, no database server (with SQLite).
