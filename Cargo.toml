@@ -1,6 +1,6 @@
 [package]
 name = "polaris"
-version = "1.0.1"
+version = "1.0.2"
 edition = "2024"
 description = "Polaris — a fast, lightweight, secure and extensible blog engine written in Rust"
 license = "MIT OR Apache-2.0"
