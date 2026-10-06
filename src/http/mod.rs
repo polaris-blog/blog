@@ -21,7 +21,7 @@ use axum::body::HttpBody;
 use axum::extract::{Request, State};
 use axum::http::{HeaderValue, header};
 use axum::middleware::{self, Next};
-use axum::response::{IntoResponse, Response};
+use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
 use flate2::Compression;
 use flate2::write::GzEncoder;
@@ -55,7 +55,11 @@ pub fn router(app: App) -> Router {
         .route("/media/{path}", get(media::serve))
         .route("/comments", post(comments::submit))
         .route("/plugins/{*path}", get(plugins_http::public_route))
-        .fallback(public::not_found);
+        .fallback(public::not_found)
+        .layer(middleware::from_fn_with_state(
+            app.clone(),
+            setup_redirect_mw,
+        ));
 
     let api_read = Router::new()
         .route("/api/posts", get(api::list_posts))
@@ -108,6 +112,16 @@ pub fn router(app: App) -> Router {
 // ---------------------------------------------------------------------------
 // Middleware
 // ---------------------------------------------------------------------------
+
+/// First-run UX: a fresh instance with no user account redirects every
+/// public page to the setup wizard instead of rendering an empty blog.
+/// `/admin/*` already redirects through `admin_auth_mw`.
+async fn setup_redirect_mw(State(app): State<App>, req: Request, next: Next) -> Response {
+    if app.needs_setup() {
+        return Redirect::to("/admin/setup").into_response();
+    }
+    next.run(req).await
+}
 
 async fn security_headers_mw(req: Request, next: Next) -> Response {
     let mut resp = next.run(req).await;

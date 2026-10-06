@@ -228,6 +228,7 @@
   "setup.error.db_driver": "不支持的数据库类型。",
   "setup.error.cache_driver": "请选择有效的缓存方式并填写 Redis 地址。",
   "setup.error.write": "无法写入配置文件：",
+  "setup.warn.readonly_config": "安装将继续使用当前运行配置 —— 如需更改数据库或缓存，请稍后手动编辑 polaris.toml 并重启 Polaris。",
   "setup.error.csrf": "表单令牌无效或已过期 —— 请重试。",
   "setup.error.site_title": "请填写站点标题（最多 120 个字符）。",
   "setup.error.username": "用户名只能包含字母、数字、点、横线与下划线（1-64 个字符）。",

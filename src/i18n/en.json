@@ -228,6 +228,7 @@
   "setup.error.db_driver": "Unsupported database type.",
   "setup.error.cache_driver": "Choose a valid cache driver and fill in the Redis URL.",
   "setup.error.write": "Could not write the configuration file",
+  "setup.warn.readonly_config": "setup continues with the running configuration — to change the database or cache later, edit polaris.toml manually and restart Polaris.",
   "setup.error.csrf": "Invalid or expired form token — please try again.",
   "setup.error.site_title": "Site title is required (up to 120 characters).",
   "setup.error.username": "Username may only contain letters, numbers, dots, dashes and underscores (1-64 characters).",

@@ -738,6 +738,73 @@ async fn setup_wizard_creates_first_admin() {
 }
 
 #[tokio::test]
+async fn fresh_instance_redirects_public_pages_to_setup() {
+    // A fresh instance without any user account (init_http seeds one).
+    let (app, _dir) = common::init_app().await;
+    let router = polaris::http::router(app.clone());
+    assert!(app.needs_setup(), "no user account exists yet");
+
+    // Every public page leads to the setup wizard on a fresh instance.
+    for path in ["/", "/rss.xml", "/some-missing-page"] {
+        let resp = get(&router, path).await;
+        assert_eq!(resp.status(), StatusCode::SEE_OTHER, "GET {path}");
+        assert_eq!(
+            resp.headers().get(header::LOCATION).unwrap(),
+            "/admin/setup",
+            "GET {path} redirects to setup"
+        );
+    }
+}
+
+#[tokio::test]
+async fn setup_env_step_survives_readonly_config() {
+    let (app, dir) = common::init_app().await;
+
+    // The config path is occupied by a directory: every write fails with
+    // EISDIR (the container/systemd read-only case behaves the same).
+    std::fs::create_dir_all(dir.path().join("polaris.toml")).unwrap();
+    let router = polaris::http::router(app.clone());
+
+    let resp = get(&router, "/admin/setup").await;
+    let csrf = set_cookie(&resp, "polaris_csrf").expect("csrf cookie");
+
+    // Step 1 with an unwritable config path: the wizard must not dead-end —
+    // it records a fallback marker and continues to the administrator step.
+    let req = Request::builder()
+        .method("POST")
+        .uri("/admin/setup")
+        .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+        .header(header::COOKIE, format!("polaris_csrf={csrf}"))
+        .body(Body::from(
+            format!("csrf={csrf}&step=env&db_driver=sqlite&sqlite_path=data/polaris.db&cache_enabled=on&cache_driver=memory"),
+        ))
+        .unwrap();
+    let resp = send(&router, req).await;
+    assert_eq!(resp.status(), StatusCode::OK);
+    let html = body(resp).await;
+    assert!(
+        html.contains("Step 2"),
+        "wizard continued past the env step"
+    );
+
+    // The fallback marker lives in the settings table, not the config file.
+    assert_eq!(
+        app.settings.get("setup.env_done").as_deref(),
+        Some("true"),
+        "fallback marker stored"
+    );
+    assert!(
+        dir.path().join("polaris.toml").is_dir(),
+        "config path is still the placeholder directory"
+    );
+
+    // The administrator step is reachable.
+    let resp = get(&router, "/admin/setup").await;
+    let html = body(resp).await;
+    assert!(html.contains("Step 2"), "marker honored on reload");
+}
+
+#[tokio::test]
 async fn i18n_locale_switches_public_strings() {
     let (app, router, _dir) = init_http().await;
 

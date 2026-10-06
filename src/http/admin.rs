@@ -339,9 +339,11 @@ fn config_file_path(app: &App) -> std::path::PathBuf {
 
 /// Step 2 is offered once the environment step has been saved. The marker
 /// lives in the config file's `[setup]` section — it survives switching to a
-/// different database, unlike a settings-table row.
+/// different database, unlike a settings-table row. A read-only configuration
+/// (container mounts, systemd hardening) falls back to a settings-table
+/// marker so the wizard can still complete.
 fn env_step_done(app: &App) -> bool {
-    std::fs::read_to_string(config_file_path(app))
+    if std::fs::read_to_string(config_file_path(app))
         .ok()
         .and_then(|raw| raw.parse::<toml::Value>().ok())
         .and_then(|v| {
@@ -350,6 +352,10 @@ fn env_step_done(app: &App) -> bool {
                 .and_then(|b| b.as_bool())
         })
         .unwrap_or(false)
+    {
+        return true;
+    }
+    app.settings.get("setup.env_done").as_deref() == Some("true")
 }
 
 fn percent_encode(s: &str) -> String {
@@ -640,8 +646,17 @@ async fn setup_submit(
                 return Ok(setup_page(&app, "env", "", true, &HashMap::new()));
             }
             Err(e) => {
-                let msg = format!("{}: {e}", tr("setup.error.write"));
-                return Ok(setup_page(&app, "env", &msg, false, &HashMap::new()));
+                // Read-only configuration (container mounts, systemd
+                // hardening, ...): the running configuration is what it is —
+                // record the fallback marker and continue to the
+                // administrator step instead of dead-ending the wizard.
+                let _ = app.settings.set(&app.db, "setup.env_done", "true").await;
+                let msg = format!(
+                    "{} ({e}). {}",
+                    tr("setup.error.write"),
+                    tr("setup.warn.readonly_config")
+                );
+                return Ok(setup_page(&app, "admin", &msg, false, &HashMap::new()));
             }
         }
     }
