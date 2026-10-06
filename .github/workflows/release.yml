@@ -238,6 +238,9 @@ jobs:
           files: |
             artifacts/polaris-*
             artifacts/SHA256SUMS
+          # A moved tag re-runs the pipeline: replace same-named assets
+          # instead of failing the upload.
+          overwrite_files: true
           generate_release_notes: true
           body: |
             The first stable release of Polaris — a single-binary blog engine in Rust.
