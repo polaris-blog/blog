@@ -16,10 +16,11 @@ LABEL org.opencontainers.image.title="Polaris" \
 RUN addgroup -S polaris && adduser -S polaris -G polaris \
     && mkdir -p /app/data && chown -R polaris:polaris /app
 WORKDIR /app
-COPY polaris /usr/local/bin/polaris
-COPY themes /app/themes
-COPY plugins /app/plugins
-COPY polaris.toml.example /app/polaris.toml
+COPY --chown=polaris:polaris polaris /usr/local/bin/polaris
+COPY --chown=polaris:polaris themes /app/themes
+COPY --chown=polaris:polaris plugins /app/plugins
+# Owned by the runtime user: the first-run setup wizard writes this file.
+COPY --chown=polaris:polaris polaris.toml.example /app/polaris.toml
 USER polaris
 VOLUME ["/app/data"]
 EXPOSE 3000
