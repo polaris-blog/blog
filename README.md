@@ -276,13 +276,13 @@ Reads are public; writes require an authenticated session (or `Authorization: Be
 ## Docker
 
 Multi-arch images (`linux/amd64` + `linux/arm64`, Alpine-based, static musl binary,
-non-root, health-checked) are published to GHCR on every release:
+non-root, health-checked) are published to GHCR on every release. The image ships
+with default settings, so it works out of the box:
 
 ```bash
 docker run -d --name polaris \
   -p 3000:3000 \
   -v polaris-data:/app/data \
-  -v ./polaris.toml:/app/polaris.toml \
   ghcr.io/polaris-blog/blog:latest
 ```
 
@@ -296,7 +296,8 @@ services:
       - "3000:3000"
     volumes:
       - polaris-data:/app/data
-      - ./polaris.toml:/app/polaris.toml:ro
+      # Optional: override the bundled configuration
+      # - ./polaris.toml:/app/polaris.toml:ro
     restart: unless-stopped
 
 volumes:
@@ -305,11 +306,12 @@ volumes:
 
 Then open `http://localhost:3000/admin` — the setup wizard offers to switch the
 database and cache drivers before the first account is created. Tags: `latest`
-(and `X.Y.Z`) track releases, `edge` tracks `main`.
+and `X.Y.Z` track releases.
 
 Build the image locally with `docker build -t polaris .` — the multi-stage
 Dockerfile compiles a static musl binary inside a Rust/Alpine builder and ships
-it in a ~20 MB runtime image.
+it in a ~20 MB runtime image. To mount your own configuration, drop a
+`polaris.toml` next to the compose file and uncomment the volume line above.
 
 ## Documentation
 

@@ -3,8 +3,14 @@ name: Rust CI
 on:
   push:
     # Branch pushes only — tag pushes of already-tested commits must not
-    # trigger a redundant CI run.
+    # trigger a redundant CI run. Docs/ignore-file edits skip CI entirely.
     branches: ["**"]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - ".gitignore"
+      - ".dockerignore"
+      - "LICENSE*"
   pull_request:
 
 permissions:
