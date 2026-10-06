@@ -296,22 +296,31 @@ services:
       - "3000:3000"
     volumes:
       - polaris-data:/app/data
-      # Optional: override the bundled configuration
-      # - ./polaris.toml:/app/polaris.toml:ro
     restart: unless-stopped
 
 volumes:
   polaris-data:
 ```
 
-Then open `http://localhost:3000/admin` — the setup wizard offers to switch the
-database and cache drivers before the first account is created. Tags: `latest`
-and `X.Y.Z` track releases.
+**First run — the setup wizard:**
+
+1. Open `http://localhost:3000/admin` (from v1.0.1 the homepage redirects there
+   automatically while no account exists).
+2. Step 1 keeps the bundled defaults (SQLite on the data volume) — just save.
+3. Step 2 creates the administrator account; then sign in.
+
+> **Do not mount `polaris.toml` on the first run.** The setup wizard writes the
+> configuration inside the container, and a host-mounted file is not writable
+> by the container user (`permission denied`). Site settings live in the
+> database anyway — mount a config file only after setup, only if you need to
+> pin the database/cache/secret, and then mount it read-only.
+
+All persistent state (database, media, uploads) lives on the `polaris-data`
+volume. Tags: `latest` and `X.Y.Z` track releases.
 
 Build the image locally with `docker build -t polaris .` — the multi-stage
 Dockerfile compiles a static musl binary inside a Rust/Alpine builder and ships
-it in a ~20 MB runtime image. To mount your own configuration, drop a
-`polaris.toml` next to the compose file and uncomment the volume line above.
+it in a ~20 MB runtime image.
 
 ## Documentation
 
