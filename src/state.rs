@@ -234,6 +234,13 @@ impl AppState {
                 cache_cfg.redis.url = u.to_string();
             }
         }
+        if let Some(password) = settings.get("cache.redis.password") {
+            let password = password.trim();
+            if !password.is_empty() {
+                cache_cfg.redis.url =
+                    crate::config::redis_url_with_password(&cache_cfg.redis.url, password);
+            }
+        }
         if let Some(v) = settings.get("cache.redis.namespace") {
             let n = v.trim();
             if !n.is_empty() {

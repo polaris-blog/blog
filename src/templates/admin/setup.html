@@ -81,6 +81,10 @@
         <input id="redis-url" type="text" name="redis_url" value="{{ v_redis_url }}" placeholder="redis://127.0.0.1:6379">
       </div>
       <div class="setup-fields{% if v_cache_driver == 'redis' %} visible{% endif %}" data-fields="redis">
+        <label for="redis-password">{{ t(key="setup.redis_password") }}</label>
+        <input id="redis-password" type="password" name="redis_password" autocomplete="new-password">
+      </div>
+      <div class="setup-fields{% if v_cache_driver == 'redis' %} visible{% endif %}" data-fields="redis">
         <label for="redis-namespace">{{ t(key="setup.redis_namespace") }}</label>
         <input id="redis-namespace" type="text" name="redis_namespace" value="{{ v_redis_namespace }}">
       </div>

@@ -74,6 +74,10 @@
         <input id="f-redis-url" type="text" name="cache_redis_url" value="{{ cache_redis_url }}" placeholder="redis://127.0.0.1:6379">
       </div>
       <div>
+        <label for="f-redis-pass">{{ t(key="admin.settings.cache_redis_password") }}</label>
+        <input id="f-redis-pass" type="password" name="cache_redis_password" autocomplete="new-password" placeholder="••••••••">
+      </div>
+      <div>
         <label for="f-redis-ns">{{ t(key="admin.settings.cache_redis_namespace") }}</label>
         <input id="f-redis-ns" type="text" name="cache_redis_namespace" value="{{ cache_redis_namespace }}" maxlength="128">
       </div>

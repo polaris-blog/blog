@@ -220,6 +220,8 @@
   "setup.cache_driver": "缓存方式",
   "setup.cache_memory": "内存（默认）",
   "setup.redis_url": "Redis 地址",
+  "setup.redis_password": "Redis 密码",
+  "admin.settings.cache_redis_password": "Redis 密码",
   "setup.redis_namespace": "命名空间",
   "setup.env_submit": "保存并继续",
   "setup.password_confirm": "确认密码",

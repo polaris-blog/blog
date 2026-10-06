@@ -318,6 +318,8 @@ struct SetupForm {
     #[serde(default)]
     redis_url: String,
     #[serde(default)]
+    redis_password: String,
+    #[serde(default)]
     redis_namespace: String,
     // Step 2 — administrator.
     #[serde(default)]
@@ -634,7 +636,7 @@ async fn setup_submit(
             &url,
             cache_enabled,
             cache_driver,
-            form.redis_url.trim(),
+            &crate::config::redis_url_with_password(form.redis_url.trim(), &form.redis_password),
             if form.redis_namespace.trim().is_empty() {
                 "polaris"
             } else {
@@ -2607,6 +2609,8 @@ struct SettingsForm {
     #[serde(default)]
     cache_redis_url: String,
     #[serde(default)]
+    cache_redis_password: String,
+    #[serde(default)]
     cache_redis_namespace: String,
 }
 
@@ -2693,9 +2697,18 @@ async fn settings_save(
         ),
         ("cache.driver".to_string(), cache_driver),
         ("cache.redis.url".to_string(), redis_url),
+        // The password is stored only when submitted — an empty field keeps
+        // the currently saved one (it is never echoed back to the form).
+        (
+            "cache.redis.password".to_string(),
+            form.cache_redis_password.trim().to_string(),
+        ),
         ("cache.redis.namespace".to_string(), redis_namespace),
     ]
     .into_iter()
+    .collect::<HashMap<String, String>>()
+    .into_iter()
+    .filter(|(k, v)| !(k == "cache.redis.password" && v.is_empty()))
     .collect();
     app.settings.set_many(&app.db, &values).await?;
     crate::i18n::set_locale(&form.site_locale);

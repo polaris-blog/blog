@@ -250,6 +250,45 @@ pub struct RedisCacheConfig {
     pub pool_size: u32,
 }
 
+/// Inject a password into a `redis://` URL as the userinfo part, percent-
+/// encoding every byte that is not an RFC 3986 unreserved character. An
+/// existing userinfo (`user:pass@`) is replaced; an empty password returns
+/// the URL unchanged. Used by the setup wizard and Admin → Settings, where
+/// the password is collected in its own field instead of inside the URL.
+pub fn redis_url_with_password(url: &str, password: &str) -> String {
+    if password.is_empty() {
+        return url.to_string();
+    }
+    let (scheme, rest) = match url.split_once("://") {
+        Some((scheme, rest)) => (scheme, rest),
+        // Not a schemed URL — nothing sensible to inject into.
+        None => return url.to_string(),
+    };
+    // Split the remainder into authority (up to the first '/') and path.
+    let (authority, path) = match rest.split_once('/') {
+        Some((authority, path)) => (authority, Some(path)),
+        None => (rest, None),
+    };
+    // Replace any existing userinfo (everything up to the last '@').
+    let host = match authority.rsplit_once('@') {
+        Some((_, host)) => host,
+        None => authority,
+    };
+    let mut encoded = String::with_capacity(password.len() * 3);
+    for byte in password.bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' => {
+                encoded.push(byte as char);
+            }
+            _ => encoded.push_str(&format!("%{byte:02X}")),
+        }
+    }
+    match path {
+        Some(path) => format!("{scheme}://:{encoded}@{host}/{path}"),
+        None => format!("{scheme}://:{encoded}@{host}"),
+    }
+}
+
 impl Default for RedisCacheConfig {
     fn default() -> Self {
         Self {
@@ -928,6 +967,35 @@ pub fn default_config_path() -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn redis_password_injection() {
+        // Plain host:port — password injected as userinfo.
+        assert_eq!(
+            redis_url_with_password("redis://127.0.0.1:6379", "s3cret"),
+            "redis://:s3cret@127.0.0.1:6379"
+        );
+        // URL with a path (db number) — path preserved.
+        assert_eq!(
+            redis_url_with_password("redis://10.0.0.5:6379/2", "pw"),
+            "redis://:pw@10.0.0.5:6379/2"
+        );
+        // Existing userinfo is replaced by the dedicated password.
+        assert_eq!(
+            redis_url_with_password("redis://olduser:oldpass@host:6379", "new"),
+            "redis://:new@host:6379"
+        );
+        // Special characters are percent-encoded.
+        assert_eq!(
+            redis_url_with_password("redis://host:6379", "p@ss w rd/1"),
+            "redis://:p%40ss%20w%20rd%2F1@host:6379"
+        );
+        // Empty password leaves the URL untouched.
+        assert_eq!(
+            redis_url_with_password("redis://127.0.0.1:6379", ""),
+            "redis://127.0.0.1:6379"
+        );
+    }
 
     #[test]
     fn defaults() {

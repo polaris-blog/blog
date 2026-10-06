@@ -220,6 +220,8 @@
   "setup.cache_driver": "Cache",
   "setup.cache_memory": "In-memory (default)",
   "setup.redis_url": "Redis URL",
+  "setup.redis_password": "Redis password",
+  "admin.settings.cache_redis_password": "Redis password",
   "setup.redis_namespace": "Namespace",
   "setup.env_submit": "Save and continue",
   "setup.password_confirm": "Confirm password",
