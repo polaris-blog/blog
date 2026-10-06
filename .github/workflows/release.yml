@@ -1,8 +1,16 @@
 name: Release
 
-# Triggered by pushing a version tag:  git tag v0.1.0 && git push origin v0.1.0
-# Builds 6 targets (Windows/macOS/Linux × x86_64/arm64), compresses with UPX
-# where supported, attaches archives + SHA256SUMS to the GitHub release.
+# Triggered by pushing a version tag:  git tag v1.0.0 && git push origin v1.0.0
+#
+# One pipeline, one build per target:
+#   1. build matrix — 5 targets (Linux/Windows x86_64+arm64, macOS arm64),
+#      UPX where supported, binaries attached raw to the GitHub release
+#   2. the two Linux builds are additionally packed into multi-arch GHCR
+#      images by reusing the prebuilt binary (Dockerfile.release — no
+#      compilation inside Docker), then merged into one manifest list
+#
+# Release assets are the raw binaries (no tar/zip wrappers); SHA256SUMS is
+# computed over the exact files being released.
 
 on:
   push:
@@ -10,9 +18,12 @@ on:
 
 permissions:
   contents: write
+  packages: write
 
 env:
   CARGO_TERM_COLOR: always
+  REGISTRY: ghcr.io
+  IMAGE: ${{ github.repository }}
   BIN: polaris
 
 jobs:
@@ -25,33 +36,36 @@ jobs:
       matrix:
         include:
           # Linux — static musl binaries, run anywhere without dependencies.
+          # These two also become the container images (linux/amd64+arm64).
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
-            archive: tar.gz
+            platform: linux/amd64
             upx: true
+            docker: true
           - target: aarch64-unknown-linux-musl
             os: ubuntu-24.04-arm
-            archive: tar.gz
+            platform: linux/arm64
             upx: true
+            docker: true
           # macOS — Apple Silicon native runner (macos-14+). Intel macOS is
           # not built: macos-13 runners are no longer available. UPX is
           # intentionally skipped: compressed Mach-O binaries are killed by
           # modern macOS code signing/runtime protections.
           - target: aarch64-apple-darwin
             os: macos-14
-            archive: tar.gz
             upx: false
+            docker: false
           # Windows — ARM64 cross-compiles on the x64 runner (the windows
           # image ships the MSVC ARM64 toolset; libsqlite3-sys builds from
           # source through cc). UPX: only x64 — keep the ARM64 PE as-is.
           - target: x86_64-pc-windows-msvc
             os: windows-latest
-            archive: zip
             upx: true
+            docker: false
           - target: aarch64-pc-windows-msvc
             os: windows-latest
-            archive: zip
             upx: false
+            docker: false
 
     steps:
       - uses: actions/checkout@v4
@@ -81,39 +95,119 @@ jobs:
         if: matrix.upx
         run: upx --best --lzma target/${{ matrix.target }}/release/${{ env.BIN }}${{ runner.os == 'Windows' && '.exe' || '' }}
 
-      - name: Package (tar.gz)
-        if: matrix.archive == 'tar.gz'
+      - name: Stage release binary (Linux/macOS)
+        if: runner.os != 'Windows'
         run: |
-          VERSION="${GITHUB_REF_NAME}"
-          NAME="${BIN}-${VERSION}-${{ matrix.target }}"
-          mkdir -p dist
-          cp "target/${{ matrix.target }}/release/${BIN}" "dist/${BIN}"
-          for f in README.md polaris.toml.example LICENSE*; do
-            [ -f "$f" ] && cp "$f" dist/
-          done
-          tar -czf "${NAME}.tar.gz" -C dist .
-          echo "ARCHIVE=${NAME}.tar.gz" >> "$GITHUB_ENV"
+          NAME="${BIN}-${GITHUB_REF_NAME}-${{ matrix.target }}"
+          cp "target/${{ matrix.target }}/release/${BIN}" "${NAME}"
+          echo "FILE=${NAME}" >> "$GITHUB_ENV"
 
-      - name: Package (zip)
-        if: matrix.archive == 'zip'
+      - name: Stage release binary (Windows)
+        if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $version = $env:GITHUB_REF_NAME
-          $name = "${env:BIN}-${version}-${{ matrix.target }}"
-          New-Item -ItemType Directory -Force dist | Out-Null
-          Copy-Item "target/${{ matrix.target }}/release/${env:BIN}.exe" "dist/${env:BIN}.exe"
-          Copy-Item README.md, polaris.toml.example dist/
-          Compress-Archive -Path dist/* -DestinationPath "${name}.zip"
-          "ARCHIVE=${name}.zip" | Out-File -Append -Encoding ascii $env:GITHUB_ENV
+          $name = "${env:BIN}-${env:GITHUB_REF_NAME}-${{ matrix.target }}.exe"
+          Copy-Item "target/${{ matrix.target }}/release/${env:BIN}.exe" $name
+          "FILE=$name" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
 
-      - name: Upload artifact
+      - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.target }}
-          # Checksums are (re)computed by the release job over the downloaded
-          # archives — no per-job checksum files to ferry around.
-          path: ${{ env.ARCHIVE }}
+          path: ${{ env.FILE }}
           if-no-files-found: error
+
+      # ---- Container image (Linux targets only): assemble the runtime image
+      # ---- from the prebuilt binary — seconds, not another full compile.
+      - name: Log in to GHCR
+        if: matrix.docker
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          # PAT with write:packages (repo secret) — sidesteps the
+          # GITHUB_TOKEN package-permission quirks on GHCR.
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Set up Docker Buildx
+        if: matrix.docker
+        uses: docker/setup-buildx-action@v3
+
+      - name: Stage container image context
+        if: matrix.docker
+        run: |
+          mkdir image
+          cp "target/${{ matrix.target }}/release/${BIN}" image/polaris
+          cp -r themes plugins image/
+          cp polaris.toml.example image/
+          cp Dockerfile.release image/Dockerfile
+
+      - name: Build and push image by digest
+        id: image
+        if: matrix.docker
+        uses: docker/build-push-action@v6
+        with:
+          context: ./image
+          platforms: ${{ matrix.platform }}
+          push: true
+          provenance: false
+          # Push by digest: the ref must NOT carry a tag — tagged refs
+          # conflict with push-by-digest mode. Version/latest tags are
+          # applied by the merge job's imagetools create.
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE }}
+          cache-from: type=gha,scope=${{ matrix.platform }}
+          cache-to: type=gha,scope=${{ matrix.platform }},mode=max
+          outputs: type=image,push-by-digest=true,name-canonical=true,push=true
+
+      - name: Export image digest
+        if: matrix.docker
+        run: |
+          d="${{ steps.image.outputs.digest }}"
+          mkdir -p /tmp/digests
+          echo "${d#sha256:}" > "/tmp/digests/${d#sha256:}"
+
+      - uses: actions/upload-artifact@v4
+        if: matrix.docker
+        with:
+          name: image-digests-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+
+  images:
+    name: merge image manifest
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download image digests
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: image-digests-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Create manifest list (version + latest)
+        working-directory: /tmp/digests
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE }}"
+          VERSION="${GITHUB_REF_NAME#v}"
+          SOURCES=""
+          for d in *; do
+            SOURCES="$SOURCES ${IMAGE}@sha256:$d"
+          done
+          docker buildx imagetools create \
+            -t "${IMAGE}:${VERSION}" -t "${IMAGE}:latest" $SOURCES
+          docker buildx imagetools inspect "${IMAGE}:${VERSION}"
 
   release:
     name: publish GitHub release
@@ -121,32 +215,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Download all archives
+      - name: Download binaries
         uses: actions/download-artifact@v4
         with:
           path: artifacts
           pattern: release-*
           merge-multiple: true
 
-      - name: Generate checksums and validate archives
+      - name: Validate binaries and compute checksums
         run: |
           cd artifacts
           ls -la
-          # Fail fast instead of uploading a 0-byte asset.
-          for f in *.tar.gz *.zip; do
-            [ -s "$f" ] || { echo "EMPTY OR MISSING ARCHIVE: $f"; exit 1; }
+          # Fail fast instead of attaching empty assets.
+          for f in polaris-*; do
+            [ -s "$f" ] || { echo "EMPTY BINARY: $f"; exit 1; }
           done
-          # Checksums are computed here, on the exact files being released.
-          sha256sum *.tar.gz *.zip > SHA256SUMS
-          cat SHA256SUMS
-
-      - name: Attach archives to the release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            artifacts/*.tar.gz
-            artifacts/*.zip
-            artifacts/SHA256SUMS
-          generate_release_notes: true
+          sha256sum polaris-* > SHA256SUMS

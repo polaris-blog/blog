@@ -1,0 +1,31 @@
+# Runtime-only container image assembled by .github/workflows/release.yml
+# from the already-built static musl binary — nothing is compiled here, so
+# the image build takes seconds instead of minutes. For a build-from-source
+# image use the top-level Dockerfile instead.
+#
+# The release workflow stages a context directory containing:
+#   polaris               — prebuilt static binary (UPX-compressed)
+#   themes/  plugins/     — shipped assets
+#   polaris.toml.example  — out-of-the-box defaults
+
+FROM alpine:3.21
+LABEL org.opencontainers.image.title="Polaris" \
+      org.opencontainers.image.description="Fast, lightweight, secure and extensible blog engine — a single static binary." \
+      org.opencontainers.image.source="https://github.com/polaris-blog/blog" \
+      org.opencontainers.image.licenses="MIT OR Apache-2.0"
+RUN addgroup -S polaris && adduser -S polaris -G polaris \
+    && mkdir -p /app/data && chown -R polaris:polaris /app
+WORKDIR /app
+COPY polaris /usr/local/bin/polaris
+COPY themes /app/themes
+COPY plugins /app/plugins
+COPY polaris.toml.example /app/polaris.toml
+USER polaris
+VOLUME ["/app/data"]
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD wget -q -O /dev/null http://127.0.0.1:3000/ || exit 1
+ENTRYPOINT ["polaris"]
+# The bundled polaris.toml defaults to 127.0.0.1 — useless inside a container.
+# CLI args win over config, so listening on all interfaces is forced here.
+CMD ["serve", "--config", "/app/polaris.toml", "--host", "0.0.0.0"]

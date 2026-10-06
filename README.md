@@ -35,23 +35,23 @@ $ ./polaris serve
 
 Prebuilt binaries are attached to every [release](https://github.com/polaris-blog/blog/releases)
 for five targets — Linux (static musl, UPX-compressed) and Windows in x86_64
-and arm64, plus macOS Apple Silicon. Every archive has a SHA-256 checksum in
-`SHA256SUMS`.
+and arm64, plus macOS Apple Silicon. Binaries are attached raw (no archive
+wrapper); `SHA256SUMS` covers the exact released files.
 
 | Download | Target | Notes |
 |---|---|---|
-| `polaris-vX.Y.Z-x86_64-unknown-linux-musl.tar.gz` | Linux x86_64 | static, no runtime deps |
-| `polaris-vX.Y.Z-aarch64-unknown-linux-musl.tar.gz` | Linux arm64 | static, no runtime deps |
-| `polaris-vX.Y.Z-aarch64-apple-darwin.tar.gz` | macOS Apple Silicon | |
-| `polaris-vX.Y.Z-x86_64-pc-windows-msvc.zip` | Windows x86_64 | UPX-compressed |
-| `polaris-vX.Y.Z-aarch64-pc-windows-msvc.zip` | Windows arm64 | |
+| `polaris-vX.Y.Z-x86_64-unknown-linux-musl` | Linux x86_64 | static, no runtime deps |
+| `polaris-vX.Y.Z-aarch64-unknown-linux-musl` | Linux arm64 | static, no runtime deps |
+| `polaris-vX.Y.Z-aarch64-apple-darwin` | macOS Apple Silicon | |
+| `polaris-vX.Y.Z-x86_64-pc-windows-msvc.exe` | Windows x86_64 | UPX-compressed |
+| `polaris-vX.Y.Z-aarch64-pc-windows-msvc.exe` | Windows arm64 | |
 
 ```bash
 # Example: Linux x86_64 (adjust the version and target)
-V=v0.1.0
-curl -fsSL -o polaris.tar.gz \
-  "https://github.com/polaris-blog/blog/releases/download/${V}/polaris-${V}-x86_64-unknown-linux-musl.tar.gz"
-tar -xzf polaris.tar.gz polaris && chmod +x polaris
+V=v1.0.0
+curl -fsSL -o polaris \
+  "https://github.com/polaris-blog/blog/releases/download/${V}/polaris-${V}-x86_64-unknown-linux-musl"
+chmod +x polaris
 sha256sum -c <(grep linux-musl SHA256SUMS)   # verify
 ./polaris serve
 ```
