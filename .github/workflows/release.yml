@@ -231,3 +231,25 @@ jobs:
             [ -s "$f" ] || { echo "EMPTY BINARY: $f"; exit 1; }
           done
           sha256sum polaris-* > SHA256SUMS
+
+      - name: Publish the GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/polaris-*
+            artifacts/SHA256SUMS
+          generate_release_notes: true
+          body: |
+            The first stable release of Polaris — a single-binary blog engine in Rust.
+
+            - **Single static binary** — Linux builds are fully static (musl); no runtime dependencies.
+            - **Multi-database** — SQLite (WAL, zero-config), MySQL, PostgreSQL with automatic migrations.
+            - **Server-rendered admin** — posts, pages, terms, comment moderation, users, navigation, scheduling.
+            - **Media library** — magic-byte validation, dedup, thumbnails, SVG sanitization.
+            - **Sandboxed plugins** — Rhai scripts: hooks, routes, filters, jobs; no filesystem or network.
+            - **Full-text search** — FTS5 / tsquery / boolean-mode providers per dialect.
+            - **Backups** — checksummed archives, verified restores with pre-restore snapshots.
+            - **Themes** — hot switching, embedded fallback, syntax-highlighted code blocks.
+            - **Containers** — multi-arch images at `ghcr.io/polaris-blog/blog:1.0.0`.
+
+            Install: download the binary for your target, `chmod +x`, verify against `SHA256SUMS`, run `./polaris serve`.
