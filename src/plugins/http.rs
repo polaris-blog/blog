@@ -55,7 +55,13 @@ pub fn register(engine: &mut Engine) {
     engine.register_fn(
         "http_post",
         |url: &str, headers: Map, body: &str| -> Dynamic {
-            request("POST", url, Some(headers), body, DEFAULT_TIMEOUT_SECS as i64)
+            request(
+                "POST",
+                url,
+                Some(headers),
+                body,
+                DEFAULT_TIMEOUT_SECS as i64,
+            )
         },
     );
     engine.register_fn(
@@ -365,12 +371,21 @@ mod tests {
 
     #[test]
     fn request_rejects_bad_input_without_io() {
-        for url in ["", "   ", "ftp://example.com/", "notaurl", "http://127.0.0.1:9/x"] {
+        for url in [
+            "",
+            "   ",
+            "ftp://example.com/",
+            "notaurl",
+            "http://127.0.0.1:9/x",
+        ] {
             let d = request("GET", url, None, "", 1);
             assert_eq!(status_of(d.clone()), 0, "url: {url}");
             assert!(!error_of(d).is_empty());
         }
-        assert_eq!(status_of(request("TRACE", "https://example.com/", None, "", 1)), 0);
+        assert_eq!(
+            status_of(request("TRACE", "https://example.com/", None, "", 1)),
+            0
+        );
     }
 
     #[test]

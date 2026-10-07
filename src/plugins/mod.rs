@@ -627,14 +627,20 @@ fn build_engine(
     // JSON helpers — pure functions, always available. Most HTTP APIs speak
     // JSON, so `json_parse` pairs with the network API below (but is useful
     // on its own).
-    engine.register_fn("json_parse", |text: &str| -> Result<Dynamic, Box<EvalAltResult>> {
-        serde_json::from_str::<serde_json::Value>(text)
-            .map(|v| json_to_dynamic(&v))
-            .map_err(|e| e.to_string().into())
-    });
-    engine.register_fn("json_stringify", |value: Dynamic| -> Result<String, Box<EvalAltResult>> {
-        serde_json::to_string(&dynamic_to_json(&value)).map_err(|e| e.to_string().into())
-    });
+    engine.register_fn(
+        "json_parse",
+        |text: &str| -> Result<Dynamic, Box<EvalAltResult>> {
+            serde_json::from_str::<serde_json::Value>(text)
+                .map(|v| json_to_dynamic(&v))
+                .map_err(|e| e.to_string().into())
+        },
+    );
+    engine.register_fn(
+        "json_stringify",
+        |value: Dynamic| -> Result<String, Box<EvalAltResult>> {
+            serde_json::to_string(&dynamic_to_json(&value)).map_err(|e| e.to_string().into())
+        },
+    );
 
     // Sandboxed host functions only — no filesystem or process access;
     // network access is exposed exclusively through the permission-gated
