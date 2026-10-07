@@ -116,9 +116,6 @@ html {
   scroll-behavior: smooth;
   /* Fixed glass nav clearance for #anchor jumps. */
   scroll-padding-top: 64px;
-  /* Wider-than-viewport content (big media, vw sizing) must never open a
-     horizontal scrollbar or expose the page edge. */
-  overflow-x: clip;
 }
 body {
   margin: 0;
@@ -673,6 +670,8 @@ html.dark .post-card-media,
   margin: 0 0 44px;
 }
 .post-body {
+  /* Long inline code / URLs wrap instead of stretching the page. */
+  overflow-wrap: break-word;
   max-width: 720px;
   margin: 0 auto;
   font-size: 17px;
@@ -780,6 +779,11 @@ html.dark .post-card-media,
   margin: 1.5em 0;
   font-size: 14px;
   letter-spacing: -0.224px;
+  /* Wide tables scroll inside their own box on narrow screens instead of
+     stretching the page (the html-level overflow is clipped). */
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .post-body th, .post-body td {
   border: none;
