@@ -1,6 +1,6 @@
 [package]
 name = "polaris"
-version = "1.0.2"
+version = "1.0.3"
 edition = "2024"
 description = "Polaris — a fast, lightweight, secure and extensible blog engine written in Rust"
 license = "MIT OR Apache-2.0"
@@ -32,6 +32,9 @@ clap = { version = "4", features = ["derive"] }
 argon2 = "0.5"
 pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
 rhai = { version = "1", features = ["sync"] }
+# Sync HTTP client for the permission-gated plugin network API (`network.fetch`).
+# rustls with bundled webpki roots — no system CA store needed (musl-friendly).
+ureq = { version = "2.10", default-features = false, features = ["tls"] }
 flate2 = "1"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "gif", "webp"] }
 quick-xml = "0.37"

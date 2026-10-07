@@ -13,8 +13,11 @@
 //                (read-only, own namespace only) + on_config_changed(event)
 //
 // Sandboxing: only `log`, `now`, `cache_*` and `config_get*` host functions
-// are available. There is no filesystem, network or OS access from script
-// code, and no way to write any configuration.
+// are available. There is no filesystem or OS access from script code, and
+// no way to write any configuration. Outbound HTTP is available to plugins
+// that declare `permissions = ["network.fetch"]` (generic, SSRF-guarded
+// `http_get` / `http_post` / `http_request` host functions) — this example
+// does not declare it, so those functions are absent here.
 
 // ---------------------------------------------------------------------------
 // Lifecycle

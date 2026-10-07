@@ -25,6 +25,11 @@
 //! functions and the `init(config)` hook. Scripts have no write access to
 //! any configuration namespace.
 //!
+//! Capabilities: by default a plugin has no I/O at all. Declaring
+//! `permissions = ["network.fetch"]` in `plugin.toml` grants the generic,
+//! SSRF-hardened `http_*` API (see `http.rs`); JSON helpers (`json_parse`,
+//! `json_stringify`) are always available.
+//!
 //! ABI stability: plugins are *source scripts*, not compiled artifacts, so
 //! there is no native ABI to break. The hook surface is documented in
 //! `docs/DEVELOPMENT.md`.
@@ -34,12 +39,13 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
-use rhai::{AST, Dynamic, Engine, Scope};
+use rhai::{AST, Dynamic, Engine, EvalAltResult, Scope};
 use serde::Deserialize;
 
 use crate::cache::memory::MemoryCache;
 use crate::config_store::{ConfigManager, plugin_ns};
 
+pub mod http;
 pub mod jobs;
 
 // ---------------------------------------------------------------------------
@@ -67,6 +73,8 @@ fn default_entry() -> String {
 struct PluginToml {
     #[serde(flatten)]
     meta: PluginMeta,
+    #[serde(default)]
+    permissions: Vec<String>,
     #[serde(default)]
     routes: HashMap<String, String>,
     #[serde(default)]
@@ -180,9 +188,15 @@ impl PluginManager {
         let script = std::fs::read_to_string(dir.join(&spec.meta.entry))
             .map_err(|e| anyhow::anyhow!("cannot read entry {}: {e}", spec.meta.entry))?;
         // Per-plugin engine: cache and config functions are namespaced to
-        // this plugin.
+        // this plugin; capability APIs (network) follow the declared
+        // permissions.
         let jobs = Arc::new(RwLock::new(spec.jobs));
-        let mut engine = build_engine(self.plugin_cache.clone(), name, &self.configs);
+        let mut engine = build_engine(
+            self.plugin_cache.clone(),
+            name,
+            &self.configs,
+            &spec.permissions,
+        );
         jobs::register_api(&mut engine, name, self.scheduler.clone(), jobs.clone());
         let engine = Arc::new(engine);
         let ast = engine.compile(&script)?;
@@ -595,6 +609,7 @@ fn build_engine(
     plugin_cache: Option<Arc<MemoryCache>>,
     plugin_name: &str,
     configs: &Arc<ConfigManager>,
+    permissions: &[String],
 ) -> Engine {
     let mut engine = Engine::new();
 
@@ -609,7 +624,21 @@ fn build_engine(
     engine.set_max_modules(RHAI_MAX_MODULES);
     engine.set_max_expr_depths(32, 64);
 
-    // Sandboxed host functions only — no filesystem, network or process access.
+    // JSON helpers — pure functions, always available. Most HTTP APIs speak
+    // JSON, so `json_parse` pairs with the network API below (but is useful
+    // on its own).
+    engine.register_fn("json_parse", |text: &str| -> Result<Dynamic, Box<EvalAltResult>> {
+        serde_json::from_str::<serde_json::Value>(text)
+            .map(|v| json_to_dynamic(&v))
+            .map_err(|e| e.to_string().into())
+    });
+    engine.register_fn("json_stringify", |value: Dynamic| -> Result<String, Box<EvalAltResult>> {
+        serde_json::to_string(&dynamic_to_json(&value)).map_err(|e| e.to_string().into())
+    });
+
+    // Sandboxed host functions only — no filesystem or process access;
+    // network access is exposed exclusively through the permission-gated
+    // `http_*` API (`network.fetch`, see `http.rs`).
     engine.register_fn("log", |level: &str, msg: &str| match level {
         "debug" => tracing::debug!(target: "polaris::plugin", "{msg}"),
         "warn" => tracing::warn!(target: "polaris::plugin", "{msg}"),
@@ -647,6 +676,13 @@ fn build_engine(
         engine.register_fn("cache_del", move |key: &str| {
             c.del_sync(&format!("{ns_del}{key}"));
         });
+    }
+
+    // Capability API: outbound HTTP, granted only when the manifest declares
+    // the matching permission. Registered functions are SSRF-guarded and
+    // size/time-capped — see `http.rs`.
+    if permissions.iter().any(|p| p == http::PERMISSION) {
+        http::register(&mut engine);
     }
 
     // Configuration API — strictly read-only, namespaced to this plugin.

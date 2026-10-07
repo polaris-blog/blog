@@ -345,3 +345,82 @@ fn shout(s) {
     assert_eq!(mgr.hook_str("markdown_before", "# T"), "# T");
     assert_eq!(mgr.call_filter("shout", "hi"), None);
 }
+
+/// The generic HTTP/JSON host API follows the manifest permissions: a plugin
+/// declaring `network.fetch` gets SSRF-guarded `http_*` functions, while for
+/// others the functions are absent (the call throws and a script `catch`
+/// handles it). `json_parse` / `json_stringify` are always available.
+#[test]
+fn network_api_follows_permissions() {
+    let dir = tempfile::tempdir().unwrap();
+    let plugins_dir = dir.path().join("plugins");
+
+    for (name, permissions) in [
+        ("withperm", "permissions = [\"network.fetch\"]\n"),
+        ("noperm", ""),
+    ] {
+        let pdir = plugins_dir.join(name);
+        std::fs::create_dir_all(&pdir).unwrap();
+        std::fs::write(
+            pdir.join("plugin.toml"),
+            format!("name = \"{name}\"\nversion = \"0.1.0\"\n{permissions}"),
+        )
+        .unwrap();
+        std::fs::write(
+            pdir.join("main.rhai"),
+            r#"
+fn json_roundtrip(s) {
+    json_parse(json_stringify(s))
+}
+
+fn probe(url) {
+    // With the permission: an SSRF-guarded result map (status 0 for
+    // non-public hosts, no I/O performed). Without it: the call throws
+    // and the catch arm wins.
+    let status = -1;
+    try {
+        let r = http_get(url);
+        status = r.status;
+    } catch (e) {
+        status = -1;
+    }
+    status
+}
+"#,
+        )
+        .unwrap();
+    }
+
+    let mgr = polaris::plugins::PluginManager::new(
+        &plugins_dir,
+        &["withperm".to_string(), "noperm".to_string()],
+        None,
+        common::empty_config_manager(),
+    );
+    assert_eq!(
+        mgr.enabled_names(),
+        vec!["noperm".to_string(), "withperm".to_string()]
+    );
+
+    // JSON helpers: always registered.
+    assert_eq!(
+        mgr.call_plugin_str("withperm", "json_roundtrip", "hello"),
+        Some("hello".to_string())
+    );
+    assert_eq!(
+        mgr.call_plugin_str("noperm", "json_roundtrip", "hello"),
+        Some("hello".to_string())
+    );
+
+    // http_get exists with the permission — loopback is blocked host-side
+    // (status 0, no I/O).
+    assert_eq!(
+        mgr.call_plugin_str("withperm", "probe", "http://127.0.0.1:9/x"),
+        Some("0".to_string())
+    );
+    // …and is absent without it (runtime error caught by the script).
+    assert_eq!(
+        mgr.call_plugin_str("noperm", "probe", "http://127.0.0.1:9/x"),
+        Some("-1".to_string())
+    );
+}

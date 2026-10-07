@@ -230,11 +230,12 @@ and admins manage everything.
 
 ## Plugins
 
-Plugins are sandboxed Rhai scripts — no native code, no filesystem, no network:
+Plugins are sandboxed Rhai scripts — no native code, no filesystem; outbound
+HTTP only through the permission-gated `network.fetch` capability:
 
 ```
 plugins/example/
-├── plugin.toml     # metadata + [routes] / [admin_routes] / [filters]
+├── plugin.toml     # metadata + permissions + [routes] / [admin_routes] / [filters]
 ├── main.rhai       # hooks & handlers
 └── config.toml     # optional plugin configuration
 ```
@@ -247,6 +248,11 @@ before_post_update   after_post_update     before_comment_create
 before_post_delete   after_post_delete     user_login (event)
 nav()                init(config)
 ```
+
+Host functions (excerpt): `log`, `now`, `cache_get/set/del` (namespaced),
+`config_get*` (read-only), `json_parse` / `json_stringify`, and — for plugins
+declaring `permissions = ["network.fetch"]` — SSRF-guarded `http_get` /
+`http_post` / `http_request` returning `{status, body, content_type, error}`.
 
 Enable at runtime: **Admin → Plugins → Enable**, or `polaris plugin enable example`. Full API: `docs/DEVELOPMENT.md`.
 
