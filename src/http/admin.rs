@@ -219,7 +219,7 @@ fn human_duration(secs: i64) -> String {
 // Login / logout
 // ---------------------------------------------------------------------------
 
-async fn login_page(app: &App, error: &str) -> Response {
+async fn login_page(app: &App, headers: &HeaderMap, error: &str) -> Response {
     // Fresh instance: send visitors to the setup wizard instead.
     if app.needs_setup() && repositories::users::count(&app.db).await.unwrap_or(0) == 0 {
         return Redirect::to("/admin/setup").into_response();
@@ -241,14 +241,14 @@ async fn login_page(app: &App, error: &str) -> Response {
             1800,
             "/",
             true,
-            auth::secure_cookies_for(app),
+            auth::secure_cookies_for(app, headers),
         ),
     );
     resp
 }
 
-async fn login_form(State(app): State<App>) -> AppResult<Response> {
-    Ok(login_page(&app, "").await)
+async fn login_form(State(app): State<App>, headers: HeaderMap) -> AppResult<Response> {
+    Ok(login_page(&app, &headers, "").await)
 }
 
 async fn login_submit(
@@ -262,13 +262,23 @@ async fn login_submit(
     if !auth::login_csrf_ok(&headers, &form.csrf)
         && !auth::form_token_ok("login", &app.config.security.secret, &form.csrf)
     {
-        return login_page(&app, "Invalid or expired form token — please try again.").await;
+        return login_page(
+            &app,
+            &headers,
+            "Invalid or expired form token — please try again.",
+        )
+        .await;
     }
     let ip =
         crate::utils::client_ip::resolve(addr.ip(), &headers, &app.config.security.trusted_proxies);
     let key = format!("login:{ip}");
     if app.limiter.is_locked(&key) {
-        return login_page(&app, "Too many failed attempts. Try again in 15 minutes.").await;
+        return login_page(
+            &app,
+            &headers,
+            "Too many failed attempts. Try again in 15 minutes.",
+        )
+        .await;
     }
     match services::users::authenticate(&app, &form.username, &form.password).await {
         Some(user) => {
@@ -276,13 +286,14 @@ async fn login_submit(
             let ttl = app.config.security.session_ttl_hours * 3600;
             let token = app.sessions.create(user.id, ttl);
             let mut resp = Redirect::to(&auth::safe_next(&form.next)).into_response();
-            let (name, value) = auth::session_cookie(&token, ttl, auth::secure_cookies_for(&app));
+            let (name, value) =
+                auth::session_cookie(&token, ttl, auth::secure_cookies_for(&app, &headers));
             resp.headers_mut().insert(name, value);
             resp
         }
         None => {
             app.limiter.record_failure(&key);
-            login_page(&app, "Wrong username or password.").await
+            login_page(&app, &headers, "Wrong username or password.").await
         }
     }
 }
@@ -384,6 +395,7 @@ fn percent_encode(s: &str) -> String {
 
 fn setup_page(
     app: &App,
+    headers: &HeaderMap,
     step: &str,
     error: &str,
     saved: bool,
@@ -457,7 +469,7 @@ fn setup_page(
             1800,
             "/",
             true,
-            auth::secure_cookies_for(app),
+            auth::secure_cookies_for(app, headers),
         ),
     );
     resp
@@ -530,14 +542,14 @@ fn write_env_config(
     Ok(())
 }
 
-async fn setup_form(State(app): State<App>) -> AppResult<Response> {
+async fn setup_form(State(app): State<App>, headers: HeaderMap) -> AppResult<Response> {
     // Guard: the wizard is only available before the first account exists.
     if repositories::users::count(&app.db).await.unwrap_or(0) > 0 {
         app.set_setup_done();
         return Ok(Redirect::to("/admin/login").into_response());
     }
     let step = if env_step_done(&app) { "admin" } else { "env" };
-    Ok(setup_page(&app, step, "", false, &HashMap::new()))
+    Ok(setup_page(&app, &headers, step, "", false, &HashMap::new()))
 }
 
 async fn setup_submit(
@@ -565,7 +577,14 @@ async fn setup_submit(
         && !auth::form_token_ok("setup", &app.config.security.secret, &form.csrf)
     {
         let msg = tr("setup.error.csrf");
-        return Ok(setup_page(&app, "env", &msg, false, &HashMap::new()));
+        return Ok(setup_page(
+            &app,
+            &headers,
+            "env",
+            &msg,
+            false,
+            &HashMap::new(),
+        ));
     }
 
     // ---- Step 1: environment (database + cache) → written to the config file.
@@ -577,6 +596,7 @@ async fn setup_submit(
                 if p.is_empty() {
                     return Ok(setup_page(
                         &app,
+                        &headers,
                         "env",
                         &tr("setup.error.db_fields"),
                         false,
@@ -592,6 +612,7 @@ async fn setup_submit(
                 {
                     return Ok(setup_page(
                         &app,
+                        &headers,
                         "env",
                         &tr("setup.error.db_fields"),
                         false,
@@ -615,6 +636,7 @@ async fn setup_submit(
             _ => {
                 return Ok(setup_page(
                     &app,
+                    &headers,
                     "env",
                     &tr("setup.error.db_driver"),
                     false,
@@ -626,6 +648,7 @@ async fn setup_submit(
         if cache_driver != "memory" && cache_driver != "redis" {
             return Ok(setup_page(
                 &app,
+                &headers,
                 "env",
                 &tr("setup.error.cache_driver"),
                 false,
@@ -635,6 +658,7 @@ async fn setup_submit(
         if cache_driver == "redis" && form.redis_url.trim().is_empty() {
             return Ok(setup_page(
                 &app,
+                &headers,
                 "env",
                 &tr("setup.error.cache_driver"),
                 false,
@@ -662,7 +686,7 @@ async fn setup_submit(
                     cache = cache_driver,
                     "environment configuration saved by the setup wizard"
                 );
-                return Ok(setup_page(&app, "env", "", true, &HashMap::new()));
+                return Ok(setup_page(&app, &headers, "env", "", true, &HashMap::new()));
             }
             Err(e) => {
                 // Read-only configuration (container mounts, systemd
@@ -675,14 +699,28 @@ async fn setup_submit(
                     tr("setup.error.write"),
                     tr("setup.warn.readonly_config")
                 );
-                return Ok(setup_page(&app, "admin", &msg, false, &HashMap::new()));
+                return Ok(setup_page(
+                    &app,
+                    &headers,
+                    "admin",
+                    &msg,
+                    false,
+                    &HashMap::new(),
+                ));
             }
         }
     }
 
     // ---- Step 2: administrator account (only after the environment step).
     if !env_step_done(&app) {
-        return Ok(setup_page(&app, "env", "", false, &HashMap::new()));
+        return Ok(setup_page(
+            &app,
+            &headers,
+            "env",
+            "",
+            false,
+            &HashMap::new(),
+        ));
     }
 
     let mut values: HashMap<String, String> = HashMap::new();
@@ -694,7 +732,7 @@ async fn setup_submit(
     let title = form.site_title.trim();
     if title.is_empty() || title.chars().count() > 120 {
         let msg = tr("setup.error.site_title");
-        return Ok(setup_page(&app, "admin", &msg, false, &values));
+        return Ok(setup_page(&app, &headers, "admin", &msg, false, &values));
     }
     if !form
         .username
@@ -705,15 +743,15 @@ async fn setup_submit(
         || form.username.trim().chars().count() > 64
     {
         let msg = tr("setup.error.username");
-        return Ok(setup_page(&app, "admin", &msg, false, &values));
+        return Ok(setup_page(&app, &headers, "admin", &msg, false, &values));
     }
     if form.password.chars().count() < 8 {
         let msg = tr("setup.error.password_length");
-        return Ok(setup_page(&app, "admin", &msg, false, &values));
+        return Ok(setup_page(&app, &headers, "admin", &msg, false, &values));
     }
     if form.password != form.password_confirm {
         let msg = tr("setup.error.password_mismatch");
-        return Ok(setup_page(&app, "admin", &msg, false, &values));
+        return Ok(setup_page(&app, &headers, "admin", &msg, false, &values));
     }
 
     let locale = crate::i18n::normalize(&form.site_locale);
@@ -738,7 +776,14 @@ async fn setup_submit(
             app.invalidate_content().await;
             Ok(Redirect::to("/admin/login").into_response())
         }
-        Err(e) => Ok(setup_page(&app, "admin", &e.message(), false, &values)),
+        Err(e) => Ok(setup_page(
+            &app,
+            &headers,
+            "admin",
+            &e.message(),
+            false,
+            &values,
+        )),
     }
 }
 
@@ -753,7 +798,7 @@ async fn logout(
         app.sessions.remove(&token);
     }
     let mut resp = Redirect::to("/admin/login").into_response();
-    let (name, value) = auth::clear_session_cookie(auth::secure_cookies_for(&app));
+    let (name, value) = auth::clear_session_cookie(auth::secure_cookies_for(&app, &headers));
     resp.headers_mut().insert(name, value);
     Ok(resp)
 }

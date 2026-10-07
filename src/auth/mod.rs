@@ -354,11 +354,28 @@ pub fn clear_session_cookie(secure: bool) -> (header::HeaderName, axum::http::He
 
 /// Effective `Secure` flag: explicit config wins, otherwise derived from the
 /// configured base URL (HTTPS deployments get `Secure` cookies).
-pub fn secure_cookies_for(app: &crate::state::AppState) -> bool {
-    app.config.security.secure_cookies.unwrap_or_else(|| {
-        app.base_url()
-            .trim()
-            .to_ascii_lowercase()
-            .starts_with("https://")
-    })
+/// The `Secure` cookie flag is request-dependent: it must only be set when
+/// the visitor actually reached Polaris over HTTPS. With a CDN/reverse proxy
+/// in front (HTTPS edge, HTTP origin) the forwarded scheme is the truth —
+/// otherwise Secure cookies would be dropped on plain-HTTP direct access and
+/// login would silently fail. An explicit `security.secure_cookies` setting
+/// always wins.
+pub fn secure_cookies_for(app: &crate::state::AppState, headers: &HeaderMap) -> bool {
+    if let Some(explicit) = app.config.security.secure_cookies {
+        return explicit;
+    }
+    if app
+        .base_url()
+        .trim()
+        .to_ascii_lowercase()
+        .starts_with("https://")
+    {
+        return true;
+    }
+    headers
+        .get("x-forwarded-proto")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.split(',').next())
+        .map(str::trim)
+        .is_some_and(|v| v.eq_ignore_ascii_case("https"))
 }
