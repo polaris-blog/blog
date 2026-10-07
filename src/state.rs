@@ -234,6 +234,16 @@ impl AppState {
                 cache_cfg.redis.url = u.to_string();
             }
         }
+        // Redis password: stored separately from the URL (the setup wizard
+        // writes it into the file, Admin → Settings into the settings table)
+        // and injected at connect time. The admin-set password wins over the
+        // file-level one; the URL itself always stays credential-free.
+        if !cfg.cache.redis.password.is_empty() {
+            cache_cfg.redis.url = crate::config::redis_url_with_password(
+                &cache_cfg.redis.url,
+                &cfg.cache.redis.password,
+            );
+        }
         if let Some(password) = settings.get("cache.redis.password") {
             let password = password.trim();
             if !password.is_empty() {

@@ -465,6 +465,7 @@ fn setup_page(
 
 /// Merge the environment choices into the config file's `[database]` and
 /// `[cache]` sections, plus a `[setup] env_done` marker for the wizard.
+#[allow(clippy::too_many_arguments)]
 fn write_env_config(
     app: &App,
     db_driver: &str,
@@ -472,6 +473,7 @@ fn write_env_config(
     cache_enabled: bool,
     cache_driver: &str,
     redis_url: &str,
+    redis_password: &str,
     redis_namespace: &str,
 ) -> anyhow::Result<()> {
     use toml::value::{Table, Value as Tv};
@@ -504,6 +506,9 @@ fn write_env_config(
             _ => Table::new(),
         };
         redis.insert("url".into(), Tv::String(redis_url.to_owned()));
+        // Stored as its own key (never merged into the URL) and injected at
+        // connect time — see state.rs / redis_url_with_password.
+        redis.insert("password".into(), Tv::String(redis_password.to_owned()));
         redis.insert("namespace".into(), Tv::String(redis_namespace.to_owned()));
         cache.insert("redis".into(), Tv::Table(redis));
     }
@@ -643,7 +648,8 @@ async fn setup_submit(
             &url,
             cache_enabled,
             cache_driver,
-            &crate::config::redis_url_with_password(form.redis_url.trim(), &form.redis_password),
+            form.redis_url.trim(),
+            &form.redis_password,
             if form.redis_namespace.trim().is_empty() {
                 "polaris"
             } else {

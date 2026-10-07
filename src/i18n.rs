@@ -20,7 +20,7 @@ use std::sync::{OnceLock, RwLock};
 use serde_json::Value;
 use tera::Function;
 
-const EN: &str = include_str!("i18n/en.json");
+const EN: &str = include_str!("i18n/en-US.json");
 const ZH_CN: &str = include_str!("i18n/zh-CN.json");
 
 /// Locales with a bundled pack; anything else falls back to English.

@@ -318,6 +318,14 @@ volumes:
 All persistent state (database, media, uploads) lives on the `polaris-data`
 volume. Tags: `latest` and `X.Y.Z` track releases.
 
+**Behind a CDN or reverse proxy:** Polaris speaks **plain HTTP** — it does not
+terminate TLS. Point your CDN's back-to-origin at `http://<origin>:3000`
+(**not** HTTPS — an HTTPS origin fetch against a plain-HTTP server fails with
+"Origin Refused" style 502s), allow the CDN's back-to-origin IP range in your
+firewall, and set **Settings → Site → Base URL** to your public
+`https://domain` so canonical/RSS/sitemap URLs match what visitors use
+(`X-Forwarded-Proto: https` is also honored when Base URL is empty).
+
 Build the image locally with `docker build -t polaris .` — the multi-stage
 Dockerfile compiles a static musl binary inside a Rust/Alpine builder and ships
 it in a ~20 MB runtime image.

@@ -242,6 +242,10 @@ impl Default for MemoryCacheConfig {
 #[serde(default)]
 pub struct RedisCacheConfig {
     pub url: String,
+    /// Redis password, stored separately from the URL and injected into it
+    /// at connect time (setup wizard and Admin → Settings collect it in a
+    /// dedicated field).
+    pub password: String,
     /// Required for Redis: stable site identifier shared by this site's
     /// instances, distinct from every other site/environment on the server.
     pub namespace: String,
@@ -293,6 +297,7 @@ impl Default for RedisCacheConfig {
     fn default() -> Self {
         Self {
             url: "redis://127.0.0.1:6379".into(),
+            password: String::new(),
             namespace: String::new(),
             pool_size: 8,
         }

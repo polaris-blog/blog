@@ -897,7 +897,10 @@ pub fn render_theme(app: &App, template: &str, ctx: &Context) -> AppResult<Strin
 }
 
 /// Absolute base URL for feeds/sitemap: configured value, or derived from the
-/// request Host header.
+/// request Host header. Behind a CDN/reverse proxy that forwards the public
+/// scheme, `X-Forwarded-Proto: https` upgrades the derived scheme so
+/// canonical/RSS URLs match what visitors actually use. Set `site.base_url`
+/// in Admin → Settings for an authoritative value.
 pub fn base_url_for(app: &App, headers: &axum::http::HeaderMap) -> String {
     let configured = app.base_url();
     if !configured.is_empty() {
@@ -907,5 +910,15 @@ pub fn base_url_for(app: &App, headers: &axum::http::HeaderMap) -> String {
         .get(header::HOST)
         .and_then(|h| h.to_str().ok())
         .unwrap_or("localhost");
-    format!("http://{host}")
+    let forwarded_https = headers
+        .get("x-forwarded-proto")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.split(',').next())
+        .map(str::trim)
+        .is_some_and(|v| v.eq_ignore_ascii_case("https"));
+    if forwarded_https {
+        format!("https://{host}")
+    } else {
+        format!("http://{host}")
+    }
 }
