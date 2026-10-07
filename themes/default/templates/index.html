@@ -5,7 +5,7 @@
    one filled CTA and one pill CTA, exactly the Apple launch-module shape. #}
 <section class="hero">
   <div class="container">
-    <h1 class="hero-headline">{{ site.title }}</h1>
+    <h1 class="hero-headline" data-typewriter="{{ theme.config.typewriter | default(value=true) }}" aria-label="{{ site.title }}"><span class="type-target">{{ site.title }}</span></h1>
     {% if site.description %}<p class="hero-sub">{{ site.description }}</p>{% endif %}
   </div>
 </section>

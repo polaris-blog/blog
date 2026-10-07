@@ -122,6 +122,7 @@ fn tera_context() -> tera::Context {
         "site": { "title": "Test Blog", "description": "A test site" },
         "theme": { "name": "Test", "config": {
             "accent_color": "#2563eb", "dark_mode": true, "show_rss_link": true,
+            "typewriter": true,
             "layout": "default", "social_links": [], "footer_text": ""
         } },
         "seo": { "title": "Hello", "description": "A post", "canonical": "http://localhost/posts/hello",

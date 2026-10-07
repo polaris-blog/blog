@@ -26,8 +26,39 @@
     }
     initCarousels();
     initReplies();
+    initTypewriter();
     initPjax();
   });
+
+  /* Typewriter headline: fills .type-target character by character with a
+     blinking caret (opt-in via the theme's typewriter toggle; skipped for
+     prefers-reduced-motion). Re-runs after pjax swaps on new headlines. */
+  function initTypewriter() {
+    var targets = document.querySelectorAll(
+      '.hero-headline[data-typewriter="true"] .type-target'
+    );
+    var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    Array.prototype.forEach.call(targets, function (el) {
+      if (el.dataset.typed) return;
+      el.dataset.typed = "1";
+      var full = el.textContent;
+      if (reduced || !full) {
+        el.classList.add("type-ready", "type-done");
+        return;
+      }
+      el.textContent = "";
+      el.classList.add("type-ready");
+      var i = 0;
+      var timer = setInterval(function () {
+        i += 1;
+        el.textContent = full.slice(0, i);
+        if (i >= full.length) {
+          clearInterval(timer);
+          el.classList.add("type-done");
+        }
+      }, 90);
+    });
+  }
 
   /* Nested comment replies: "Reply" fills the parent id, shows who is being
      replied to and scrolls to the form; "Cancel" resets it. */
@@ -152,6 +183,7 @@
           );
           initCarousels();
           initReplies();
+          initTypewriter();
           // Re-highlight code blocks in the swapped-in page: the highlighter
           // only binds on DOMContentLoaded otherwise, so pjax-navigated posts
           // would render without syntax colors.

@@ -38,6 +38,13 @@ description = "Follow the visitor's system preference for a dark color scheme."
 default = true
 group = "appearance"
 
+[typewriter]
+type = "boolean"
+label = "Typewriter headline animation"
+description = "Type the homepage headline character by character with a blinking caret."
+default = true
+group = "appearance"
+
 [show_rss_link]
 type = "boolean"
 label = "RSS link in navigation"

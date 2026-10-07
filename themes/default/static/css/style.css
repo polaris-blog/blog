@@ -116,6 +116,9 @@ html {
   scroll-behavior: smooth;
   /* Fixed glass nav clearance for #anchor jumps. */
   scroll-padding-top: 64px;
+  /* Wider-than-viewport content (big media, vw sizing) must never open a
+     horizontal scrollbar or expose the page edge. */
+  overflow-x: clip;
 }
 body {
   margin: 0;
@@ -135,7 +138,12 @@ body {
 }
 main {
   flex: 1 0 auto; /* pushes the footer down on short pages */
+  /* Stretch the last block so its background reaches the footer on short
+     pages (empty blog, short posts) instead of exposing the page edge. */
+  display: flex;
+  flex-direction: column;
 }
+main > :last-child { flex: 1 1 auto; }
 a {
   color: var(--link);
   text-decoration: none;
@@ -177,7 +185,7 @@ body.layout-wide .container { max-width: 1180px; }
   backdrop-filter: saturate(180%) blur(20px);
 }
 .globalnav-content {
-  max-width: 1024px;
+  max-width: 1200px;
   height: 100%;
   margin: 0 auto;
   padding: 0 22px;
@@ -376,6 +384,29 @@ html.dark:not(.no-dark) .theme-toggle .icon-moon { display: none; }
 }
 .hero .btn-pill { color: #ffffff; }
 .hero .link-arrow { color: var(--link-dark-bg); font-size: 17px; }
+
+/* Typewriter headline — the JS fills .type-target character by character;
+   the caret blinks while typing and fades out when done. Without JS the
+   headline renders complete and caret-free. */
+.hero-headline .type-target { display: inline-block; white-space: pre-wrap; }
+.hero-headline[data-typewriter="true"] .type-target { opacity: 0; }
+.hero-headline[data-typewriter="true"] .type-target.type-ready { opacity: 1; }
+.hero-headline[data-typewriter="true"] .type-ready::after {
+  content: "▌";
+  margin-left: 2px;
+  color: var(--accent);
+  animation: type-caret 1s steps(1) infinite;
+}
+.hero-headline[data-typewriter="true"] .type-ready.type-done::after {
+  animation: type-caret-out 1.2s forwards;
+}
+@keyframes type-caret {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+@keyframes type-caret-out {
+  to { opacity: 0; }
+}
 
 /* ---------------------------------------------------------------------------
    Homepage carousel — image-led feature panel configured by the theme
