@@ -128,7 +128,7 @@ impl DirSwap {
             std::fs::remove_dir_all(&self.dest)?;
         }
         if let Some(old) = &self.old {
-            std::fs::rename(old, &self.dest)?;
+            crate::utils::fs::rename_dir_or_copy(old, &self.dest)?;
         }
         Ok(())
     }
@@ -509,7 +509,9 @@ async fn apply_files(
         };
         if dest.exists() {
             let old_side = root.join(format!(".restore-{token}-old"));
-            std::fs::rename(&dest, &old_side).map_err(|e| {
+            // The staging root (data volume) and the install target (image
+            // layer) can be different filesystems — fall back to copying.
+            crate::utils::fs::rename_dir_or_copy(&dest, &old_side).map_err(|e| {
                 AppError::Internal(anyhow::anyhow!(
                     "cannot move the current '{}/{}' aside: {e}",
                     staged.part,
@@ -519,7 +521,7 @@ async fn apply_files(
             swap.old = Some(old_side);
         }
         files.swaps.push(swap);
-        std::fs::rename(&ready, &dest).map_err(|e| {
+        crate::utils::fs::rename_dir_or_copy(&ready, &dest).map_err(|e| {
             AppError::Internal(anyhow::anyhow!(
                 "cannot install '{}/{}' from the backup: {e}",
                 staged.part,

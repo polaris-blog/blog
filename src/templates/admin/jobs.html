@@ -3,7 +3,7 @@
 {% block content %}
 <div class="page-head"><h1>{{ t(key="admin.page.jobs") }}</h1><a class="btn btn-secondary" href="/admin/jobs">{{ t(key="admin.action.refresh") }}</a></div>
 {% if not scheduler_enabled %}<p class="flash">{{ t(key="admin.jobs.scheduler_disabled") }}</p>{% endif %}
-<nav class="tabs" aria-label="Job status">
+<nav class="tabs" aria-label="{{ t(key="admin.jobs.status_aria") }}">
   <a href="/admin/jobs?limit={{ limit_filter }}{% if type_filter %}&amp;type={{ type_filter | urlencode }}{% endif %}" class="{% if status_filter == '' %}active{% endif %}">{{ t(key="admin.tab.all") }}</a>
   {% for status in ['pending', 'running', 'success', 'failed', 'cancelled'] %}
   <a href="/admin/jobs?status={{ status }}&amp;limit={{ limit_filter }}{% if type_filter %}&amp;type={{ type_filter | urlencode }}{% endif %}" class="{% if status_filter == status %}active{% endif %}">{{ t(key="status." ~ status) }}</a>

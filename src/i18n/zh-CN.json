@@ -642,5 +642,127 @@
   "SVG could not be sanitized safely (rejected)": "SVG 无法安全净化（已拒绝）",
   "empty upload": "上传内容为空",
   "invalid filename": "文件名无效",
-  "filename has no recognizable extension": "文件名没有可识别的扩展名"
+  "filename has no recognizable extension": "文件名没有可识别的扩展名",
+  "admin.restore.incompatible": "—— 与当前实例不兼容",
+
+  "admin.restore.created": "创建时间",
+
+  "admin.restore.database": "数据库",
+
+  "admin.restore.files": "文件",
+
+  "admin.restore.warn_db_html": "恢复数据库将<strong>删除本实例中的全部文章、页面、评论、用户与设置</strong>，并替换为归档中的内容。恢复开始前会自动创建当前数据库的安全快照。",
+
+  "admin.backups.live_in": "归档存放于",
+
+  "admin.backups.storage_kind": "存储后端：{kind}",
+
+  "admin.backups.manifest_note": "每个归档都带有版本化清单与逐文件 SHA-256 校验和。恢复流程：先校验，再快照当前数据库，最后替换。",
+
+  "admin.backups.verify_only_note": "仅校验模式只检查归档、不执行导入。导入必须先通过完整性校验。",
+
+  "admin.backups.max_upload": "上传上限 {max}。",
+
+  "admin.backups.files_unit": "个文件",
+
+  "admin.backups.part_db": "数据库",
+
+  "admin.backups.part_media": "媒体",
+
+  "admin.backups.part_themes": "主题",
+
+  "admin.backups.part_plugins": "插件",
+
+  "admin.pager.newer": "← 上一页",
+
+  "admin.pager.page_n": "第 {n} / {total} 页",
+
+  "admin.pager.older": "下一页 →",
+
+  "admin.config.back": "← 返回",
+
+  "admin.config.restart_hint": "⚠ 需要重启才能生效。",
+
+  "admin.config.default_option": "— 默认 —",
+
+  "admin.config.multi_hint": "按住 Ctrl / Cmd 可多选。",
+
+  "admin.config.array_hint_pre": "JSON 对象数组：",
+
+  "admin.config.secret_set": "已设置值 —— 留空保持不变。",
+
+  "admin.config.encrypted_set": "已加密存储。",
+
+  "admin.config.unchanged": "保持不变",
+
+  "admin.jobs.status_aria": "任务状态",
+
+  "admin.login.title": "登录",
+
+  "admin.media.upload_title_aria": "上传文件（或拖放 / 粘贴）",
+
+  "admin.media.bytes": "字节",
+
+  "admin.media.sizes": "尺寸：原图",
+
+  "admin.media.tags_label": "标签",
+
+  "admin.media.tags_hint": "（逗号分隔）",
+
+  "admin.navigation.intro": "编辑公开顶部导航：重命名或隐藏内置项，管理自定义链接。",
+
+  "admin.navigation.show_aria": "显示{label}",
+
+  "admin.navigation.label_for": "“{label}”的名称",
+
+  "admin.navigation.label_field": "名称",
+
+  "admin.navigation.label_placeholder": "关于",
+
+  "admin.navigation.url_field": "URL",
+
+  "admin.navigation.remove": "移除",
+
+  "admin.navigation.add_link": "+ 添加链接",
+
+  "admin.navigation.cancel": "取消",
+
+  "admin.plugins.upload_intro_html": "从 <code>.zip</code> 包安装插件（离线——不会下载任何内容）。包内需包含单一根目录，其中含有 <code>plugin.toml</code> 与入口脚本。新插件安装后为<strong>禁用</strong>状态——请先审查其声明的权限，再在上方启用。",
+
+  "admin.plugins.disable_aria": "禁用 {name}",
+
+  "admin.plugins.enable_aria": "启用 {name}",
+
+  "admin.plugins.drop_aria": "拖入插件 ZIP 或选择文件",
+
+  "admin.plugins.confirm_uninstall": "卸载插件“{name}”并删除其数据库表？此操作不可撤销。",
+
+  "admin.ext.downgrade_title": "允许安装低于当前版本的扩展",
+
+  "admin.themes.no_dir_html": "未找到主题目录 —— 正在使用内置回退模板。可在下方上传主题 ZIP 并启用。",
+
+  "admin.themes.upload_intro_html": "从 <code>.zip</code> 包安装主题（离线——不会下载任何内容）。包内需包含单一根目录，其中含有 <code>theme.toml</code>。新主题<strong>不会自动启用</strong>——安装完成后请在上方启用。",
+
+  "admin.themes.drop_aria": "拖入主题 ZIP 或选择文件",
+
+  "admin.search.indexed_pages": "已索引页面",
+
+  "admin.search.needs_rebuild": "需要重建",
+
+  "admin.search.last_rebuild": "上次重建",
+
+  "admin.search.rebuild_note_html": "删除并从数据库重建索引。超大站点建议改用 <code>polaris search rebuild</code>。",
+
+  "admin.search.no_queries": "暂无搜索记录。",
+
+  "admin.search.gaps_intro": "访客搜索过但站点尚未覆盖的主题：",
+
+  "admin.search.analytics_off_html": "搜索分析未启用。系统只记录聚合的查询次数（不含 IP 与 User-Agent）——在 <code>polaris.toml</code> 中加入以下配置即可启用：<pre>[search.analytics]\nenabled = true</pre>",
+
+  "admin.terms.no_categories_hint": "暂无分类 —— 在文章中指定分类后会自动创建。",
+
+  "admin.terms.no_tags_hint": "暂无标签。",
+
+  "admin.terms.auto_note": "保存带分类或标签的文章时，也会自动创建对应条目。"
+
 }

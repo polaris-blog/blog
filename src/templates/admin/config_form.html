@@ -2,7 +2,7 @@
 {% block title %}{{ cfg_title }}{% endblock title %}
 {% block content %}
 <h1>{{ cfg_title }}</h1>
-<p><a href="{{ back_url }}">&larr; Back</a></p>
+<p><a href="{{ back_url }}">{{ t(key="admin.config.back") }}</a></p>
 
 <form method="post" action="" class="stack">
   <input type="hidden" name="csrf" value="{{ csrf }}">
@@ -22,18 +22,18 @@
           {{ f.label }}{% if f.required %} <span class="req">*</span>{% endif %}
         </label>
         {% if f.description %}<p class="hint">{{ f.description }}</p>{% endif %}
-        {% if f.restart %}<p class="hint">⚠ Requires a restart to take effect.</p>{% endif %}
+        {% if f.restart %}<p class="hint">{{ t(key="admin.config.restart_hint") }}</p>{% endif %}
 
         {% elif f.input == 'select' %}
         <label for="cf-{{ f.key }}">{{ f.label }}{% if f.required %} <span class="req">*</span>{% endif %}</label>
         <select id="cf-{{ f.key }}" name="{{ f.key }}">
-          {% if not f.required %}<option value="" {% if not f.value %}selected{% endif %}>— default —</option>{% endif %}
+          {% if not f.required %}<option value="" {% if not f.value %}selected{% endif %}>{{ t(key="admin.config.default_option") }}</option>{% endif %}
           {% for o in f.options %}
           <option value="{{ o.value }}" {% if o.selected %}selected{% endif %}>{{ o.label }}</option>
           {% endfor %}
         </select>
         {% if f.description %}<p class="hint">{{ f.description }}</p>{% endif %}
-        {% if f.restart %}<p class="hint">⚠ Requires a restart to take effect.</p>{% endif %}
+        {% if f.restart %}<p class="hint">{{ t(key="admin.config.restart_hint") }}</p>{% endif %}
 
         {% elif f.input == 'multiselect' %}
         <label for="cf-{{ f.key }}">{{ f.label }}{% if f.required %} <span class="req">*</span>{% endif %}</label>
@@ -43,16 +43,16 @@
           <option value="{{ o.value }}" {% if o.selected %}selected{% endif %}>{{ o.label }}</option>
           {% endfor %}
         </select>
-        <p class="hint">Hold Ctrl / Cmd to select multiple.</p>
+        <p class="hint">{{ t(key="admin.config.multi_hint") }}</p>
         {% if f.description %}<p class="hint">{{ f.description }}</p>{% endif %}
 
         {% elif f.input == 'textarea' or f.input == 'array' %}
         <label for="cf-{{ f.key }}">{{ f.label }}{% if f.required %} <span class="req">*</span>{% endif %}</label>
-        <textarea id="cf-{{ f.key }}" name="{{ f.key }}" rows="{% if f.input == 'array' %}5{% else %}3{% endif %}" placeholder="{% if f.is_secret %}unchanged{% else %}{{ f.description }}{% endif %}">{{ f.value }}</textarea>
-        {% if f.input == 'array' %}<p class="hint">JSON array of objects: [{% for k in f.item_fields %}"{{ k }}": …{% if not loop.last %}, {% endif %}{% endfor %}]</p>{% endif %}
+        <textarea id="cf-{{ f.key }}" name="{{ f.key }}" rows="{% if f.input == 'array' %}5{% else %}3{% endif %}" placeholder="{% if f.is_secret %}{{ t(key="admin.config.unchanged") }}{% else %}{{ f.description }}{% endif %}">{{ f.value }}</textarea>
+        {% if f.input == 'array' %}<p class="hint">{{ t(key="admin.config.array_hint_pre") }}[{% for k in f.item_fields %}"{{ k }}": …{% if not loop.last %}, {% endif %}{% endfor %}]</p>{% endif %}
         {% if f.description and not f.is_secret %}<p class="hint">{{ f.description }}</p>{% endif %}
-        {% if f.is_secret and f.has_value %}<p class="hint">A value is set — leave blank to keep it.</p>{% endif %}
-        {% if f.restart %}<p class="hint">⚠ Requires a restart to take effect.</p>{% endif %}
+        {% if f.is_secret and f.has_value %}<p class="hint">{{ t(key="admin.config.secret_set") }}</p>{% endif %}
+        {% if f.restart %}<p class="hint">{{ t(key="admin.config.restart_hint") }}</p>{% endif %}
 
         {% elif f.input == 'color' %}
         <label for="cf-{{ f.key }}">{{ f.label }}{% if f.required %} <span class="req">*</span>{% endif %}</label>
@@ -61,17 +61,17 @@
           <code>{{ f.value }}</code>
         </div>
         {% if f.description %}<p class="hint">{{ f.description }}</p>{% endif %}
-        {% if f.restart %}<p class="hint">⚠ Requires a restart to take effect.</p>{% endif %}
+        {% if f.restart %}<p class="hint">{{ t(key="admin.config.restart_hint") }}</p>{% endif %}
 
         {% else %}
         <label for="cf-{{ f.key }}">{{ f.label }}{% if f.required %} <span class="req">*</span>{% endif %}</label>
         <input id="cf-{{ f.key }}" type="{{ f.input }}" name="{{ f.key }}" value="{{ f.value }}"
                {% if f.min %}min="{{ f.min }}"{% endif %}{% if f.max %}max="{{ f.max }}"{% endif %}
                {% if f.required and not f.is_secret %}required{% endif %}
-               {% if f.is_secret %}autocomplete="new-password" placeholder="{% if f.has_value %}unchanged{% else %}{{ f.description }}{% endif %}"{% endif %}>
+               {% if f.is_secret %}autocomplete="new-password" placeholder="{% if f.has_value %}{{ t(key="admin.config.unchanged") }}{% else %}{{ f.description }}{% endif %}"{% endif %}>
         {% if f.description and not f.is_secret %}<p class="hint">{{ f.description }}</p>{% endif %}
-        {% if f.is_secret %}<p class="hint">Stored encrypted{% if f.has_value %} — a value is set, leave blank to keep it{% endif %}.</p>{% endif %}
-        {% if f.restart %}<p class="hint">⚠ Requires a restart to take effect.</p>{% endif %}
+        {% if f.is_secret %}<p class="hint">{{ t(key="admin.config.encrypted_set") }}{% if f.has_value %} {{ t(key="admin.config.secret_set") }}{% endif %}</p>{% endif %}
+        {% if f.restart %}<p class="hint">{{ t(key="admin.config.restart_hint") }}</p>{% endif %}
         {% endif %}
 
       </div>

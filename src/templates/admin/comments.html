@@ -60,11 +60,11 @@
 {% if pages > 1 %}
 <div class="pager">
   {% if current_page > 1 %}
-  <a class="btn btn-secondary btn-sm" href="/admin/comments?status={{ status_filter }}&page={{ current_page - 1 }}">&larr; Newer</a>
+  <a class="btn btn-secondary btn-sm" href="/admin/comments?status={{ status_filter }}&page={{ current_page - 1 }}">{{ t(key="admin.pager.newer") }}</a>
   {% endif %}
-  <span class="muted">Page {{ current_page }} / {{ pages }}</span>
+  <span class="muted">{{ t(key="admin.pager.page_n", n=current_page, total=pages) }}</span>
   {% if current_page < pages %}
-  <a class="btn btn-secondary btn-sm" href="/admin/comments?status={{ status_filter }}&page={{ current_page + 1 }}">Older &rarr;</a>
+  <a class="btn btn-secondary btn-sm" href="/admin/comments?status={{ status_filter }}&page={{ current_page + 1 }}">{{ t(key="admin.pager.older") }}</a>
   {% endif %}
 </div>
 {% endif %}

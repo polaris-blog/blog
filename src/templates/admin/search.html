@@ -6,11 +6,11 @@
 <div class="cards">
   <div class="card">
     <div class="num">{{ status.indexed_posts }}</div>
-    <div class="lbl">Indexed posts</div>
+    <div class="lbl">{{ t(key="admin.search.indexed_posts") }}</div>
   </div>
   <div class="card">
     <div class="num">{{ status.indexed_pages }}</div>
-    <div class="lbl">Indexed pages</div>
+    <div class="lbl">{{ t(key="admin.search.indexed_pages") }}</div>
   </div>
   <div class="card">
     <div class="num">{{ cache_hit_rate }}%</div>
@@ -24,17 +24,16 @@
     <li><span>Provider</span><span>{{ status.provider }}</span></li>
     <li><span>Status</span>
       <span>{% if status.healthy %}<span class="badge badge-published">Healthy</span>
-      {% else %}<span class="badge badge-draft">Needs rebuild</span>{% endif %}</span></li>
+      {% else %}<span class="badge badge-draft">{{ t(key="admin.search.needs_rebuild") }}</span>{% endif %}</span></li>
     <li><span>Enabled</span><span>{% if search_enabled %}yes{% else %}no{% endif %}</span></li>
-    <li><span>Last rebuild</span><span>{{ last_rebuild }}</span></li>
+    <li><span>{{ t(key="admin.search.last_rebuild") }}</span><span>{{ last_rebuild }}</span></li>
   </ul>
   {% if search_enabled %}
   <form method="post" action="/admin/search/rebuild">
     <input type="hidden" name="csrf" value="{{ csrf }}">
     <button type="submit" class="btn-danger">{{ t(key="admin.action.rebuild_index") }}</button>
   </form>
-  <p class="muted">Drops and rebuilds the index from the database. For very large
-  sites use <code>polaris search rebuild</code> instead.</p>
+  <p class="muted">{{ t(key="admin.search.rebuild_note_html") | safe }}</p>
   {% endif %}
 </div>
 
@@ -42,7 +41,7 @@
   <h2>{{ t(key="admin.search.stats") }}</h2>
   {% if analytics_enabled %}
   {% if popular | length == 0 %}
-  <p class="muted">No searches recorded yet.</p>
+  <p class="muted">{{ t(key="admin.search.no_queries") }}</p>
   {% else %}
   <h3>{{ t(key="admin.search.popular") }}</h3>
   <table>
@@ -56,7 +55,7 @@
   {% endif %}
   {% if no_results_list | length > 0 %}
   <h3>{{ t(key="admin.search.no_results_queries") }}</h3>
-  <p class="muted">Topics visitors look for that this site does not cover yet:</p>
+  <p class="muted">{{ t(key="admin.search.gaps_intro") }}</p>
   <ul class="list-plain">
     {% for s in no_results_list %}
     <li><span>{{ s.query }}</span><span>{{ s.no_results }}×</span></li>
@@ -64,10 +63,7 @@
   </ul>
   {% endif %}
   {% else %}
-  <p class="muted">Analytics is disabled. Only aggregated query counts are ever
-  recorded (no IPs, no user agents) — enable in <code>polaris.toml</code>:</p>
-  <pre>[search.analytics]
-enabled = true</pre>
+  <p class="muted">{{ t(key="admin.search.analytics_off_html") | safe }}</p>
   {% endif %}
 </div>
 

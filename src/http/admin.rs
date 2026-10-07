@@ -228,6 +228,7 @@ async fn login_page(app: &App, headers: &HeaderMap, error: &str) -> Response {
     let csrf = auth::form_token("login", &app.config.security.secret);
     let mut ctx = Context::new();
     ctx.insert("csrf", &csrf);
+    ctx.insert("site", &serde_json::json!({ "title": app.site_title() }));
     ctx.insert("error", &crate::i18n::tr_or(error));
     ctx.insert("next", "");
     let body = templates::render_admin("login.html", &ctx)

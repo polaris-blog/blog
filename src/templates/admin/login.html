@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sign in · Polaris</title>
+<title>{{ t(key="admin.login.title") }} · {{ site.title }}</title>
 <link rel="stylesheet" href="/admin/static/style.css">
 </head>
 <body>
 <div class="login-wrap">
   <div class="login-card">
-    <h1>✦ Polaris</h1>
+    <h1>✦ {{ site.title }}</h1>
     <p class="sub">{{ t(key="admin.login.subtitle") }}</p>
     {% if error %}<div class="login-error">{{ error }}</div>{% endif %}
     <form method="post" action="/admin/login">

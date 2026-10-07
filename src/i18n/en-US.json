@@ -642,5 +642,127 @@
   "SVG could not be sanitized safely (rejected)": "SVG could not be sanitized safely (rejected)",
   "empty upload": "empty upload",
   "invalid filename": "invalid filename",
-  "filename has no recognizable extension": "filename has no recognizable extension"
+  "filename has no recognizable extension": "filename has no recognizable extension",
+  "admin.restore.incompatible": "— INCOMPATIBLE with this instance",
+
+  "admin.restore.created": "Created",
+
+  "admin.restore.database": "Database",
+
+  "admin.restore.files": "Files",
+
+  "admin.restore.warn_db_html": "Restoring the database <strong>deletes every post, page, comment, user and setting in this instance</strong> and replaces it with the archive's content. A safety snapshot of the current database is created automatically before the restore starts.",
+
+  "admin.backups.live_in": "Archives live in",
+
+  "admin.backups.storage_kind": "storage backend: {kind}",
+
+  "admin.backups.manifest_note": "Every archive carries a versioned manifest with per-file SHA-256 checksums. Restores verify first, snapshot the current database, and then swap.",
+
+  "admin.backups.verify_only_note": "Verify-only checks the archive without importing it. Imports must pass integrity verification first.",
+
+  "admin.backups.max_upload": "Upload limit: {max}.",
+
+  "admin.backups.files_unit": "file(s)",
+
+  "admin.backups.part_db": "db",
+
+  "admin.backups.part_media": "media",
+
+  "admin.backups.part_themes": "themes",
+
+  "admin.backups.part_plugins": "plugins",
+
+  "admin.pager.newer": "← Newer",
+
+  "admin.pager.page_n": "Page {n} of {total}",
+
+  "admin.pager.older": "Older →",
+
+  "admin.config.back": "← Back",
+
+  "admin.config.restart_hint": "⚠ Requires a restart to take effect.",
+
+  "admin.config.default_option": "— default —",
+
+  "admin.config.multi_hint": "Hold Ctrl / Cmd to select multiple.",
+
+  "admin.config.array_hint_pre": "JSON array of objects: ",
+
+  "admin.config.secret_set": "A value is set — leave blank to keep it.",
+
+  "admin.config.encrypted_set": "Stored encrypted.",
+
+  "admin.config.unchanged": "unchanged",
+
+  "admin.jobs.status_aria": "Job status",
+
+  "admin.login.title": "Sign in",
+
+  "admin.media.upload_title_aria": "Upload files (or drag & drop / paste)",
+
+  "admin.media.bytes": "bytes",
+
+  "admin.media.sizes": "Sizes: original",
+
+  "admin.media.tags_label": "Tags",
+
+  "admin.media.tags_hint": "(comma separated)",
+
+  "admin.navigation.intro": "Edit the public top bar: rename or hide built-in entries, manage your custom links.",
+
+  "admin.navigation.show_aria": "Show {label}",
+
+  "admin.navigation.label_for": "Label for {label}",
+
+  "admin.navigation.label_field": "Label",
+
+  "admin.navigation.label_placeholder": "About",
+
+  "admin.navigation.url_field": "URL",
+
+  "admin.navigation.remove": "Remove",
+
+  "admin.navigation.add_link": "+ Add link",
+
+  "admin.navigation.cancel": "Cancel",
+
+  "admin.plugins.upload_intro_html": "Install a plugin from a <code>.zip</code> package (offline — nothing is downloaded). The package needs a single root directory containing <code>plugin.toml</code> and its entry script. A new plugin is installed <strong>disabled</strong> — review its declared permissions, then enable it above.",
+
+  "admin.plugins.disable_aria": "Disable {name}",
+
+  "admin.plugins.enable_aria": "Enable {name}",
+
+  "admin.plugins.drop_aria": "Drop plugin ZIP here or select a file",
+
+  "admin.plugins.confirm_uninstall": "Uninstall plugin \"{name}\" AND drop its database tables? This cannot be undone.",
+
+  "admin.ext.downgrade_title": "Allow installing an older version than the current one",
+
+  "admin.themes.no_dir_html": "No theme directory was found — the built-in fallback templates are in use. Upload a theme ZIP below and activate it.",
+
+  "admin.themes.upload_intro_html": "Install a theme from a <code>.zip</code> package (offline — nothing is downloaded). The package needs a single root directory containing <code>theme.toml</code>. A new theme is <strong>not activated automatically</strong> — activate it above once installed.",
+
+  "admin.themes.drop_aria": "Drop theme ZIP here or select a file",
+
+  "admin.search.indexed_pages": "Indexed pages",
+
+  "admin.search.needs_rebuild": "Needs rebuild",
+
+  "admin.search.last_rebuild": "Last rebuild",
+
+  "admin.search.rebuild_note_html": "Drops and rebuilds the index from the database. For very large sites use <code>polaris search rebuild</code> instead.",
+
+  "admin.search.no_queries": "No searches recorded yet.",
+
+  "admin.search.gaps_intro": "Topics visitors look for that this site does not cover yet:",
+
+  "admin.search.analytics_off_html": "Analytics is disabled. Only aggregated query counts are ever recorded (no IPs, no user agents) — enable it in <code>polaris.toml</code>:<pre>[search.analytics]\nenabled = true</pre>",
+
+  "admin.terms.no_categories_hint": "No categories yet — they are created automatically when you assign one to a post.",
+
+  "admin.terms.no_tags_hint": "No tags yet.",
+
+  "admin.terms.auto_note": "Terms are also created automatically when you save a post with a category or tags."
+
 }

@@ -3,9 +3,9 @@
 {% block content %}
 <h1>{{ t(key="admin.page.backups") }}</h1>
 <p class="muted">
-  Archives live in <code>{{ backup_dir }}</code> (storage: {{ storage_provider }}).
-  Every archive carries a versioned manifest with per-file SHA-256 checksums.
-  Restores verify first, snapshot the current database, and then swap.
+  {{ t(key="admin.backups.live_in") }} <code>{{ backup_dir }}</code> · {{ t(key="admin.backups.storage_kind", kind=storage_provider) }}
+  {{ t(key="admin.backups.manifest_note") }}
+  
 </p>
 
 <div class="panel">
@@ -26,8 +26,8 @@
 <div class="panel">
   <h2>{{ t(key="admin.backups.upload_title") }}</h2>
   <p class="muted">
-    Verify-only checks the archive without importing it. Imports must pass
-    integrity verification first. Max {{ max_upload }}.
+    {{ t(key="admin.backups.verify_only_note") }}
+    {{ t(key="admin.backups.max_upload", max=max_upload) }}
   </p>
   <form method="post" action="/admin/backups/upload" enctype="multipart/form-data" class="stack">
     <input type="hidden" name="csrf" value="{{ csrf }}">
@@ -83,11 +83,11 @@
         <td>{{ b.created_by }}</td>
         <td>{{ b.version }}</td>
         <td class="muted">
-          {{ b.files }} file(s)
-          {% if b.includes.database %}· db{% endif %}
-          {% if b.includes.media %}· {{ b.media_files }} media{% endif %}
-          {% if b.includes.themes %}· themes{% endif %}
-          {% if b.includes.plugins %}· plugins{% endif %}
+          {{ b.files }} {{ t(key="admin.backups.files_unit") }}
+          {% if b.includes.database %}· {{ t(key="admin.backups.part_db") }}{% endif %}
+          {% if b.includes.media %}· {{ b.media_files }} {{ t(key="admin.backups.part_media") }}{% endif %}
+          {% if b.includes.themes %}· {{ t(key="admin.backups.part_themes") }}{% endif %}
+          {% if b.includes.plugins %}· {{ t(key="admin.backups.part_plugins") }}{% endif %}
         </td>
         <td>{{ b.size }}</td>
         <td class="actions">

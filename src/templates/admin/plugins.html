@@ -48,13 +48,13 @@
         {% if p.is_enabled_plugin %}
         <input type="hidden" name="action" value="disable">
         <button type="submit" class="plugin-switch is-on" aria-pressed="true"
-                aria-label="Disable {{ p.manifest.name }}" title="{{ t(key="admin.plugins.disable_title") }}">
+                aria-label="{{ t(key="admin.plugins.disable_aria", name=p.manifest.name) }}" title="{{ t(key="admin.plugins.disable_title") }}">
           <span class="plugin-switch-knob"></span>
         </button>
         {% else %}
         <input type="hidden" name="action" value="enable">
         <button type="submit" class="plugin-switch" aria-pressed="false"
-                aria-label="Enable {{ p.manifest.name }}" title="{{ t(key="admin.plugins.enable_title") }}">
+                aria-label="{{ t(key="admin.plugins.enable_aria", name=p.manifest.name) }}" title="{{ t(key="admin.plugins.enable_title") }}">
           <span class="plugin-switch-knob"></span>
         </button>
         {% endif %}
@@ -64,7 +64,7 @@
       <a class="btn btn-secondary btn-sm" href="/admin/plugins/settings/{{ p.dir }}">{{ t(key="admin.action.settings") }}</a>
       {% endif %}
       <form method="post" action="/admin/extensions/uninstall" class="confirm-remove"
-            data-confirm="Uninstall plugin '{{ p.dir }}' AND drop its database tables? This cannot be undone.">
+            data-confirm="{{ t(key="admin.plugins.confirm_uninstall", name=p.dir) }}">
         <input type="hidden" name="csrf" value="{{ csrf }}">
         <input type="hidden" name="kind" value="plugin">
         <input type="hidden" name="id" value="{{ p.dir }}">
@@ -82,16 +82,13 @@
 <div class="panel ext-upload" data-ext-upload>
   <h2>{{ t(key="admin.plugins.upload_title") }}</h2>
   <p class="muted">
-    Install a plugin from a <code>.zip</code> package (offline — nothing is downloaded).
-    The package needs a single root directory containing <code>plugin.toml</code> and its
-    entry script. A new plugin is installed <strong>disabled</strong> — review its declared
-    permissions, then enable it above.
+    {{ t(key="admin.plugins.upload_intro_html") | safe }}
   </p>
   <form method="post" action="/admin/extensions/upload" enctype="multipart/form-data">
     <input type="hidden" name="csrf" value="{{ csrf }}">
     <input type="hidden" name="return_to" value="plugins">
     <div class="ext-drop-zone" data-drop-zone tabindex="0" role="button"
-         aria-label="Drop plugin ZIP here or select a file">
+         aria-label="{{ t(key="admin.plugins.drop_aria") }}">
       <svg class="ext-drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
            stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 9 12 4 17 9"/>
@@ -108,7 +105,7 @@
       <label class="inline-check" title="{{ t(key="admin.plugins.force_title") }}">
         <input type="checkbox" class="switch" name="force"> {{ t(key="admin.plugins.force") }}
       </label>
-      <label class="inline-check" title="Allow installing an older version than the current one">
+      <label class="inline-check" title="{{ t(key="admin.ext.downgrade_title") }}">
         <input type="checkbox" class="switch" name="confirm_downgrade"> {{ t(key="admin.plugins.downgrade") }}
       </label>
       <span class="spacer"></span>

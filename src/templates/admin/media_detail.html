@@ -32,7 +32,7 @@
     <dl class="info-list">
       <dt>{{ t(key="admin.media.original_filename") }}</dt><dd>{{ original }}</dd>
       <dt>{{ t(key="admin.media.type") }}</dt><dd>{{ m.mime_type }}</dd>
-      <dt>{{ t(key="admin.media.size") }}</dt><dd>{{ m.size_human }} ({{ m.size }} bytes)</dd>
+      <dt>{{ t(key="admin.media.size") }}</dt><dd>{{ m.size_human }} ({{ m.size }} {{ t(key="admin.media.bytes") }})</dd>
       {% if m.dimensions %}
       <dt>{{ t(key="admin.media.dimensions") }}</dt><dd>{{ m.dimensions }}</dd>
       {% endif %}
@@ -62,7 +62,7 @@
     </div>
     {% endif %}
     {% if m.thumbnails %}
-    <p class="hint">Sizes: original{% for t in m.thumbnails %}, {{ t }}{% endfor %}</p>
+    <p class="hint">{{ t(key="admin.media.sizes") }}{% for t in m.thumbnails %}, {{ t }}{% endfor %}</p>
     {% endif %}
 
     <div class="media-refs">
@@ -124,7 +124,7 @@
           </select>
         </div>
         <div>
-          <label for="f-tags">Tags <span class="hint">(comma separated)</span></label>
+          <label for="f-tags">{{ t(key="admin.media.tags_label") }} <span class="hint">{{ t(key="admin.media.tags_hint") }}</span></label>
           <input id="f-tags" type="text" name="tags" value="{{ tags_str }}">
         </div>
       </div>

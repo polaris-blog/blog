@@ -97,9 +97,18 @@ impl BackupStorage {
                 "backup '{name}' already exists"
             )));
         }
-        tokio::fs::rename(staging, &dest).await.map_err(|e| {
-            AppError::Internal(anyhow::anyhow!("cannot commit backup '{name}': {e}"))
-        })?;
+        // Staging and the backup store may sit on different filesystems.
+        if let Err(e) = tokio::fs::rename(&staging, &dest).await {
+            if e.kind() != std::io::ErrorKind::CrossesDevices && e.raw_os_error() != Some(18) {
+                return Err(AppError::Internal(anyhow::anyhow!(
+                    "cannot commit backup '{name}': {e}"
+                )));
+            }
+            tokio::fs::copy(&staging, &dest).await.map_err(|e| {
+                AppError::Internal(anyhow::anyhow!("cannot commit backup '{name}': {e}"))
+            })?;
+            tokio::fs::remove_file(&staging).await.ok();
+        }
         Ok(dest)
     }
 

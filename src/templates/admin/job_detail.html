@@ -2,7 +2,7 @@
 {% block title %}{{ job.name }}{% endblock title %}
 {% block content %}
 <p><a href="/admin/jobs">Jobs</a></p>
-<div class="page-head"><h1 class="job-wrap">{{ job.name }}</h1><span>{{ job.status }}{% if job.paused %} / paused{% endif %}</span></div>
+<div class="page-head"><h1 class="job-wrap">{{ job.name }}</h1><span>{{ job.status }}{% if job.paused %} / {{ t(key="admin.jobs.paused") }}{% endif %}</span></div>
 <div class="actions job-controls">
 {% if job.status != 'running' %}<a class="btn" href="/admin/jobs/{{ job.id }}/run">{{ t(key="admin.action.run_now") }}</a>{% endif %}
 {% if job.status == 'pending' or job.status == 'running' %}

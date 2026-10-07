@@ -412,15 +412,17 @@ impl ExtensionInstaller {
             package::zip_dir(dest, &b)?;
             backup = Some(b);
             let side = dest.with_extension(format!("old-{}", unique_suffix()));
-            std::fs::rename(dest, &side).map_err(|e| {
+            // Staging and the install target can live on different filesystems
+            // (data volume vs image layer) — rename falls back to copy.
+            crate::utils::fs::rename_dir_or_copy(dest, &side).map_err(|e| {
                 AppError::BadRequest(format!("cannot move the current version away: {e}"))
             })?;
             old_side = Some(side);
         }
-        if let Err(e) = std::fs::rename(&root, dest) {
+        if let Err(e) = crate::utils::fs::rename_dir_or_copy(&root, dest) {
             // Roll the previous version back into place.
             if let Some(side) = &old_side {
-                let _ = std::fs::rename(side, dest);
+                let _ = crate::utils::fs::rename_dir_or_copy(side, dest);
             }
             return Err(AppError::BadRequest(format!("cannot install files: {e}")));
         }
@@ -493,7 +495,7 @@ impl ExtensionInstaller {
     fn rollback(&self, dest: &Path, old_side: Option<&Path>) {
         let _ = std::fs::remove_dir_all(dest);
         if let Some(side) = old_side {
-            let _ = std::fs::rename(side, dest);
+            let _ = crate::utils::fs::rename_dir_or_copy(side, dest);
         }
     }
 

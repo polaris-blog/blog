@@ -26,7 +26,7 @@
     </tbody>
   </table>
   {% else %}
-  <p class="muted">No categories yet — they are created automatically when you assign one to a post.</p>
+  <p class="muted">{{ t(key="admin.terms.no_categories_hint") }}</p>
   {% endif %}
 </div>
 
@@ -52,7 +52,7 @@
     </tbody>
   </table>
   {% else %}
-  <p class="muted">No tags yet.</p>
+  <p class="muted">{{ t(key="admin.terms.no_tags_hint") }}</p>
   {% endif %}
 </div>
 
@@ -75,6 +75,6 @@
     </div>
     <div><button type="submit">{{ t(key="admin.action.create") }}</button></div>
   </form>
-  <p class="hint">Terms are also created automatically when you save a post with a category or tags.</p>
+  <p class="hint">{{ t(key="admin.terms.auto_note") }}</p>
 </div>
 {% endblock content %}

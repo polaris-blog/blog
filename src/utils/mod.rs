@@ -1,5 +1,6 @@
 pub mod client_ip;
 pub mod cookies;
+pub mod fs;
 pub mod hash;
 pub mod lock;
 pub mod slug;

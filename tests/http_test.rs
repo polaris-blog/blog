@@ -255,7 +255,8 @@ async fn admin_login_flow() {
     let html = body(resp).await;
     assert!(
         html.contains("csrf") || html.contains("CSRF"),
-        "form carries the token"
+        "form carries the token; got: {}",
+        &html[..html.len().min(200)]
     );
 
     // Wrong password: no session, login page re-rendered with an error.
