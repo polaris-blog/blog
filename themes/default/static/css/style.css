@@ -356,7 +356,12 @@ html.dark:not(.no-dark) .theme-toggle .icon-moon { display: none; }
   color: #f5f5f7;
   text-align: center;
   padding: 96px 0 104px;
+  /* Give the banner real vertical presence on tall screens (1080p and up). */
+  min-height: clamp(420px, 52vh, 680px);
+  display: flex;
+  align-items: center;
 }
+.hero .container { width: 100%; }
 .hero-headline {
   margin: 0 0 10px;
   font-family: var(--font-display);
