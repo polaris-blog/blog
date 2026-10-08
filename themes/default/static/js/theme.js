@@ -30,21 +30,30 @@
     initPjax();
   });
 
-  /* Typewriter headline: fills .type-target character by character with a
-     blinking caret (opt-in via the theme's typewriter toggle; skipped for
-     prefers-reduced-motion). Re-runs after pjax swaps on new headlines. */
+  /* Typewriter headline: fills .type-target character by character; a
+     sibling caret blinks while typing and is removed when done so the
+     centered headline keeps its true center (opt-in via the theme's
+     typewriter toggle; skipped for prefers-reduced-motion). Re-runs after
+     pjax swaps on new headlines. */
   function initTypewriter() {
-    var targets = document.querySelectorAll(
-      '.hero-headline[data-typewriter="true"] .type-target'
+    var heads = document.querySelectorAll(
+      '.hero-headline[data-typewriter="true"]'
     );
     var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    Array.prototype.forEach.call(targets, function (el) {
-      if (el.dataset.typed) return;
+    Array.prototype.forEach.call(heads, function (h) {
+      var el = h.querySelector(".type-target");
+      if (!el || el.dataset.typed) return;
       el.dataset.typed = "1";
-      var full = el.textContent;
-      if (reduced || !full) {
-        el.classList.add("type-ready", "type-done");
-        return;
+      var full = (el.textContent || "").replace(/\s+/g, " ").trim();
+      if (!full) return;
+      if (reduced) return; // full text renders as-is, caret-free
+      var caret = document.createElement("span");
+      caret.className = "type-caret";
+      caret.setAttribute("aria-hidden", "true");
+      if (el.nextSibling) {
+        el.parentNode.insertBefore(caret, el.nextSibling);
+      } else {
+        el.parentNode.appendChild(caret);
       }
       el.textContent = "";
       el.classList.add("type-ready");
@@ -54,7 +63,10 @@
         el.textContent = full.slice(0, i);
         if (i >= full.length) {
           clearInterval(timer);
-          el.classList.add("type-done");
+          caret.classList.add("type-done");
+          setTimeout(function () {
+            if (caret.parentNode) caret.parentNode.removeChild(caret);
+          }, 1300);
         }
       }, 90);
     });

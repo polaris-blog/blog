@@ -26,6 +26,13 @@
 //! - request and response bodies are size-capped, the timeout is clamped
 //!   and requests run via `block_in_place` so the async runtime keeps
 //!   scheduling while a fetch is in flight.
+//!
+//! Known limitation (documented trade-off): the SSRF guard resolves the host
+//! once and the connection resolves it again — a hostile authoritative DNS
+//! can in principle rebind between the two (TOCTOU). Full mitigation requires
+//! connecting to the validated socket address directly, which ureq 2.x does
+//! not support with correct TLS/SNI; plugin authors are admin-vetted, so the
+//! guard is treated as best-effort hardening.
 
 use std::io::Read;
 use std::net::{IpAddr, ToSocketAddrs};
@@ -114,9 +121,6 @@ fn request(
     let Some((_scheme, host, port)) = parse_url(url) else {
         return err_map(0, "invalid url (only http/https is allowed)");
     };
-    if !resolves_public(&host, port) {
-        return err_map(0, "host is not a public address");
-    }
 
     let mut hdrs: Vec<(String, String)> = Vec::new();
     if let Some(map) = headers {
@@ -128,26 +132,28 @@ fn request(
             }
         }
     }
-    let body = if body.len() > MAX_BODY_OUT {
-        &body[..MAX_BODY_OUT]
-    } else {
-        body
-    };
+    let body = truncate_utf8(body, MAX_BODY_OUT).to_string();
     let timeout = timeout_secs.clamp(1, MAX_TIMEOUT_SECS as i64) as u64;
+    let url = url.to_string();
 
     run_blocking(move || {
+        // DNS resolution is blocking I/O — keep it inside run_blocking so a
+        // slow resolver cannot stall an async worker thread.
+        if !resolves_public(&host, port) {
+            return err_map(0, "host is not a public address");
+        }
         let agent = ureq::AgentBuilder::new()
             .timeout_connect(Duration::from_secs(10))
             .timeout(Duration::from_secs(timeout))
             .redirects(0)
             .user_agent(concat!("polaris-plugin-http/", env!("CARGO_PKG_VERSION")))
             .build();
-        let mut req = agent.request(&method, url);
+        let mut req = agent.request(&method, &url);
         for (k, v) in &hdrs {
             req = req.set(k, v);
         }
         let outcome = if matches!(method.as_str(), "POST" | "PUT" | "PATCH") && !body.is_empty() {
-            req.send_string(body)
+            req.send_string(&body)
         } else {
             req.call()
         };
@@ -159,16 +165,33 @@ fn request(
     })
 }
 
+/// Byte-length cap that never splits a UTF-8 character (a plain `&s[..max]`
+/// panics when the boundary lands inside a multi-byte sequence).
+fn truncate_utf8(s: &str, max: usize) -> &str {
+    if s.len() <= max {
+        return s;
+    }
+    let mut end = max;
+    while end > 0 && !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    &s[..end]
+}
+
 /// Consume a response into `(status, body, content_type)` with a hard cap on
-/// the body size.
+/// the body size. A read failure mid-body is reported honestly instead of
+/// handing the plugin a silently truncated 200.
 fn read_response(resp: ureq::Response) -> Dynamic {
     let status = resp.status() as i64;
     let content_type = resp.content_type().to_string();
     let mut reader = resp.into_reader().take((MAX_BODY_IN + 1) as u64);
     let mut buf = Vec::new();
-    let _ = reader.read_to_end(&mut buf);
+    let read_result = reader.read_to_end(&mut buf);
     let truncated = buf.len() > MAX_BODY_IN;
     buf.truncate(MAX_BODY_IN);
+    if let Err(e) = read_result {
+        return err_map(status, &format!("body read failed: {e}"));
+    }
     let mut body = String::from_utf8_lossy(&buf).into_owned();
     if truncated {
         body.push_str("\n…[truncated]");
@@ -386,6 +409,19 @@ mod tests {
             status_of(request("TRACE", "https://example.com/", None, "", 1)),
             0
         );
+    }
+
+    #[test]
+    fn truncate_utf8_never_splits_characters() {
+        // 1MB of multi-byte characters: the byte cap lands mid-character.
+        let body = "你".repeat(600_000); // 1_800_000 bytes
+        let cut = truncate_utf8(&body, MAX_BODY_OUT);
+        assert!(cut.len() <= MAX_BODY_OUT);
+        assert!(cut.is_char_boundary(cut.len()));
+        assert!(std::panic::catch_unwind(|| truncate_utf8(&body, MAX_BODY_OUT)).is_ok());
+        // Short bodies pass through untouched.
+        assert_eq!(truncate_utf8("hello", MAX_BODY_OUT), "hello");
+        assert_eq!(truncate_utf8("", 10), "");
     }
 
     #[test]
