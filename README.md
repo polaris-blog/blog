@@ -249,10 +249,13 @@ before_post_delete   after_post_delete     user_login (event)
 nav()                init(config)
 ```
 
-Host functions (excerpt): `log`, `now`, `cache_get/set/del` (namespaced),
-`config_get*` (read-only), `json_parse` / `json_stringify`, and — for plugins
-declaring `permissions = ["network.fetch"]` — SSRF-guarded `http_get` /
-`http_post` / `http_request` returning `{status, body, content_type, error}`.
+Host functions (excerpt): `log`, `now` / `now_iso`, `cache_get/set/del` (namespaced),
+`config_get*` (read-only), `json_parse` / `json_stringify`, crypto & encoding
+helpers (`sha256_hex`, `hmac_sha256_hex` for webhook signatures,
+`base64_encode/decode`, `url_encode`), and — for plugins declaring
+`permissions = ["network.fetch"]` — SSRF-guarded `http_get` / `http_post` /
+`http_request` returning
+`{status, body, content_type, headers, error}`.
 
 Enable at runtime: **Admin → Plugins → Enable**, or `polaris plugin enable example`. Full API: `docs/DEVELOPMENT.md`.
 

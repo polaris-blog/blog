@@ -6,11 +6,15 @@
 //! about any particular upstream service:
 //!
 //! ```text
-//! http_get(url)                          -> #{status, body, content_type, error}
+//! http_get(url)                          -> #{status, body, content_type, headers, error}
 //! http_get(url, headers)                 -> ditto
 //! http_post(url, headers, body)          -> ditto
 //! http_request(method, url, headers, body, timeout_secs) -> ditto
 //! ```
+//!
+//! Always available (no permission): `sha256_hex`, `hmac_sha256_hex`
+//! (webhook signatures), `base64_encode`/`base64_decode`, `url_encode`,
+//! `now_iso` — see `crypto.rs`.
 //!
 //! On transport failure `status` is `0` and `error` explains why; scripts are
 //! expected to fall back gracefully (no exceptions are raised).
@@ -85,15 +89,6 @@ fn err_map(status: i64, error: &str) -> Dynamic {
     m.insert("body".into(), Dynamic::from(String::new()));
     m.insert("content_type".into(), Dynamic::from(String::new()));
     m.insert("error".into(), Dynamic::from(error.to_string()));
-    Dynamic::from(m)
-}
-
-fn ok_map(status: i64, body: String, content_type: String) -> Dynamic {
-    let mut m = Map::new();
-    m.insert("status".into(), Dynamic::from(status));
-    m.insert("body".into(), Dynamic::from(body));
-    m.insert("content_type".into(), Dynamic::from(content_type));
-    m.insert("error".into(), Dynamic::from(String::new()));
     Dynamic::from(m)
 }
 
@@ -178,12 +173,18 @@ fn truncate_utf8(s: &str, max: usize) -> &str {
     &s[..end]
 }
 
-/// Consume a response into `(status, body, content_type)` with a hard cap on
-/// the body size. A read failure mid-body is reported honestly instead of
-/// handing the plugin a silently truncated 200.
+/// Consume a response into `{status, body, content_type, headers}` with a
+/// hard cap on the body size. A read failure mid-body is reported honestly
+/// instead of handing the plugin a silently truncated 200.
 fn read_response(resp: ureq::Response) -> Dynamic {
     let status = resp.status() as i64;
     let content_type = resp.content_type().to_string();
+    let mut headers = Map::new();
+    for h in resp.headers_names() {
+        if let Some(v) = resp.header(&h) {
+            headers.insert(h.into(), Dynamic::from(v.to_string()));
+        }
+    }
     let mut reader = resp.into_reader().take((MAX_BODY_IN + 1) as u64);
     let mut buf = Vec::new();
     let read_result = reader.read_to_end(&mut buf);
@@ -196,7 +197,13 @@ fn read_response(resp: ureq::Response) -> Dynamic {
     if truncated {
         body.push_str("\n…[truncated]");
     }
-    ok_map(status, body, content_type)
+    let mut out = Map::new();
+    out.insert("status".into(), Dynamic::from(status));
+    out.insert("body".into(), Dynamic::from(body));
+    out.insert("content_type".into(), Dynamic::from(content_type));
+    out.insert("headers".into(), Dynamic::from(headers));
+    out.insert("error".into(), Dynamic::from(String::new()));
+    Dynamic::from(out)
 }
 
 /// Parse `scheme://[user@]host[:port]/…` into `(scheme, host, port)`.

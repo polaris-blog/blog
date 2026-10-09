@@ -28,7 +28,9 @@
 //! Capabilities: by default a plugin has no I/O at all. Declaring
 //! `permissions = ["network.fetch"]` in `plugin.toml` grants the generic,
 //! SSRF-hardened `http_*` API (see `http.rs`); JSON helpers (`json_parse`,
-//! `json_stringify`) are always available.
+//! `json_stringify`), crypto/encoding helpers (`sha256_hex`,
+//! `hmac_sha256_hex`, `base64_*`, `url_encode`) and timestamps (`now`,
+//! `now_iso`) are always available.
 //!
 //! ABI stability: plugins are *source scripts*, not compiled artifacts, so
 //! there is no native ABI to break. The hook surface is documented in
@@ -45,6 +47,7 @@ use serde::Deserialize;
 use crate::cache::memory::MemoryCache;
 use crate::config_store::{ConfigManager, plugin_ns};
 
+pub mod crypto;
 pub mod http;
 pub mod jobs;
 
@@ -652,6 +655,14 @@ fn build_engine(
         _ => tracing::info!(target: "polaris::plugin", "{msg}"),
     });
     engine.register_fn("now", crate::utils::time::now);
+    engine.register_fn("now_iso", || {
+        chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
+    });
+
+    // Crypto & encoding helpers — pure functions (webhook signing, Basic
+    // auth, data URIs, URL building). No permission gate: nothing here
+    // performs I/O.
+    crypto::register(&mut engine);
 
     // Plugin cache API. Values live under `plugin:{name}:*` — one plugin
     // can never read, overwrite or pollute another plugin's (or the
