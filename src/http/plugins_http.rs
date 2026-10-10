@@ -22,7 +22,18 @@ pub(crate) fn route_response(r: crate::plugins::RouteResult) -> Response {
         Err(_) => header::HeaderValue::from_static("text/plain; charset=utf-8"),
     };
     let status = StatusCode::from_u16(r.status).unwrap_or(StatusCode::OK);
-    (status, [(header::CONTENT_TYPE, ct)], r.body).into_response()
+    let mut resp = (status, [(header::CONTENT_TYPE, ct)], r.body).into_response();
+    // Plugin-supplied headers (e.g. a page-scoped CSP for widget pages)
+    // replace the security middleware's same-named defaults.
+    for (name, value) in r.headers {
+        if let (Ok(name), Ok(value)) = (
+            header::HeaderName::from_bytes(name.as_bytes()),
+            header::HeaderValue::from_str(&value),
+        ) {
+            resp.headers_mut().insert(name, value);
+        }
+    }
+    resp
 }
 
 /// `/plugins/{path}` — public plugin routes.

@@ -673,14 +673,29 @@ async fn plugin_guard_mw(State(app): State<App>, req: Request, next: Next) -> Re
     match app.plugins.request_guard(guard_req) {
         crate::plugins::GuardOutcome::Allow => next.run(req).await,
         crate::plugins::GuardOutcome::Redirect(loc) => Redirect::to(&loc).into_response(),
-        crate::plugins::GuardOutcome::Respond { status, body } => {
-            eprintln!("GUARD RESPOND: {status} {body}");
-            (
+        crate::plugins::GuardOutcome::Respond {
+            status,
+            body,
+            headers,
+        } => {
+            let mut resp = (
                 axum::http::StatusCode::from_u16(status)
                     .unwrap_or(axum::http::StatusCode::FORBIDDEN),
                 body,
             )
-                .into_response()
+                .into_response();
+            // Plugin-supplied headers (e.g. a page-scoped CSP) replace the
+            // security middleware's same-named defaults on this response.
+            for (name, value) in headers {
+                if let (Ok(name), Ok(v)) = (
+                    axum::http::HeaderName::from_bytes(name.as_bytes()),
+                    axum::http::HeaderValue::from_str(&value),
+                ) {
+                    resp.headers_mut().insert(name, v);
+                }
+            }
+            eprintln!("GUARD RESPOND: {status}");
+            resp
         }
     }
 }

@@ -261,8 +261,12 @@ Plugins declaring `permissions = ["request.guard"]` can define a
 `request_guard(req)` hook that runs on every content-page request (input:
 method, path, query, cookies, ip, user agent, has-session) and may redirect
 or respond directly — the building block for human-verification gates,
-maintenance pages and IP bans. The bundled **Entry Gate** plugin uses it to
-put a Cloudflare-style proof-of-work challenge in front of the blog.
+maintenance pages and IP bans. Plugin responses may also carry extra
+**headers** (a page-scoped CSP for widget pages, for example). The bundled
+**Entry Gate** plugin uses the hook to put a verification step in front of
+the blog: built-in proof-of-work by default, or **Cloudflare Turnstile**
+(`mode = "turnstile"` plus the site/secret keys in its config — requires the
+`network.fetch` permission for the server-side check).
 
 Enable at runtime: **Admin → Plugins → Enable**, or `polaris plugin enable example`. Full API: `docs/DEVELOPMENT.md`.
 

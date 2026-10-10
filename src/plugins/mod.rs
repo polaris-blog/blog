@@ -135,6 +135,9 @@ pub struct RouteResult {
     pub status: u16,
     pub content_type: String,
     pub body: String,
+    /// Extra response headers (e.g. a page-scoped CSP override for pages
+    /// embedding third-party widgets). Applied on top of the defaults.
+    pub headers: Vec<(String, String)>,
 }
 
 /// Permission required before a plugin's `request_guard` hook is invoked.
@@ -147,8 +150,13 @@ pub enum GuardOutcome {
     Allow,
     /// 303 redirect (gate pages, maintenance notices, …).
     Redirect(String),
-    /// A direct response (403 blocks, custom interstitials, …).
-    Respond { status: u16, body: String },
+    /// A direct response (403 blocks, custom interstitials, …) with
+    /// optional extra headers.
+    Respond {
+        status: u16,
+        body: String,
+        headers: Vec<(String, String)>,
+    },
 }
 
 impl PluginManager {
@@ -577,7 +585,28 @@ impl PluginManager {
                         .get("body")
                         .and_then(|v| v.clone().try_cast::<String>())
                         .unwrap_or_default();
-                    return GuardOutcome::Respond { status, body };
+                    let headers = m
+                        .get("headers")
+                        .and_then(|v| v.clone().try_cast::<rhai::Map>())
+                        .map(|h| {
+                            h.into_iter()
+                                .filter_map(|(k, v)| {
+                                    let name = k.to_string();
+                                    let value = v.clone().try_cast::<String>()?;
+                                    if !name.is_empty() && name.len() <= 128 {
+                                        Some((name, value))
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .collect()
+                        })
+                        .unwrap_or_default();
+                    return GuardOutcome::Respond {
+                        status,
+                        body,
+                        headers,
+                    };
                 }
                 Ok(_) => continue, // unexpected return type — treat as allow
                 Err(e) => {
@@ -647,6 +676,7 @@ impl PluginManager {
                         status: 500,
                         content_type: "text/plain; charset=utf-8".into(),
                         body: "plugin error".into(),
+                        headers: Vec::new(),
                     });
                 }
             }
@@ -670,10 +700,28 @@ fn route_result_from_dynamic(d: Dynamic) -> RouteResult {
             .get("content_type")
             .and_then(|d| d.clone().try_cast::<String>())
             .unwrap_or_else(|| "text/html; charset=utf-8".into());
+        let headers = m
+            .get("headers")
+            .and_then(|d| d.clone().try_cast::<rhai::Map>())
+            .map(|h| {
+                h.into_iter()
+                    .filter_map(|(k, v)| {
+                        let name = k.to_string();
+                        let value = v.clone().try_cast::<String>()?;
+                        if !name.is_empty() && name.len() <= 128 {
+                            Some((name, value))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
         return RouteResult {
             status: status.clamp(200, 599) as u16,
             content_type,
             body,
+            headers,
         };
     }
     if d.is::<String>() {
@@ -682,12 +730,14 @@ fn route_result_from_dynamic(d: Dynamic) -> RouteResult {
             status: 200,
             content_type: "text/html; charset=utf-8".into(),
             body: s,
+            headers: Vec::new(),
         };
     }
     RouteResult {
         status: 200,
         content_type: "text/plain; charset=utf-8".into(),
         body: d.to_string(),
+        headers: Vec::new(),
     }
 }
 
