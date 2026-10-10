@@ -2,6 +2,8 @@
 
 mod common;
 
+use std::path::Path;
+
 use polaris::models::{PostStatus, Role};
 use polaris::services::posts::{self, PostInput};
 
@@ -64,6 +66,90 @@ fn post_input(title: &str) -> PostInput {
         status: PostStatus::Published,
         ..Default::default()
     }
+}
+
+fn write_gate_plugin(dir: &Path, with_permission: bool) {
+    let root = dir.join("plugins").join("gate");
+    std::fs::create_dir_all(&root).unwrap();
+    let perms = if with_permission {
+        "permissions = [\"request.guard\"]\n"
+    } else {
+        ""
+    };
+    std::fs::write(
+        root.join("plugin.toml"),
+        format!(
+            "id = \"gate\"\nname = \"gate\"\nversion = \"1.0.0\"\nauthor = \"t\"\ndescription = \"t\"\nlicense = \"MIT\"\n{perms}\n"
+        ),
+    )
+    .unwrap();
+    std::fs::write(
+        root.join("main.rhai"),
+        // Redirect every guarded request to the gate page.
+        "fn request_guard(req) { #{redirect: \"/plugins/gate/verify\"} }",
+    )
+    .unwrap();
+}
+
+fn guard_map(path: &str, cookies: &[(&str, &str)]) -> rhai::Map {
+    let mut m = rhai::Map::new();
+    m.insert("method".into(), rhai::Dynamic::from("GET"));
+    m.insert("path".into(), rhai::Dynamic::from(path.to_string()));
+    m.insert("query".into(), rhai::Dynamic::from(""));
+    let mut c = rhai::Map::new();
+    for (k, v) in cookies {
+        c.insert((*k).into(), rhai::Dynamic::from((*v).to_string()));
+    }
+    m.insert("cookies".into(), rhai::Dynamic::from(c));
+    m.insert("ip".into(), rhai::Dynamic::from("203.0.113.9"));
+    m.insert("user_agent".into(), rhai::Dynamic::from("test"));
+    m.insert("has_session".into(), rhai::Dynamic::from(false));
+    m
+}
+
+#[test]
+fn request_guard_redirects_when_permission_declared() {
+    let dir = tempfile::tempdir().unwrap();
+    write_gate_plugin(dir.path(), true);
+    let plugins_dir = dir.path().join("plugins");
+
+    let mgr = polaris::plugins::PluginManager::new(
+        &plugins_dir,
+        &["gate".to_string()],
+        None,
+        common::empty_config_manager(),
+    );
+
+    // Content pages are redirected to the gate.
+    match mgr.request_guard(guard_map("/posts/x", &[])) {
+        polaris::plugins::GuardOutcome::Redirect(loc) => {
+            assert_eq!(loc, "/plugins/gate/verify");
+        }
+        other => panic!("expected redirect, got {other:?}"),
+    }
+
+    // Machine routes are exempt at the HTTP layer; the guard itself still
+    // answers when asked directly (the middleware never calls it for those).
+}
+
+#[test]
+fn request_guard_without_permission_is_ignored() {
+    let dir = tempfile::tempdir().unwrap();
+    // Same plugin script, but the manifest does NOT declare request.guard.
+    write_gate_plugin(dir.path(), false);
+    let plugins_dir = dir.path().join("plugins");
+
+    let mgr = polaris::plugins::PluginManager::new(
+        &plugins_dir,
+        &["gate".to_string()],
+        None,
+        common::empty_config_manager(),
+    );
+
+    assert!(matches!(
+        mgr.request_guard(guard_map("/posts/x", &[])),
+        polaris::plugins::GuardOutcome::Allow
+    ));
 }
 
 #[test]

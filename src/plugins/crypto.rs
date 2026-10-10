@@ -133,6 +133,20 @@ pub fn register(engine: &mut Engine) {
     engine.register_fn("url_encode", url_encode);
 }
 
+/// Register `sign_hex(data)` — an HMAC bound to a **plugin-scoped** key
+/// derived as `HMAC(instance_secret, "plugin-signing:<plugin>")`. Scripts can
+/// sign and later verify their own tokens (challenge clearances, webhook
+/// payloads) without ever seeing the instance secret or another plugin's key.
+pub fn register_signing(engine: &mut Engine, plugin_name: &str, instance_secret: &str) {
+    let key = hmac_sha256_hex(
+        instance_secret.as_bytes(),
+        &format!("plugin-signing:{plugin_name}"),
+    );
+    engine.register_fn("sign_hex", move |data: &str| -> String {
+        hmac_sha256_hex(key.as_bytes(), data)
+    });
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

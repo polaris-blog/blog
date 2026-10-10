@@ -18,13 +18,14 @@ use std::time::Instant;
 
 use axum::Router;
 use axum::body::HttpBody;
-use axum::extract::{Request, State};
+use axum::extract::{ConnectInfo, Request, State};
 use axum::http::{HeaderValue, header};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
 use flate2::Compression;
 use flate2::write::GzEncoder;
+use rhai::Dynamic;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tera::Context;
@@ -102,6 +103,7 @@ pub fn router(app: App) -> Router {
         // The page cache sits innermost so stored bodies are pre-compression
         // and security headers apply to cached responses too.
         .layer(middleware::from_fn_with_state(app.clone(), page_cache_mw))
+        .layer(middleware::from_fn_with_state(app.clone(), plugin_guard_mw))
         .layer(middleware::from_fn(security_headers_mw))
         .layer(middleware::from_fn(api_error_mw))
         .layer(middleware::from_fn(compress_mw))
@@ -592,6 +594,97 @@ enum PageOutcome {
 ///   concurrent requests wait and then serve the cached result.
 /// - Feeds (rss/atom/sitemap) are cached by their handlers instead — their
 ///   absolute URLs depend on the Host header.
+///
+/// # Plugin request guard (permission: request.guard)
+///
+/// Routes a guard plugin can never intercept: authenticated surfaces, the
+/// plugins' own routes (a gate must not lock itself out), machine/asset
+/// routes and feeds. Everything else — the content pages a visitor sees —
+/// goes through the guard chain while any plugin declares `request.guard`.
+fn guard_exempt(path: &str) -> bool {
+    const PREFIXES: [&str; 4] = ["/admin", "/plugins", "/media", "/static"];
+    const EXACT: [&str; 6] = [
+        "/rss.xml",
+        "/atom.xml",
+        "/sitemap.xml",
+        "/robots.txt",
+        "/favicon.ico",
+        "/comments",
+    ];
+    PREFIXES
+        .iter()
+        .any(|p| path == *p || path.starts_with(&format!("{p}/")))
+        || EXACT.contains(&path)
+}
+
+/// Build the guard input map and run the plugin chain. A hardening layer:
+/// absent plugins, missing permissions and script failures all mean "allow".
+async fn plugin_guard_mw(State(app): State<App>, req: Request, next: Next) -> Response {
+    let path = req.uri().path().to_string();
+    if guard_exempt(&path) || app.plugins.enabled_names().is_empty() {
+        return next.run(req).await;
+    }
+
+    let mut cookies = rhai::Map::new();
+    if let Some(raw) = req
+        .headers()
+        .get(header::COOKIE)
+        .and_then(|v| v.to_str().ok())
+    {
+        for pair in raw.split(';') {
+            if let Some((k, v)) = pair.split_once('=') {
+                cookies.insert(k.trim().into(), Dynamic::from(v.trim().to_string()));
+            }
+        }
+    }
+    let has_session = cookies.contains_key("polaris_session");
+    let query = req.uri().query().unwrap_or_default().to_string();
+    // Peer address: injected by `into_make_service_with_connect_info` in
+    // production; absent when the router is driven directly (tests).
+    let peer = req
+        .extensions()
+        .get::<ConnectInfo<std::net::SocketAddr>>()
+        .map(|c| c.0.ip())
+        .unwrap_or_else(|| "0.0.0.0".parse().unwrap());
+    let ip =
+        crate::utils::client_ip::resolve(peer, req.headers(), &app.config.security.trusted_proxies);
+
+    let mut guard_req = rhai::Map::new();
+    guard_req.insert(
+        "method".into(),
+        Dynamic::from(req.method().as_str().to_string()),
+    );
+    guard_req.insert("path".into(), Dynamic::from(path.clone()));
+    guard_req.insert("query".into(), Dynamic::from(query));
+    guard_req.insert("cookies".into(), Dynamic::from(cookies));
+    guard_req.insert("ip".into(), Dynamic::from(ip.to_string()));
+    guard_req.insert(
+        "user_agent".into(),
+        Dynamic::from(
+            req.headers()
+                .get(header::USER_AGENT)
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or_default()
+                .to_string(),
+        ),
+    );
+    guard_req.insert("has_session".into(), Dynamic::from(has_session));
+
+    match app.plugins.request_guard(guard_req) {
+        crate::plugins::GuardOutcome::Allow => next.run(req).await,
+        crate::plugins::GuardOutcome::Redirect(loc) => Redirect::to(&loc).into_response(),
+        crate::plugins::GuardOutcome::Respond { status, body } => {
+            eprintln!("GUARD RESPOND: {status} {body}");
+            (
+                axum::http::StatusCode::from_u16(status)
+                    .unwrap_or(axum::http::StatusCode::FORBIDDEN),
+                body,
+            )
+                .into_response()
+        }
+    }
+}
+
 async fn page_cache_mw(State(app): State<App>, req: Request, next: Next) -> Response {
     if req.method() != axum::http::Method::GET {
         return next.run(req).await;

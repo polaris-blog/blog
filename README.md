@@ -252,10 +252,17 @@ nav()                init(config)
 Host functions (excerpt): `log`, `now` / `now_iso`, `cache_get/set/del` (namespaced),
 `config_get*` (read-only), `json_parse` / `json_stringify`, crypto & encoding
 helpers (`sha256_hex`, `hmac_sha256_hex` for webhook signatures,
-`base64_encode/decode`, `url_encode`), and — for plugins declaring
-`permissions = ["network.fetch"]` — SSRF-guarded `http_get` / `http_post` /
-`http_request` returning
+`base64_encode/decode`, `url_encode`, `sign_hex` for plugin-scoped signed
+tokens), and — for plugins declaring `permissions = ["network.fetch"]` —
+SSRF-guarded `http_get` / `http_post` / `http_request` returning
 `{status, body, content_type, headers, error}`.
+
+Plugins declaring `permissions = ["request.guard"]` can define a
+`request_guard(req)` hook that runs on every content-page request (input:
+method, path, query, cookies, ip, user agent, has-session) and may redirect
+or respond directly — the building block for human-verification gates,
+maintenance pages and IP bans. The bundled **Entry Gate** plugin uses it to
+put a Cloudflare-style proof-of-work challenge in front of the blog.
 
 Enable at runtime: **Admin → Plugins → Enable**, or `polaris plugin enable example`. Full API: `docs/DEVELOPMENT.md`.
 

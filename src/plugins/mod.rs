@@ -90,6 +90,9 @@ struct PluginToml {
 
 pub struct Plugin {
     pub meta: PluginMeta,
+    /// Declared permissions (manifest), consulted by capability dispatchers
+    /// such as the request-guard hook.
+    pub permissions: Vec<String>,
     /// Per-plugin engine: host functions that carry plugin identity (the
     /// cache API) bake the plugin's namespace in at build time.
     pub engine: Arc<Engine>,
@@ -118,6 +121,9 @@ pub struct PluginManager {
     plugin_cache: Option<Arc<MemoryCache>>,
     /// Schema-backed configuration store (read-only from scripts).
     configs: Arc<ConfigManager>,
+    /// Instance secret — the source for per-plugin signing keys (see
+    /// crypto::register_signing). Empty in tests unless provided.
+    instance_secret: String,
     inner: RwLock<Inner>,
     scheduler: Option<std::sync::Weak<crate::scheduler::Scheduler>>,
 }
@@ -128,6 +134,20 @@ pub struct RouteResult {
     pub body: String,
 }
 
+/// Permission required before a plugin's `request_guard` hook is invoked.
+pub const REQUEST_GUARD_PERMISSION: &str = "request.guard";
+
+/// Verdict of the `request_guard` hook chain over one request.
+#[derive(Debug)]
+pub enum GuardOutcome {
+    /// No plugin objected — the request proceeds.
+    Allow,
+    /// 303 redirect (gate pages, maintenance notices, …).
+    Redirect(String),
+    /// A direct response (403 blocks, custom interstitials, …).
+    Respond { status: u16, body: String },
+}
+
 impl PluginManager {
     pub fn new(
         dir: &Path,
@@ -135,7 +155,7 @@ impl PluginManager {
         plugin_cache: Option<Arc<MemoryCache>>,
         configs: Arc<ConfigManager>,
     ) -> Self {
-        Self::with_scheduler(dir, enabled, plugin_cache, configs, None)
+        Self::with_scheduler(dir, enabled, plugin_cache, configs, None).with_secret("")
     }
 
     pub fn with_scheduler(
@@ -149,11 +169,20 @@ impl PluginManager {
             dir: dir.to_path_buf(),
             plugin_cache,
             configs,
+            instance_secret: String::new(),
             inner: RwLock::new(Inner::default()),
             scheduler,
         };
         mgr.reload(enabled);
         mgr
+    }
+
+    /// Provide the instance secret as the root of per-plugin signing keys
+    /// (`sign_hex`). Builder-style: `PluginManager::with_scheduler(…)
+    /// .with_secret(&cfg.security.secret)`.
+    pub fn with_secret(mut self, secret: &str) -> Self {
+        self.instance_secret = secret.to_string();
+        self
     }
 
     pub fn reload(&self, enabled: &[String]) {
@@ -199,6 +228,7 @@ impl PluginManager {
             name,
             &self.configs,
             &spec.permissions,
+            &self.instance_secret,
         );
         jobs::register_api(&mut engine, name, self.scheduler.clone(), jobs.clone());
         let engine = Arc::new(engine);
@@ -254,6 +284,7 @@ impl PluginManager {
 
         let plugin = Plugin {
             meta: spec.meta,
+            permissions: spec.permissions.clone(),
             engine,
             ast,
             fns: fns.clone(),
@@ -494,6 +525,65 @@ impl PluginManager {
         self.run_route(url_path, query, false)
     }
 
+    /// Run the `request_guard` hook chain (permission `request.guard`).
+    ///
+    /// Each guard plugin receives a request map `{method, path, query,
+    /// cookies, ip, user_agent, has_session}` and may return:
+    /// * `()` — allow;
+    /// * `#{redirect: "…"}` — 303 to the given location;
+    /// * `#{status: 403, body: "…"}` — a direct response.
+    ///
+    /// The first verdict wins; plugins without the hook, without the
+    /// `request.guard` permission, or with failing scripts mean "allow" —
+    /// the guard is a hardening layer, never a hard dependency.
+    pub fn request_guard(&self, req: rhai::Map) -> GuardOutcome {
+        let inner = crate::utils::lock::read(&self.inner);
+        for (pname, plugin) in &inner.enabled {
+            if !plugin.fns.contains("request_guard")
+                || !plugin
+                    .permissions
+                    .iter()
+                    .any(|p| p == REQUEST_GUARD_PERMISSION)
+            {
+                continue;
+            }
+            match plugin.engine.call_fn::<Dynamic>(
+                &mut Scope::new(),
+                &plugin.ast,
+                "request_guard",
+                (Dynamic::from(req.clone()),),
+            ) {
+                Ok(d) if d.is_unit() => continue, // allow
+                Ok(d) if d.is::<rhai::Map>() => {
+                    let m = d.try_cast::<rhai::Map>().expect("checked is::<Map>");
+                    if let Some(loc) = m
+                        .get("redirect")
+                        .and_then(|v| v.clone().try_cast::<String>())
+                        .filter(|s| s.starts_with('/'))
+                    {
+                        return GuardOutcome::Redirect(loc);
+                    }
+                    let status = m
+                        .get("status")
+                        .and_then(|v| v.clone().try_cast::<i64>())
+                        .unwrap_or(403);
+                    let status = u16::try_from(status).unwrap_or(403);
+                    let body = m
+                        .get("body")
+                        .and_then(|v| v.clone().try_cast::<String>())
+                        .unwrap_or_default();
+                    return GuardOutcome::Respond { status, body };
+                }
+                Ok(_) => continue, // unexpected return type — treat as allow
+                Err(e) => {
+                    tracing::warn!(plugin = pname, hook = "request_guard", error = %e, "guard failed");
+                    continue;
+                }
+            }
+        }
+        GuardOutcome::Allow
+    }
+
     /// Invoke a plugin admin route (requires an authenticated session).
     /// `url_path` is the full request URL (e.g. `/admin/plugins/stats`).
     pub fn admin_route(
@@ -613,6 +703,7 @@ fn build_engine(
     plugin_name: &str,
     configs: &Arc<ConfigManager>,
     permissions: &[String],
+    instance_secret: &str,
 ) -> Engine {
     let mut engine = Engine::new();
 
@@ -655,6 +746,11 @@ fn build_engine(
         _ => tracing::info!(target: "polaris::plugin", "{msg}"),
     });
     engine.register_fn("now", crate::utils::time::now);
+
+    // Plugin-scoped signing key: HMAC(instance secret, "plugin-signing:name")
+    // — domain-separated, so a plugin can sign its own tokens (e.g. gate
+    // clearance cookies) without ever seeing the instance secret.
+    crypto::register_signing(&mut engine, plugin_name, instance_secret);
     engine.register_fn("now_iso", || {
         chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
     });
