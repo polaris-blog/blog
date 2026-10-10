@@ -84,6 +84,7 @@ pub fn register_plugin_filters(tera: &mut Tera, plugins: &Arc<PluginManager>) {
 
 static ADMIN_SOURCES: &[(&str, &str)] = &[
     ("base.html", include_str!("admin/base.html")),
+    ("plugin_page.html", include_str!("admin/plugin_page.html")),
     ("jobs.html", include_str!("admin/jobs.html")),
     ("job_detail.html", include_str!("admin/job_detail.html")),
     ("job_confirm.html", include_str!("admin/job_confirm.html")),

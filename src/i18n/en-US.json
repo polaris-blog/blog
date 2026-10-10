@@ -763,6 +763,7 @@
 
   "admin.terms.no_tags_hint": "No tags yet.",
 
-  "admin.terms.auto_note": "Terms are also created automatically when you save a post with a category or tags."
+  "admin.terms.auto_note": "Terms are also created automatically when you save a post with a category or tags.",
 
+  "admin.plugin_page.title": "Plugin"
 }

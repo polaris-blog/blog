@@ -1039,3 +1039,12 @@ pre.job-wrap { white-space: pre-wrap; }
 .job-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
 .job-meta { display: grid; grid-template-columns: minmax(110px, 180px) minmax(0, 1fr); gap: 8px 16px; }
 .job-meta dd { margin: 0; }
+
+/* Plugin page stat cards (e.g. Entry Gate visitor stats). */
+.stat-grid { display: flex; flex-wrap: wrap; gap: 14px; margin: 0.8em 0 1em; }
+.stat-card {
+  flex: 1 1 140px; padding: 14px 16px; border-radius: 10px;
+  background: var(--surface-2, rgba(127,127,127,.08));
+}
+.stat-value { font-size: 26px; font-weight: 700; letter-spacing: -0.3px; }
+.stat-label { font-size: 12px; color: var(--muted); margin-top: 2px; }

@@ -24,5 +24,8 @@ polaris.toml
 .vscode
 .DS_Store
 
+# Local plugins not shipped with the repository
+plugins/gate/
+
 # Local demo instance (config + its data-demo/ directory)
 /polaris-demo.toml

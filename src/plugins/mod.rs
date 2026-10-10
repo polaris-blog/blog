@@ -50,6 +50,7 @@ use crate::config_store::{ConfigManager, plugin_ns};
 pub mod crypto;
 pub mod http;
 pub mod jobs;
+pub mod stats;
 
 // ---------------------------------------------------------------------------
 // Plugin metadata & loading
@@ -124,6 +125,8 @@ pub struct PluginManager {
     /// Instance secret — the source for per-plugin signing keys (see
     /// crypto::register_signing). Empty in tests unless provided.
     instance_secret: String,
+    /// In-memory counters exposed as stat_incr/stat_get (see stats.rs).
+    stats: std::sync::Arc<crate::plugins::stats::Stats>,
     inner: RwLock<Inner>,
     scheduler: Option<std::sync::Weak<crate::scheduler::Scheduler>>,
 }
@@ -170,6 +173,7 @@ impl PluginManager {
             plugin_cache,
             configs,
             instance_secret: String::new(),
+            stats: std::sync::Arc::new(crate::plugins::stats::Stats::new()),
             inner: RwLock::new(Inner::default()),
             scheduler,
         };
@@ -229,6 +233,7 @@ impl PluginManager {
             &self.configs,
             &spec.permissions,
             &self.instance_secret,
+            self.stats.clone(),
         );
         jobs::register_api(&mut engine, name, self.scheduler.clone(), jobs.clone());
         let engine = Arc::new(engine);
@@ -626,6 +631,8 @@ impl PluginManager {
             };
             let mut call_ctx = ctx.clone();
             call_ctx.insert("path".into(), Dynamic::from(url_path.to_string()));
+            // Site locale — plugins can localize their pages.
+            call_ctx.insert("lang".into(), Dynamic::from(crate::i18n::locale()));
             let res = plugin.engine.call_fn::<Dynamic>(
                 &mut Scope::new(),
                 &plugin.ast,
@@ -704,6 +711,7 @@ fn build_engine(
     configs: &Arc<ConfigManager>,
     permissions: &[String],
     instance_secret: &str,
+    stats: std::sync::Arc<crate::plugins::stats::Stats>,
 ) -> Engine {
     let mut engine = Engine::new();
 
@@ -746,6 +754,19 @@ fn build_engine(
         _ => tracing::info!(target: "polaris::plugin", "{msg}"),
     });
     engine.register_fn("now", crate::utils::time::now);
+
+    // Statistics counters — atomic, in-memory, TTL'd per key (visitor
+    // counts, event tallies). Reset on restart by design.
+    let stats_incr = stats.clone();
+    engine.register_fn("stat_incr", move |key: &str, ttl_secs: i64| -> i64 {
+        stats_incr.incr(
+            key,
+            std::time::Duration::from_secs(ttl_secs.clamp(60, 86_400 * 7) as u64),
+        )
+    });
+    let stats = stats.clone();
+    let stats = stats.clone();
+    engine.register_fn("stat_get", move |key: &str| -> i64 { stats.get(key) });
 
     // Plugin-scoped signing key: HMAC(instance secret, "plugin-signing:name")
     // — domain-separated, so a plugin can sign its own tokens (e.g. gate

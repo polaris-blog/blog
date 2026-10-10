@@ -2886,7 +2886,28 @@ async fn plugin_admin_route(
         qmap.insert(k.as_str().into(), rhai::Dynamic::from(v.clone()));
     }
     match app.plugins.admin_route(&full, &qmap, &auth) {
-        Some(r) => crate::http::plugins_http::route_response(r),
+        Some(r) => {
+            // HTML pages render inside the standard admin layout (sidebar
+            // kept); anything else (JSON, plain text, non-200) passes
+            // through untouched.
+            if r.status == 200 && r.content_type.starts_with("text/html") {
+                let page_query = PageQuery {
+                    ok: None,
+                    err: None,
+                    status: None,
+                    page: None,
+                };
+                let mut ctx = base_ctx(&app, &auth, "plugins", &page_query);
+                ctx.insert("body", &r.body);
+                match templates::render_admin("plugin_page.html", &ctx) {
+                    Ok(html) => return Html(html).into_response(),
+                    Err(e) => {
+                        tracing::warn!(error = %e, "plugin admin page layout failed");
+                    }
+                }
+            }
+            crate::http::plugins_http::route_response(r)
+        }
         None => (
             axum::http::StatusCode::NOT_FOUND,
             Html(format!(
