@@ -673,9 +673,17 @@ async fn plugin_guard_mw(State(app): State<App>, req: Request, next: Next) -> Re
             body,
             headers,
         } => {
+            // Guard responses are rendered content — default to HTML so the
+            // browser executes the page's scripts (a text/plain default
+            // would suppress them entirely under nosniff). A plugin can
+            // still override the type via its own headers below.
             let mut resp = (
                 axum::http::StatusCode::from_u16(status)
                     .unwrap_or(axum::http::StatusCode::FORBIDDEN),
+                [(
+                    header::CONTENT_TYPE,
+                    HeaderValue::from_static("text/html; charset=utf-8"),
+                )],
                 body,
             )
                 .into_response();

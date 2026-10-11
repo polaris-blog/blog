@@ -823,6 +823,18 @@ async fn turnstile_challenge_page_keeps_its_csp() {
         .unwrap();
     assert_eq!(resp.status(), axum::http::StatusCode::FORBIDDEN);
 
+    // The page must actually render as HTML — a text/plain default would
+    // suppress every script on the page under `nosniff`.
+    let ct = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or_default();
+    assert!(
+        ct.starts_with("text/html"),
+        "guard challenge page must be served as HTML, got: {ct}"
+    );
+
     let csp = resp
         .headers()
         .get("content-security-policy")
