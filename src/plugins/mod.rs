@@ -572,7 +572,14 @@ impl PluginManager {
                     if let Some(loc) = m
                         .get("redirect")
                         .and_then(|v| v.clone().try_cast::<String>())
-                        .filter(|s| s.starts_with('/'))
+                        // Same-origin only: "//host" and "/\host" would be
+                        // folded by browsers into a protocol-relative
+                        // redirect to an external origin.
+                        .filter(|s| {
+                            s.starts_with('/')
+                                && !s[1..].starts_with('/')
+                                && !s[1..].starts_with('\\')
+                        })
                     {
                         return GuardOutcome::Redirect(loc);
                     }
@@ -723,10 +730,27 @@ fn headers_from_map(v: Option<Dynamic>) -> Vec<(String, String)> {
             if name.is_empty() || name.len() > 128 {
                 return None;
             }
+            // Framing/connection headers are owned by the server: a plugin
+            // setting a mismatched Content-Length would desynchronize the
+            // response framing for the client.
+            let lower = name.to_ascii_lowercase();
+            if FORBIDDEN_RESPONSE_HEADERS.contains(&lower.as_str()) {
+                return None;
+            }
             Some((name, value))
         })
         .collect()
 }
+
+/// Response headers a plugin may never set — framing and connection state is
+/// the server's to own.
+const FORBIDDEN_RESPONSE_HEADERS: [&str; 5] = [
+    "content-length",
+    "transfer-encoding",
+    "connection",
+    "keep-alive",
+    "upgrade",
+];
 
 /// Resource limits for the Rhai sandbox.
 ///
@@ -801,7 +825,6 @@ fn build_engine(
             std::time::Duration::from_secs(ttl_secs.clamp(60, 86_400 * 7) as u64),
         )
     });
-    let stats = stats.clone();
     let stats = stats.clone();
     engine.register_fn("stat_get", move |key: &str| -> i64 { stats.get(key) });
 
@@ -1004,4 +1027,70 @@ macro_rules! rmap {
         $( m.insert($k.into(), rhai::Dynamic::from($v)); )*
         m
     }};
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn header_map(pairs: &[(&str, &str)]) -> Option<Dynamic> {
+        let mut m = rhai::Map::new();
+        for (k, v) in pairs {
+            m.insert((*k).into(), Dynamic::from((*v).to_string()));
+        }
+        Some(Dynamic::from(m))
+    }
+
+    #[test]
+    fn headers_from_map_passes_regular_headers() {
+        let out = headers_from_map(header_map(&[
+            ("Content-Security-Policy", "default-src 'self'"),
+            ("X-Custom", "v"),
+        ]));
+        assert_eq!(
+            out,
+            vec![
+                (
+                    "Content-Security-Policy".to_string(),
+                    "default-src 'self'".to_string()
+                ),
+                ("X-Custom".to_string(), "v".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn headers_from_map_blocks_framing_headers() {
+        for name in [
+            "Content-Length",
+            "content-length",
+            "TRANSFER-ENCODING",
+            "Connection",
+            "Keep-Alive",
+            "Upgrade",
+        ] {
+            let out = headers_from_map(header_map(&[(name, "999999")]));
+            assert!(out.is_empty(), "{name} must be dropped");
+        }
+    }
+
+    #[test]
+    fn headers_from_map_drops_invalid_entries() {
+        // Non-string value, oversized and empty names are skipped; the rest
+        // survives. Names are trimmed.
+        let out = headers_from_map(header_map(&[
+            ("  Spaced  ", "v"),
+            ("", "v"),
+            (
+                "ThisNameIsWayTooLongAndGetsRejectedBecauseItExceedsOneHundredAndTwentyEightCharactersByAFewPositionsToMakeSureTheGuardTrulyRejectsIt",
+                "v",
+            ),
+        ]));
+        assert_eq!(out, vec![("Spaced".to_string(), "v".to_string())]);
+
+        let mut m = rhai::Map::new();
+        m.insert("NotAString".into(), Dynamic::from(42_i64));
+        assert!(headers_from_map(Some(Dynamic::from(m))).is_empty());
+        assert!(headers_from_map(None).is_empty());
+    }
 }

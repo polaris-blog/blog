@@ -137,13 +137,19 @@ pub fn register(engine: &mut Engine) {
 /// derived as `HMAC(instance_secret, "plugin-signing:<plugin>")`. Scripts can
 /// sign and later verify their own tokens (challenge clearances, webhook
 /// payloads) without ever seeing the instance secret or another plugin's key.
+/// `verify_hex(data, sig)` is the matching constant-time check.
 pub fn register_signing(engine: &mut Engine, plugin_name: &str, instance_secret: &str) {
     let key = hmac_sha256_hex(
         instance_secret.as_bytes(),
         &format!("plugin-signing:{plugin_name}"),
     );
+    let key_sign = key.clone();
     engine.register_fn("sign_hex", move |data: &str| -> String {
-        hmac_sha256_hex(key.as_bytes(), data)
+        hmac_sha256_hex(key_sign.as_bytes(), data)
+    });
+    let key_verify = key;
+    engine.register_fn("verify_hex", move |data: &str, sig: &str| -> bool {
+        crate::utils::cookies::ct_eq(&hmac_sha256_hex(key_verify.as_bytes(), data), sig)
     });
 }
 

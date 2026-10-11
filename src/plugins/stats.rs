@@ -28,7 +28,7 @@ impl Stats {
     /// Increment `key` by one and return the new value. The entry expires
     /// after `ttl`. A stale (expired) entry restarts from 1.
     pub fn incr(&self, key: &str, ttl: Duration) -> i64 {
-        let mut entries = self.entries.write().expect("stats lock");
+        let mut entries = crate::utils::lock::write(&self.entries);
         self.maybe_sweep(&mut entries);
         let expires_at = Instant::now() + ttl;
         match entries.get_mut(key) {
@@ -46,7 +46,7 @@ impl Stats {
 
     /// Current value of `key` (0 when absent or expired).
     pub fn get(&self, key: &str) -> i64 {
-        let entries = self.entries.read().expect("stats lock");
+        let entries = crate::utils::lock::read(&self.entries);
         match entries.get(key) {
             Some((value, exp)) if *exp > Instant::now() => *value,
             _ => 0,

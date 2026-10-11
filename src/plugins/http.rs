@@ -265,7 +265,7 @@ fn ip_allowed(ip: IpAddr) -> bool {
             !(v4.is_loopback()
                 || v4.is_private()
                 || v4.is_link_local()
-                || v4.is_unspecified()
+                || o[0] == 0 // 0.0.0.0/8 ("this network"), incl. unspecified
                 || v4.is_broadcast()
                 || v4.is_documentation()
                 || (o[0] == 100 && (o[1] & 0xC0) == 64) // 100.64.0.0/10 CGNAT
@@ -283,7 +283,9 @@ fn ip_allowed(ip: IpAddr) -> bool {
                 || (seg[0] & 0xFE00) == 0xFC00 // fc00::/7 unique local
                 || (seg[0] & 0xFFC0) == 0xFE80 // fe80::/10 link local
                 || (seg[0] & 0xFF00) == 0xFF00 // multicast
-                || (seg[0] == 0x2001 && seg[1] == 0x0DB8)) // documentation
+                || (seg[0] == 0x2001 && seg[1] == 0x0DB8) // documentation
+                || seg[..6].iter().all(|&s| s == 0) // ::/96 IPv4-compatible
+                || (seg[0] == 0x0064 && seg[1] == 0xFF9B)) // 64:ff9b::/96 NAT64
         }
     }
 }
@@ -380,6 +382,7 @@ mod tests {
             "192.168.1.1",
             "169.254.1.1",
             "0.0.0.0",
+            "0.1.2.3", // 0.0.0.0/8
             "100.64.0.1",
             "192.0.2.1",
             "198.18.0.1",
@@ -393,6 +396,8 @@ mod tests {
             "ff02::1",
             "2001:db8::1",
             "::ffff:127.0.0.1",
+            "::7f00:1",        // ::/96 IPv4-compatible
+            "64:ff9b::7f00:1", // NAT64-mapped loopback
         ];
         for bad in blocked {
             assert!(!ip_allowed(bad.parse().unwrap()), "must block {bad}");

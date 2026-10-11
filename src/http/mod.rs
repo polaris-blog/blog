@@ -628,7 +628,13 @@ async fn plugin_guard_mw(State(app): State<App>, req: Request, next: Next) -> Re
     {
         for pair in raw.split(';') {
             if let Some((k, v)) = pair.split_once('=') {
-                cookies.insert(k.trim().into(), Dynamic::from(v.trim().to_string()));
+                let k = k.trim();
+                // Session credentials never cross the plugin boundary —
+                // guards learn about login state only via `has_session`.
+                if k == crate::auth::SESSION_COOKIE || k == crate::auth::LOGIN_CSRF_COOKIE {
+                    continue;
+                }
+                cookies.insert(k.into(), Dynamic::from(v.trim().to_string()));
             }
         }
     }
