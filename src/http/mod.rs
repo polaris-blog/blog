@@ -684,8 +684,9 @@ async fn plugin_guard_mw(State(app): State<App>, req: Request, next: Next) -> Re
                 body,
             )
                 .into_response();
-            // Plugin-supplied headers (e.g. a page-scoped CSP) replace the
-            // security middleware's same-named defaults on this response.
+            // Plugin-supplied headers (e.g. a page-scoped CSP for a gate page
+            // embedding a third-party widget) replace the security
+            // middleware's same-named defaults on this response.
             for (name, value) in headers {
                 if let (Ok(name), Ok(v)) = (
                     axum::http::HeaderName::from_bytes(name.as_bytes()),
@@ -694,7 +695,7 @@ async fn plugin_guard_mw(State(app): State<App>, req: Request, next: Next) -> Re
                     resp.headers_mut().insert(name, v);
                 }
             }
-            eprintln!("GUARD RESPOND: {status}");
+            tracing::debug!(status, "plugin guard responded");
             resp
         }
     }

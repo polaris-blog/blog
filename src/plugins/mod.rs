@@ -585,23 +585,7 @@ impl PluginManager {
                         .get("body")
                         .and_then(|v| v.clone().try_cast::<String>())
                         .unwrap_or_default();
-                    let headers = m
-                        .get("headers")
-                        .and_then(|v| v.clone().try_cast::<rhai::Map>())
-                        .map(|h| {
-                            h.into_iter()
-                                .filter_map(|(k, v)| {
-                                    let name = k.to_string();
-                                    let value = v.clone().try_cast::<String>()?;
-                                    if !name.is_empty() && name.len() <= 128 {
-                                        Some((name, value))
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .collect()
-                        })
-                        .unwrap_or_default();
+                    let headers = headers_from_map(m.get("headers").cloned());
                     return GuardOutcome::Respond {
                         status,
                         body,
@@ -700,23 +684,7 @@ fn route_result_from_dynamic(d: Dynamic) -> RouteResult {
             .get("content_type")
             .and_then(|d| d.clone().try_cast::<String>())
             .unwrap_or_else(|| "text/html; charset=utf-8".into());
-        let headers = m
-            .get("headers")
-            .and_then(|d| d.clone().try_cast::<rhai::Map>())
-            .map(|h| {
-                h.into_iter()
-                    .filter_map(|(k, v)| {
-                        let name = k.to_string();
-                        let value = v.clone().try_cast::<String>()?;
-                        if !name.is_empty() && name.len() <= 128 {
-                            Some((name, value))
-                        } else {
-                            None
-                        }
-                    })
-                    .collect()
-            })
-            .unwrap_or_default();
+        let headers = headers_from_map(m.get("headers").cloned());
         return RouteResult {
             status: status.clamp(200, 599) as u16,
             content_type,
@@ -739,6 +707,25 @@ fn route_result_from_dynamic(d: Dynamic) -> RouteResult {
         body: d.to_string(),
         headers: Vec::new(),
     }
+}
+
+/// `#{ "Name": "value", … }` from a script into a validated header list:
+/// names are trimmed and length-capped, values must be plain strings.
+fn headers_from_map(v: Option<Dynamic>) -> Vec<(String, String)> {
+    let Some(m) = v.and_then(|d| d.try_cast::<rhai::Map>()) else {
+        return Vec::new();
+    };
+    m.into_iter()
+        .filter_map(|(k, val)| {
+            let name = k.to_string();
+            let name = name.trim().to_string();
+            let value = val.clone().try_cast::<String>()?;
+            if name.is_empty() || name.len() > 128 {
+                return None;
+            }
+            Some((name, value))
+        })
+        .collect()
 }
 
 /// Resource limits for the Rhai sandbox.

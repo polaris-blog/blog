@@ -131,7 +131,8 @@ data/
 themes/
 └── default/       # the active theme lives on disk, never in the binary
 plugins/
-└── example/       # sample plugin (disabled by default)
+├── example/       # sample plugin (disabled by default)
+└── turnstile/     # Cloudflare Turnstile entry gate (disabled by default)
 ```
 
 ## Extensions (theme & plugin packages)
@@ -260,13 +261,20 @@ SSRF-guarded `http_get` / `http_post` / `http_request` returning
 Plugins declaring `permissions = ["request.guard"]` can define a
 `request_guard(req)` hook that runs on every content-page request (input:
 method, path, query, cookies, ip, user agent, has-session) and may redirect
-or respond directly — the building block for human-verification gates,
-maintenance pages and IP bans. Plugin responses may also carry extra
-**headers** (a page-scoped CSP for widget pages, for example). The bundled
-**Entry Gate** plugin uses the hook to put a verification step in front of
-the blog: built-in proof-of-work by default, or **Cloudflare Turnstile**
-(`mode = "turnstile"` plus the site/secret keys in its config — requires the
-`network.fetch` permission for the server-side check).
+or respond directly, with page-scoped response **headers** that override the
+security middleware's same-named defaults (a gate page whitelisting a widget
+origin in its CSP, for example).
+
+The bundled **Turnstile Gate** plugin uses this to put a
+[Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/) human
+verification in front of the blog: visitors without a signed clearance cookie
+get an embedded challenge, the token is verified server-side against
+Turnstile's siteverify endpoint (requires `network.fetch`), and passed
+visitors keep a configurable-lifetime clearance. Site/secret keys, exemptions
+(signed-in users, path prefixes, crawler user agents) and the widget look are
+configured under **Admin → Plugins → Turnstile Gate → Settings**;
+**Admin → Plugins → Turnstile Gate** shows challenge/pass/failure counters and
+a list of recent failed verifications (suspected bots).
 
 Enable at runtime: **Admin → Plugins → Enable**, or `polaris plugin enable example`. Full API: `docs/DEVELOPMENT.md`.
 

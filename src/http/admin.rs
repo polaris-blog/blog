@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 
 use axum::Router;
-use axum::extract::{ConnectInfo, Extension, Form, Path, Query, State};
+use axum::extract::{ConnectInfo, Extension, Form, Path, Query, RawQuery, State};
 use axum::http::{HeaderMap, header};
 use axum::middleware;
 use axum::response::{Html, IntoResponse, Redirect, Response};
@@ -2879,12 +2879,14 @@ async fn plugin_admin_route(
     Extension(auth): Extension<AuthCtx>,
     Path(path): Path<String>,
     Query(params): Query<HashMap<String, String>>,
+    RawQuery(raw): RawQuery,
 ) -> Response {
     let full = format!("/admin/plugins/{path}");
     let mut qmap = rhai::Map::new();
     for (k, v) in &params {
         qmap.insert(k.as_str().into(), rhai::Dynamic::from(v.clone()));
     }
+    qmap.insert("query".into(), rhai::Dynamic::from(raw.unwrap_or_default()));
     match app.plugins.admin_route(&full, &qmap, &auth) {
         Some(r) => {
             // HTML pages render inside the standard admin layout (sidebar

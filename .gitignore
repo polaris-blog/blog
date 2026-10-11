@@ -26,6 +26,7 @@ polaris.toml
 
 # Local plugins not shipped with the repository
 plugins/gate/
+plugins/turnstile/
 
 # Local demo instance (config + its data-demo/ directory)
 /polaris-demo.toml

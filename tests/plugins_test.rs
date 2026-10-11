@@ -510,3 +510,283 @@ fn probe(url) {
         Some("-1".to_string())
     );
 }
+
+// ---------------------------------------------------------------------------
+// Turnstile gate plugin (lives outside the repository — gitignored like the
+// gate plugin — so these tests are skipped when the files are absent, e.g.
+// on CI or a fresh clone)
+// ---------------------------------------------------------------------------
+
+/// True when the turnstile plugin sources are present in the working tree.
+fn turnstile_available() -> bool {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("plugins/turnstile/main.rhai")
+        .is_file()
+}
+
+/// Copy the turnstile plugin into the test plugins dir, with the given
+/// file-level config defaults.
+fn write_turnstile_plugin(dir: &Path, config_toml: &str) {
+    let src = Path::new(env!("CARGO_MANIFEST_DIR")).join("plugins/turnstile");
+    let root = dir.join("plugins").join("turnstile");
+    std::fs::create_dir_all(&root).unwrap();
+    for file in ["plugin.toml", "main.rhai", "config.schema.toml"] {
+        std::fs::write(
+            root.join(file),
+            std::fs::read_to_string(src.join(file)).unwrap(),
+        )
+        .unwrap();
+    }
+    if !config_toml.is_empty() {
+        std::fs::write(root.join("config.toml"), config_toml).unwrap();
+    }
+}
+
+/// PluginManager for the bundled turnstile plugin with its config namespace
+/// (schema defaults + config.toml file defaults) loaded.
+async fn turnstile_manager(dir: &Path, config_toml: &str) -> polaris::plugins::PluginManager {
+    write_turnstile_plugin(dir, config_toml);
+    let plugins_dir = dir.join("plugins");
+    // A ConfigManager built on the current test runtime (the shared helper
+    // spins its own runtime and cannot be used from #[tokio::test]).
+    let cfg = common::test_config(dir);
+    let db = polaris::db::Db::connect(&cfg.database)
+        .await
+        .expect("db connect");
+    let configs = std::sync::Arc::new(polaris::config_store::ConfigManager::new(
+        db,
+        "test-secret".into(),
+    ));
+    configs
+        .load_plugin(&plugins_dir, "turnstile")
+        .await
+        .expect("load turnstile config schema");
+    polaris::plugins::PluginManager::new(
+        &plugins_dir,
+        &["turnstile".to_string()],
+        Some(std::sync::Arc::new(
+            polaris::cache::memory::MemoryCache::new(64),
+        )),
+        configs,
+    )
+}
+
+/// Signing key the engine derives for this plugin when the instance secret
+/// is empty (tests construct PluginManager without `with_secret`).
+fn turnstile_signer() -> String {
+    polaris::plugins::crypto::hmac_sha256_hex(b"", "plugin-signing:turnstile")
+}
+
+fn signed(payload: &str) -> String {
+    let key = turnstile_signer();
+    format!(
+        "{payload}.{}",
+        polaris::plugins::crypto::hmac_sha256_hex(key.as_bytes(), payload)
+    )
+}
+
+/// A valid clearance payload expiring in an hour; `ip` is already normalized
+/// (empty = not IP-bound).
+fn clearance(exp_in_secs: i64, ip: &str) -> String {
+    signed(&format!(
+        "v1|{}|{}",
+        polaris::utils::time::now() + exp_in_secs,
+        ip
+    ))
+}
+
+fn expired_clearance(ip: &str) -> String {
+    signed(&format!("v1|{}|{}", polaris::utils::time::now() - 10, ip))
+}
+
+/// Enabled gate with a key pair configured (the gate refuses to run without
+/// both keys — see `gate_ready` in the plugin script).
+const TEST_GATE_CONFIG: &str = "enabled = true\nsite_key = \"0x4AAAAAAA_test_site\"\nsecret_key = \"0x4AAAAAAA_test_secret\"\n";
+
+#[tokio::test]
+async fn turnstile_gate_is_off_until_configured() {
+    if !turnstile_available() {
+        eprintln!("skipping: plugins/turnstile is not present locally");
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    // Schema defaults only → enabled = false.
+    let mgr = turnstile_manager(dir.path(), "").await;
+
+    // The guard lets everything through while disabled.
+    assert!(matches!(
+        mgr.request_guard(guard_map("/posts/x", &[])),
+        polaris::plugins::GuardOutcome::Allow
+    ));
+
+    // The verify endpoint reports the disabled state as 404.
+    let r = mgr
+        .route("/plugins/turnstile/verify", &rhai::Map::new())
+        .unwrap();
+    assert_eq!(r.status, 404);
+}
+
+#[tokio::test]
+async fn turnstile_gate_challenges_and_clears() {
+    if !turnstile_available() {
+        eprintln!("skipping: plugins/turnstile is not present locally");
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let mgr = turnstile_manager(dir.path(), TEST_GATE_CONFIG).await;
+
+    // Without a clearance: a 403 challenge page whitelisting the widget.
+    match mgr.request_guard(guard_map("/posts/hello", &[])) {
+        polaris::plugins::GuardOutcome::Respond {
+            status,
+            body,
+            headers,
+        } => {
+            assert_eq!(status, 403);
+            assert!(body.contains("challenges.cloudflare.com/turnstile"));
+            assert!(body.contains("/plugins/turnstile/verify"));
+            assert!(headers.iter().any(|(n, v)| n == "Content-Security-Policy"
+                && v.contains("https://challenges.cloudflare.com")));
+        }
+        other => panic!("expected challenge page, got {other:?}"),
+    }
+
+    // A valid, unbound clearance lets the visitor through.
+    let value = clearance(3600, "");
+    let ok = vec![("ts_cleared", value.as_str())];
+    assert!(matches!(
+        mgr.request_guard(guard_map("/posts/hello", &ok)),
+        polaris::plugins::GuardOutcome::Allow
+    ));
+
+    // A tampered signature is challenged again.
+    let mut tampered = clearance(3600, "");
+    tampered.push_str("beef");
+    let bad = vec![("ts_cleared", tampered.as_str())];
+    assert!(matches!(
+        mgr.request_guard(guard_map("/posts/hello", &bad)),
+        polaris::plugins::GuardOutcome::Respond { .. }
+    ));
+
+    // An expired clearance is challenged again.
+    let value = expired_clearance("");
+    let old = vec![("ts_cleared", value.as_str())];
+    assert!(matches!(
+        mgr.request_guard(guard_map("/posts/hello", &old)),
+        polaris::plugins::GuardOutcome::Respond { .. }
+    ));
+
+    // Signed-in users are exempt by default.
+    let mut m = guard_map("/posts/hello", &[]);
+    m.insert("has_session".into(), rhai::Dynamic::from(true));
+    assert!(matches!(
+        mgr.request_guard(m),
+        polaris::plugins::GuardOutcome::Allow
+    ));
+
+    // Exempt path prefixes are never challenged.
+    let dir2 = tempfile::tempdir().unwrap();
+    let mgr2 = turnstile_manager(
+        dir2.path(),
+        &format!("{TEST_GATE_CONFIG}exempt_paths = \"/api,/health\"\n"),
+    )
+    .await;
+    assert!(matches!(
+        mgr2.request_guard(guard_map("/api/posts", &[])),
+        polaris::plugins::GuardOutcome::Allow
+    ));
+    assert!(matches!(
+        mgr2.request_guard(guard_map("/api/posts/3", &[])),
+        polaris::plugins::GuardOutcome::Allow
+    ));
+    assert!(matches!(
+        mgr2.request_guard(guard_map("/posts/3", &[])),
+        polaris::plugins::GuardOutcome::Respond { .. }
+    ));
+}
+
+#[tokio::test]
+async fn turnstile_gate_ip_binding() {
+    if !turnstile_available() {
+        eprintln!("skipping: plugins/turnstile is not present locally");
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let mgr = turnstile_manager(
+        dir.path(),
+        "enabled = true\nbind_ip = true\nsite_key = \"0x4AAAAAAA_test_site\"\nsecret_key = \"0x4AAAAAAA_test_secret\"\n",
+    )
+    .await;
+
+    // guard_map hardcodes ip 203.0.113.9 — a clearance bound to another
+    // address is rejected…
+    let value = clearance(3600, "1-2-3-4");
+    let other = vec![("ts_cleared", value.as_str())];
+    assert!(matches!(
+        mgr.request_guard(guard_map("/posts/hello", &other)),
+        polaris::plugins::GuardOutcome::Respond { .. }
+    ));
+
+    // …while one bound to the requesting IP passes.
+    let value = clearance(3600, "203-0-113-9");
+    let own = vec![("ts_cleared", value.as_str())];
+    assert!(matches!(
+        mgr.request_guard(guard_map("/posts/hello", &own)),
+        polaris::plugins::GuardOutcome::Allow
+    ));
+}
+
+#[tokio::test]
+async fn turnstile_verify_rejects_bad_input() {
+    if !turnstile_available() {
+        eprintln!("skipping: plugins/turnstile is not present locally");
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let mgr = turnstile_manager(dir.path(), TEST_GATE_CONFIG).await;
+
+    // No token, no ticket → 400 JSON.
+    let r = mgr
+        .route("/plugins/turnstile/verify", &rhai::Map::new())
+        .unwrap();
+    assert_eq!(r.status, 400);
+    assert!(r.content_type.starts_with("application/json"));
+    assert!(r.body.contains("bad_request"));
+
+    // A signed but expired ticket is rejected the same way (the clearance
+    // payload signature path is covered by the guard tests above).
+    let mut ctx = rhai::Map::new();
+    ctx.insert("token".into(), rhai::Dynamic::from("dummy-token"));
+    ctx.insert(
+        "ticket".into(),
+        rhai::Dynamic::from(signed(&format!(
+            "t|{}|203-0-113-9",
+            polaris::utils::time::now() - 10
+        ))),
+    );
+    let r = mgr.route("/plugins/turnstile/verify", &ctx).unwrap();
+    assert_eq!(r.status, 400);
+}
+
+#[tokio::test]
+async fn turnstile_stats_page_renders() {
+    if !turnstile_available() {
+        eprintln!("skipping: plugins/turnstile is not present locally");
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let mgr = turnstile_manager(dir.path(), TEST_GATE_CONFIG).await;
+    let user = polaris::auth::AuthCtx {
+        user_id: 1,
+        username: "admin".into(),
+        display_name: "Admin".into(),
+        role: polaris::models::Role::Admin,
+        csrf: "t".into(),
+    };
+    let r = mgr
+        .admin_route("/admin/plugins/turnstile/stats", &rhai::Map::new(), &user)
+        .unwrap();
+    assert_eq!(r.status, 200);
+    assert!(r.content_type.starts_with("text/html"));
+    assert!(r.body.contains("Turnstile"));
+}
