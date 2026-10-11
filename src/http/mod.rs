@@ -143,29 +143,24 @@ fn is_setup_redirect_target(path: &str) -> bool {
         )
 }
 
+/// Site-wide security header defaults. Applied as *defaults*: a header an
+/// inner layer set deliberately (a plugin gate page whitelisting a widget
+/// origin in its page-scoped CSP, for example) is kept, not clobbered.
+const DEFAULT_CSP: &str = "default-src 'self'; style-src 'self' 'unsafe-inline'; \
+     img-src 'self' data: https:; script-src 'self'; \
+     frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
+
 async fn security_headers_mw(req: Request, next: Next) -> Response {
     let mut resp = next.run(req).await;
     let h = resp.headers_mut();
-    h.insert(
-        header::HeaderName::from_static("x-content-type-options"),
-        HeaderValue::from_static("nosniff"),
-    );
-    h.insert(
-        header::HeaderName::from_static("x-frame-options"),
-        HeaderValue::from_static("DENY"),
-    );
-    h.insert(
-        header::HeaderName::from_static("referrer-policy"),
-        HeaderValue::from_static("strict-origin-when-cross-origin"),
-    );
-    h.insert(
-        header::HeaderName::from_static("content-security-policy"),
-        HeaderValue::from_static(
-            "default-src 'self'; style-src 'self' 'unsafe-inline'; \
-             img-src 'self' data: https:; script-src 'self'; \
-             frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
-        ),
-    );
+    h.entry(header::HeaderName::from_static("x-content-type-options"))
+        .or_insert(HeaderValue::from_static("nosniff"));
+    h.entry(header::HeaderName::from_static("x-frame-options"))
+        .or_insert(HeaderValue::from_static("DENY"));
+    h.entry(header::HeaderName::from_static("referrer-policy"))
+        .or_insert(HeaderValue::from_static("strict-origin-when-cross-origin"));
+    h.entry(header::HeaderName::from_static("content-security-policy"))
+        .or_insert(HeaderValue::from_static(DEFAULT_CSP));
     resp
 }
 

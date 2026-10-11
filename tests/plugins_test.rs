@@ -790,3 +790,50 @@ async fn turnstile_stats_page_renders() {
     assert!(r.content_type.starts_with("text/html"));
     assert!(r.body.contains("Turnstile"));
 }
+
+/// End-to-end regression: the guard's page-scoped CSP must reach the client.
+/// The site-wide security headers middleware used to overwrite it
+/// unconditionally, which blocked the Turnstile widget script entirely.
+#[tokio::test]
+async fn turnstile_challenge_page_keeps_its_csp() {
+    if !turnstile_available() {
+        eprintln!("skipping: plugins/turnstile is not present locally");
+        return;
+    }
+    use axum::body::Body;
+    use axum::extract::Request;
+    use http_body_util::BodyExt;
+    use tower::ServiceExt;
+
+    let (app, dir) = common::init_app().await;
+    write_turnstile_plugin(dir.path(), TEST_GATE_CONFIG);
+    app.set_plugins_enabled(&["turnstile".to_string()])
+        .await
+        .unwrap();
+    let router = polaris::http::router(app.clone());
+
+    let resp: axum::response::Response = router
+        .oneshot(
+            Request::builder()
+                .uri("/posts/anything")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), axum::http::StatusCode::FORBIDDEN);
+
+    let csp = resp
+        .headers()
+        .get("content-security-policy")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or_default()
+        .to_string();
+    assert!(
+        csp.contains("https://challenges.cloudflare.com"),
+        "guard CSP must survive the security middleware, got: {csp}"
+    );
+
+    let bytes = resp.into_body().collect().await.unwrap().to_bytes();
+    assert!(String::from_utf8_lossy(&bytes).contains("challenges.cloudflare.com/turnstile"));
+}
