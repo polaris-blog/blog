@@ -48,7 +48,6 @@ pub fn router(app: App) -> Router {
         .route("/{slug}", get(public::page))
         .route("/search", get(search::page))
         .route("/rss.xml", get(seo::rss))
-        .route("/atom.xml", get(seo::atom))
         .route("/sitemap.xml", get(seo::sitemap))
         .route("/robots.txt", get(seo::robots))
         .route("/static/{*path}", get(static_files::theme_static))
@@ -134,12 +133,7 @@ fn is_setup_redirect_target(path: &str) -> bool {
         && !path.starts_with("/static/")
         && !matches!(
             path,
-            "/favicon.ico"
-                | "/rss.xml"
-                | "/atom.xml"
-                | "/sitemap.xml"
-                | "/robots.txt"
-                | "/comments"
+            "/favicon.ico" | "/rss.xml" | "/sitemap.xml" | "/robots.txt" | "/comments"
         )
 }
 
@@ -368,7 +362,6 @@ fn is_compressible(ct: Option<&str>) -> bool {
             | "application/javascript"
             | "application/json"
             | "application/xml"
-            | "application/atom+xml"
             | "application/rss+xml"
             | "image/svg+xml"
     )
@@ -484,7 +477,7 @@ fn resp_etag_weak(etag: Option<&HeaderValue>) -> Option<HeaderValue> {
 // ---------------------------------------------------------------------------
 
 const CACHEABLE_PREFIXES: [&str; 4] = ["/posts/", "/category/", "/tag/", "/page/"];
-const RESERVED_ROOTS: [&str; 12] = [
+const RESERVED_ROOTS: [&str; 11] = [
     "admin",
     "api",
     "static",
@@ -492,7 +485,6 @@ const RESERVED_ROOTS: [&str; 12] = [
     "comments",
     "favicon.ico",
     "rss.xml",
-    "atom.xml",
     "sitemap.xml",
     "robots.txt",
     "search",

@@ -20,7 +20,6 @@
 <script src="/static/js/highlight.js" defer></script>
 {% if theme.config.accent_color %}<style>:root { --accent: {{ theme.config.accent_color }}; }</style>{% endif %}
 <link rel="alternate" type="application/rss+xml" title="{{ site.title }}" href="/rss.xml">
-<link rel="alternate" type="application/atom+xml" title="{{ site.title }}" href="/atom.xml">
 </head>
 <body {% if theme.config.layout == 'wide' %}class="layout-wide"{% endif %} data-copy-label="{{ t(key='code.copy') }}" data-copied-label="{{ t(key='code.copied') }}">
 
@@ -74,7 +73,6 @@
     <p class="footer-links">
       <a href="/">{{ t(key="footer.home") }}</a>
       <a href="/rss.xml">{{ t(key="footer.rss") }}</a>
-      <a href="/atom.xml">{{ t(key="footer.atom") }}</a>
       {% if theme.config.social_links %}
       {% for link in theme.config.social_links %}
       <a href="{{ link.url }}" rel="me">{{ link.label }}</a>
@@ -85,7 +83,7 @@
     <p>
       {{ t(key="footer.copyright") }} © {{ current_year }} {{ site.title }}.
       {% if site.description %}{{ site.description }}.{% endif %}
-      Powered by <a href="https://github.com/polaris">Polaris</a>.
+      Powered by <a href="https://github.com/polaris-blog/blog">Polaris</a>.
     </p>
     {% if theme.config.footer_text %}<p>{{ theme.config.footer_text }}</p>{% endif %}
   </div>

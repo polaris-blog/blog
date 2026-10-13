@@ -61,7 +61,6 @@ pub mod ns {
     pub const CATEGORY: &str = "category";
     pub const TAG: &str = "tag";
     pub const RSS: &str = "rss";
-    pub const ATOM: &str = "atom";
     pub const SITEMAP: &str = "sitemap";
     /// Search results and suggestions (version-invalidated with content).
     pub const SEARCH: &str = "search";
@@ -73,7 +72,7 @@ pub mod ns {
 
     /// Content namespaces invalidated together on any content mutation
     /// (post/page/term/user-profile/settings changes).
-    pub const CONTENT: &[&str] = &[POST, POSTS, PAGE, CATEGORY, TAG, RSS, ATOM, SITEMAP, SEARCH];
+    pub const CONTENT: &[&str] = &[POST, POSTS, PAGE, CATEGORY, TAG, RSS, SITEMAP, SEARCH];
 }
 
 /// Abstract cache backend contract. Implement this trait to add a new
@@ -359,7 +358,6 @@ impl CacheManager {
             ns::CATEGORY => self.ttl.category,
             ns::TAG => self.ttl.tag,
             ns::RSS => self.ttl.rss,
-            ns::ATOM => self.ttl.atom,
             ns::SITEMAP => self.ttl.sitemap,
             ns::SEARCH => self.ttl.search,
             // Rendered HTML rides the homepage/list TTL (most volatile

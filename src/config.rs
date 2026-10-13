@@ -160,7 +160,7 @@ impl Default for SiteConfig {
     fn default() -> Self {
         Self {
             title: "Polaris".into(),
-            description: "A fast, lightweight blog powered by Polaris".into(),
+            description: "A fast, lightweight blog".into(),
             base_url: String::new(),
             posts_per_page: 10,
         }
@@ -332,7 +332,6 @@ pub struct CacheTtlConfig {
     pub homepage: u64,
     pub posts: u64,
     pub rss: u64,
-    pub atom: u64,
     pub sitemap: u64,
     /// Search results and suggestions (`[search.cache]` namespace).
     pub search: u64,
@@ -348,7 +347,6 @@ impl Default for CacheTtlConfig {
             homepage: 60,
             posts: 60,
             rss: 300,
-            atom: 300,
             sitemap: 600,
             search: 60,
         }

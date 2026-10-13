@@ -16,7 +16,6 @@
 <meta name="twitter:title" content="{% if seo.title %}{{ seo.title }}{% else %}{{ site.title }}{% endif %}">
 {% endif %}
 <link rel="alternate" type="application/rss+xml" title="{{ site.title }}" href="/rss.xml">
-<link rel="alternate" type="application/atom+xml" title="{{ site.title }}" href="/atom.xml">
 <script src="/static/js/theme.js"></script>
 <script src="/static/js/highlight.js" defer></script>
 <style>
@@ -246,7 +245,7 @@ form.comment-form button {
   </main>
 
   <footer class="site">
-    <p>{% if site.description %}{{ site.description }} · {% endif %}Powered by <a href="https://github.com/polaris">Polaris</a> · &copy; {{ current_year }} {{ site.title }}</p>
+    <p>{% if site.description %}{{ site.description }} · {% endif %}Powered by <a href="https://github.com/polaris-blog/blog">Polaris</a> · &copy; {{ current_year }} {{ site.title }}</p>
   </footer>
 </div>
 {% if json_ld %}

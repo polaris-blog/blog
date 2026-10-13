@@ -1,4 +1,4 @@
-//! SEO endpoints: sitemap.xml, robots.txt, rss.xml, atom.xml.
+//! SEO endpoints: sitemap.xml, robots.txt, rss.xml.
 //!
 //! Feeds and the sitemap are cached (cache-aside, single-flight) keyed by
 //! the effective base URL — the configured `site.base_url` or the request
@@ -74,41 +74,6 @@ async fn build_rss(app: &App, base: &str) -> anyhow::Result<String> {
     ))
 }
 
-pub async fn atom(State(app): State<App>, headers: HeaderMap) -> AppResult<Response> {
-    let base = base_url_for(&app, &headers);
-    let body = app
-        .cache
-        .get_or_load::<String, _>(ns::ATOM, &base, async { build_atom(&app, &base).await })
-        .await
-        .map_err(AppError::Internal)?;
-    Ok(xml_response("application/atom+xml; charset=utf-8", body))
-}
-
-async fn build_atom(app: &App, base: &str) -> anyhow::Result<String> {
-    let site_title = xml::esc(&app.site_title());
-    let posts = posts_repo::latest_published(&app.db, FEED_LIMIT).await?;
-
-    let mut entries = String::new();
-    for p in &posts {
-        let url = format!("{}/posts/{}", base, p.slug);
-        let ts = p.published_at.unwrap_or(p.created_at);
-        entries.push_str(&format!(
-            "  <entry>\n    <title>{}</title>\n    <link href=\"{}\" rel=\"alternate\" type=\"text/html\"/>\n    <id>{}</id>\n    <updated>{}</updated>\n    <published>{}</published>\n    <author><name>{}</name></author>\n    <summary>{}</summary>\n  </entry>\n",
-            xml::esc(&p.title),
-            xml::esc(&url),
-            xml::esc(&url),
-            time::format(p.updated_at, "rfc3339"),
-            time::format(ts, "rfc3339"),
-            xml::esc(p.author_name.as_deref().unwrap_or("")),
-            xml::esc(&p.summary),
-        ));
-    }
-    Ok(format!(
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<feed xmlns=\"http://www.w3.org/2005/Atom\">\n  <title>{site_title}</title>\n  <id>{base}/atom.xml</id>\n  <updated>{}</updated>\n  <generator>Polaris</generator>\n{entries}</feed>\n",
-        time::format(time::now(), "rfc3339"),
-    ))
-}
-
 pub async fn sitemap(State(app): State<App>, headers: HeaderMap) -> AppResult<Response> {
     let base = base_url_for(&app, &headers);
     let body = app
@@ -121,12 +86,27 @@ pub async fn sitemap(State(app): State<App>, headers: HeaderMap) -> AppResult<Re
     Ok(xml_response("application/xml; charset=utf-8", body))
 }
 
+/// Automatic sitemap: homepage and its pagination, static pages, posts and
+/// the public listing pagination for every category/tag. Pagination depth
+/// follows the same `posts_per_page` setting as the public list handlers,
+/// so every generated URL is a page a visitor can actually land on.
 async fn build_sitemap(app: &App, base: &str) -> anyhow::Result<String> {
+    let per = app.posts_per_page() as i64;
     let mut urls = String::new();
+
+    // Homepage and its pagination (/page/{n}).
     urls.push_str(&format!(
         "  <url>\n    <loc>{}</loc>\n  </url>\n",
         xml::esc(base)
     ));
+    let home = crate::services::posts::list_public_full(app, 1, per, None).await?;
+    for page in 2..=home.pages {
+        urls.push_str(&format!(
+            "  <url>\n    <loc>{}/page/{page}</loc>\n  </url>\n",
+            xml::esc(base)
+        ));
+    }
+
     for p in pages::list(&app.db, true).await? {
         urls.push_str(&format!(
             "  <url>\n    <loc>{}/{}</loc>\n    <lastmod>{}</lastmod>\n  </url>\n",
@@ -155,6 +135,17 @@ async fn build_sitemap(app: &App, base: &str) -> anyhow::Result<String> {
                 prefix,
                 xml::esc(&t.slug)
             ));
+            // Listing pages 2..=N for terms with more posts than one page
+            // holds (count 0 or below → single listing, no pagination).
+            let listing = crate::services::posts::list_public_full(app, 1, per, Some(t.id)).await?;
+            for page in 2..=listing.pages {
+                urls.push_str(&format!(
+                    "  <url>\n    <loc>{}/{}/{}/page/{page}</loc>\n  </url>\n",
+                    xml::esc(base),
+                    prefix,
+                    xml::esc(&t.slug)
+                ));
+            }
         }
     }
     Ok(format!(

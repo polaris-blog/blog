@@ -180,18 +180,16 @@ async fn seo_feeds_and_sitemap() {
     assert!(xml.contains("<rss"), "rss root element");
     assert!(xml.contains("hello-polaris"), "rss lists the seeded post");
 
-    let resp = get(&router, "/atom.xml").await;
-    assert_eq!(resp.status(), StatusCode::OK);
-    let xml = body(resp).await;
-    assert!(xml.contains("<feed"), "atom root element");
-    assert!(xml.contains("hello-polaris"));
-
     let resp = get(&router, "/sitemap.xml").await;
     assert_eq!(resp.status(), StatusCode::OK);
     let xml = body(resp).await;
     assert!(xml.contains("<urlset"), "sitemap root element");
     assert!(xml.contains("hello-polaris"));
     assert!(xml.contains("/about"), "sitemap lists pages");
+    // Atom support was removed: the endpoint is gone and no sitemap entry
+    // or page references it.
+    let resp = get(&router, "/atom.xml").await;
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
     let resp = get(&router, "/robots.txt").await;
     assert_eq!(resp.status(), StatusCode::OK);

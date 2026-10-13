@@ -28,7 +28,7 @@ $ ./polaris serve
 | **Complete blog** | posts, pages, categories, tags, comments with moderation, scheduled publishing, draft workflow |
 | **Media library** | upload with magic-byte validation, SHA-256 dedup, thumbnails, WebP conversion, folders/tags, reference tracking — served with immutable cache + ETag + Range |
 | **SSR admin** | server-rendered admin at `/admin` — no React/Vue, minimal JS |
-| **SEO built in** | `/sitemap.xml`, `/robots.txt`, `/rss.xml`, `/atom.xml`, canonical, Open Graph, Twitter Card, JSON-LD |
+| **SEO built in** | `/sitemap.xml` (auto-generated with pagination), `/robots.txt`, `/rss.xml`, canonical, Open Graph, Twitter Card, JSON-LD |
 | **REST API** | `/api/posts`, `/api/pages`, `/api/categories`, `/api/tags`, `/api/comments` — session or token auth |
 
 ## Install
