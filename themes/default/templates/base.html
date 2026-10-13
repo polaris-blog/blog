@@ -20,6 +20,10 @@
 <script src="/static/js/highlight.js" defer></script>
 {% if theme.config.accent_color %}<style>:root { --accent: {{ theme.config.accent_color }}; }</style>{% endif %}
 <link rel="alternate" type="application/rss+xml" title="{{ site.title }}" href="/rss.xml">
+{% if site.favicon %}
+<link rel="icon" href="{{ site.favicon }}">
+<link rel="apple-touch-icon" href="{{ site.favicon }}">
+{% endif %}
 </head>
 <body {% if theme.config.layout == 'wide' %}class="layout-wide"{% endif %} data-copy-label="{{ t(key='code.copy') }}" data-copied-label="{{ t(key='code.copied') }}">
 

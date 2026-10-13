@@ -172,6 +172,7 @@ impl AppState {
             ("site.description", cfg.site.description.clone()),
             ("site.base_url", cfg.site.base_url.clone()),
             ("site.posts_per_page", cfg.site.posts_per_page.to_string()),
+            ("site.favicon", cfg.site.favicon.clone()),
             ("comments.enabled", cfg.comments.enabled.to_string()),
             ("comments.moderate", cfg.comments.moderate.to_string()),
             ("theme.active", cfg.theme.active.clone()),
@@ -368,6 +369,13 @@ impl AppState {
     pub fn site_description(&self) -> String {
         self.settings
             .get_str("site.description", &self.config.site.description)
+    }
+
+    /// Tab icon URL (media library path or absolute URL). Empty = the theme
+    /// ships no override and `/favicon.ico` falls back to the theme asset.
+    pub fn site_favicon(&self) -> String {
+        self.settings
+            .get_str("site.favicon", &self.config.site.favicon)
     }
 
     pub fn base_url(&self) -> String {

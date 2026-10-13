@@ -847,6 +847,7 @@ pub async fn page_context(app: &App) -> Context {
             "title": app.site_title(),
             "description": app.site_description(),
             "base_url": app.base_url(),
+            "favicon": app.site_favicon(),
             "version": env!("CARGO_PKG_VERSION"),
         }),
     );

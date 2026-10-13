@@ -21,6 +21,10 @@
         <label for="f-base">{{ t(key="admin.settings.base_url") }} <span class="hint">{{ t(key="admin.settings.base_url_hint") }}</span></label>
         <input id="f-base" type="url" name="site_base_url" value="{{ site_base_url }}" placeholder="https://example.com">
       </div>
+      <div class="wide">
+        <label for="f-fav">{{ t(key="admin.settings.favicon") }} <span class="hint">{{ t(key="admin.settings.favicon_hint") }}</span></label>
+        <input id="f-fav" type="text" name="site_favicon" value="{{ site_favicon }}" placeholder="/media/2026/10/icon.png">
+      </div>
       <div>
         <label for="f-per">{{ t(key="admin.settings.posts_per_page") }}</label>
         <input id="f-per" type="number" name="posts_per_page" value="{{ posts_per_page }}" min="1" max="100">

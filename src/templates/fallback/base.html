@@ -16,6 +16,10 @@
 <meta name="twitter:title" content="{% if seo.title %}{{ seo.title }}{% else %}{{ site.title }}{% endif %}">
 {% endif %}
 <link rel="alternate" type="application/rss+xml" title="{{ site.title }}" href="/rss.xml">
+{% if site.favicon %}
+<link rel="icon" href="{{ site.favicon }}">
+<link rel="apple-touch-icon" href="{{ site.favicon }}">
+{% endif %}
 <script src="/static/js/theme.js"></script>
 <script src="/static/js/highlight.js" defer></script>
 <style>

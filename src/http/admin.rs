@@ -2613,6 +2613,7 @@ async fn settings_page(
     ctx.insert("site_title", &app.site_title());
     ctx.insert("site_description", &app.site_description());
     ctx.insert("site_base_url", &app.base_url());
+    ctx.insert("site_favicon", &app.site_favicon());
     ctx.insert("posts_per_page", &app.posts_per_page());
     ctx.insert("comments_enabled", &app.comments_enabled());
     ctx.insert("comments_moderate", &app.comments_moderate());
@@ -2653,6 +2654,8 @@ struct SettingsForm {
     site_description: String,
     #[serde(default)]
     site_base_url: String,
+    #[serde(default)]
+    site_favicon: String,
     #[serde(default)]
     posts_per_page: String,
     #[serde(default)]
@@ -2701,6 +2704,19 @@ async fn settings_save(
             "Base URL must start with http:// or https://.",
         ));
     }
+    // Tab icon: a media-library path or an absolute URL; anything else
+    // (javascript:, data: with scripts, …) is rejected as a typo guard.
+    let site_favicon = form.site_favicon.trim().to_string();
+    if !site_favicon.is_empty()
+        && !site_favicon.starts_with('/')
+        && !site_favicon.starts_with("http://")
+        && !site_favicon.starts_with("https://")
+    {
+        return Ok(redirect_err(
+            "/admin/settings",
+            "Favicon must be a media path (/media/…) or an http(s) URL.",
+        ));
+    }
     // Cache settings: validated here, applied on restart (the cache backend
     // is built at startup). The namespace must stay a safe identifier.
     let cache_driver = form.cache_driver.trim().to_ascii_lowercase();
@@ -2737,6 +2753,7 @@ async fn settings_save(
             form.site_description.trim().to_string(),
         ),
         ("site.base_url".to_string(), base_url),
+        ("site.favicon".to_string(), site_favicon),
         ("site.posts_per_page".to_string(), per_page.to_string()),
         (
             "comments.enabled".to_string(),

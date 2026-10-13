@@ -51,6 +51,8 @@
   "admin.settings.site_title": "Site title",
   "admin.settings.description": "Description",
   "admin.settings.base_url": "Base URL",
+  "admin.settings.favicon": "Tab icon (favicon)",
+  "admin.settings.favicon_hint": "media path or https URL — leave empty for the theme default",
   "admin.settings.posts_per_page": "Posts per page",
   "admin.settings.language": "Language",
   "admin.settings.save": "Save settings",

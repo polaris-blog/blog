@@ -154,6 +154,8 @@ pub struct SiteConfig {
     pub description: String,
     pub base_url: String,
     pub posts_per_page: usize,
+    /// Tab icon: media-library path or absolute URL (empty = theme default).
+    pub favicon: String,
 }
 
 impl Default for SiteConfig {
@@ -163,6 +165,7 @@ impl Default for SiteConfig {
             description: "A fast, lightweight blog".into(),
             base_url: String::new(),
             posts_per_page: 10,
+            favicon: String::new(),
         }
     }
 }

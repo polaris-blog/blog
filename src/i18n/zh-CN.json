@@ -51,6 +51,8 @@
   "admin.settings.site_title": "站点标题",
   "admin.settings.description": "站点描述",
   "admin.settings.base_url": "站点地址",
+  "admin.settings.favicon": "标签页图标（favicon）",
+  "admin.settings.favicon_hint": "媒体库路径或 https 地址——留空使用主题默认",
   "admin.settings.posts_per_page": "每页文章数",
   "admin.settings.language": "语言",
   "admin.settings.save": "保存设置",

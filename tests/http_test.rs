@@ -198,6 +198,47 @@ async fn seo_feeds_and_sitemap() {
     assert!(txt.contains("Sitemap:"));
 }
 
+/// The configured tab icon is linked from every page and `/favicon.ico`
+/// redirects to it; an unset icon falls back to the theme asset.
+#[tokio::test]
+async fn favicon_setting_renders_and_redirects() {
+    let (app, router, _dir) = init_http().await;
+
+    // No icon configured: /favicon.ico serves the theme asset (200 here —
+    // the embedded fallback theme ships one) and pages carry no icon link.
+    let resp = get(&router, "/").await;
+    let html = body(resp).await;
+    assert!(!html.contains("rel=\"icon\""), "no icon link by default");
+
+    // Configure through the settings store (the admin form path saves via
+    // the same key).
+    let values = std::collections::HashMap::from([(
+        "site.favicon".to_string(),
+        "/media/2026/10/icon.png".to_string(),
+    )]);
+    app.settings.set_many(&app.db, &values).await.unwrap();
+    // The admin save path invalidates the response cache — mirror it here.
+    app.invalidate_content().await;
+
+    // Pages now link the icon… (Tera escapes `/` as &#x2F; in href — the
+    // browser resolves it identically, so assert on the unescaped tail.)
+    let resp = get(&router, "/").await;
+    let html = body(resp).await;
+    assert!(html.contains(r#"<link rel="icon" href="#));
+    assert!(html.contains(r#"<link rel="apple-touch-icon" href="#));
+    assert!(html.matches("icon.png").count() >= 2);
+
+    // …and the well-known URL redirects to it.
+    let resp = get(&router, "/favicon.ico").await;
+    assert_eq!(resp.status(), StatusCode::SEE_OTHER);
+    assert_eq!(
+        resp.headers()
+            .get(header::LOCATION)
+            .and_then(|v| v.to_str().ok()),
+        Some("/media/2026/10/icon.png")
+    );
+}
+
 // ---------------------------------------------------------------------------
 // REST API
 // ---------------------------------------------------------------------------

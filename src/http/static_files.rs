@@ -152,6 +152,12 @@ pub async fn theme_static(State(app): State<App>, Path(path): Path<String>) -> R
 }
 
 pub async fn favicon(State(app): State<App>) -> Response {
+    // A configured tab icon (Admin → Settings) wins: redirect to it so
+    // browsers probing /favicon.ico land on the same asset the pages link.
+    let configured = app.site_favicon();
+    if !configured.is_empty() {
+        return axum::response::Redirect::to(&configured).into_response();
+    }
     let theme = app.theme.current();
     if theme.static_dir.as_os_str().is_empty() {
         return (StatusCode::NOT_FOUND, "not found").into_response();
