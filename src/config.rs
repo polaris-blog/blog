@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(default)]
@@ -476,8 +476,9 @@ pub fn parse_size(s: &str) -> Option<u64> {
     Some((num * mult as f64) as u64)
 }
 
-/// One named storage instance — `[[media.storages]]`.
-#[derive(Clone, Debug, Deserialize)]
+/// One named storage instance — `[[media.storages]]` or GUI-configured
+/// (stored as JSON in the settings table).
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(default)]
 pub struct StorageEntry {
     /// Referenced by `media.storage.active` / `mirror`.
@@ -580,6 +581,37 @@ impl MediaStorageConfig {
                 dir: self.dir.clone(),
                 ..StorageEntry::default()
             }],
+        }
+    }
+
+    /// Merge GUI-configured storages (Admin → Media → Storage; stored as
+    /// JSON in the settings table with S3 secrets AES-GCM encrypted under
+    /// the instance key) over the file-level defaults.
+    pub fn apply_settings_overrides(&mut self, get: impl Fn(&str) -> Option<String>, secret: &str) {
+        if let Some(raw) = get("media.storage.config") {
+            match serde_json::from_str::<Vec<StorageEntry>>(&raw) {
+                Ok(mut entries) => {
+                    for e in &mut entries {
+                        if e.secret_access_key.starts_with("enc:")
+                            && let Some(plain) =
+                                crate::config_store::decrypt_setting(secret, &e.secret_access_key)
+                        {
+                            e.secret_access_key = plain;
+                        }
+                    }
+                    if !entries.is_empty() {
+                        self.storages = entries;
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!(error = %e, "media.storage.config is not valid JSON — ignoring")
+                }
+            }
+        }
+        if let Some(raw) = get("media.storage.mirror")
+            && let Ok(list) = serde_json::from_str::<Vec<String>>(&raw)
+        {
+            self.mirror = list;
         }
     }
 

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ t(key="admin.page.media") }}{% endblock title %}
+{% block title %}{{ t(key="admin.media.storage") }}{% endblock title %}
 {% block content %}
 <div class="page-head">
   <h1>{{ t(key="admin.media.storage") }}</h1>
@@ -17,6 +17,7 @@
       <th>{{ t(key="admin.media.storage_type") }}</th>
       <th>{{ t(key="admin.media.storage_role") }}</th>
       <th>{{ t(key="admin.media.storage_target") }}</th>
+      <th>{{ t(key="admin.media.storage_source") }}</th>
       <th></th>
     </tr>
   </thead>
@@ -32,12 +33,24 @@
         {% endif %}
       </td>
       <td class="muted">{{ s.summary }}</td>
+      <td>
+        {% if s.editable %}<span class="badge badge-inactive">{{ t(key="admin.media.storage_gui") }}</span>
+        {% else %}<span class="muted">{{ t(key="admin.media.storage_file") }}</span>{% endif %}
+      </td>
       <td class="actions">
         {% if not s.active %}
         <form method="post" action="/admin/media/storage/activate">
           <input type="hidden" name="csrf" value="{{ csrf }}">
           <input type="hidden" name="id" value="{{ s.id }}">
           <button type="submit" class="btn btn-sm">{{ t(key="admin.media.storage_activate") }}</button>
+        </form>
+        {% endif %}
+        {% if s.editable %}
+        <a class="btn btn-sm btn-secondary" href="/admin/media/storage?edit={{ s.id }}">{{ t(key="admin.action.edit") }}</a>
+        <form method="post" action="/admin/media/storage/delete">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <input type="hidden" name="id" value="{{ s.id }}">
+          <button type="submit" class="btn btn-sm btn-danger">{{ t(key="admin.action.delete") }}</button>
         </form>
         {% endif %}
       </td>
@@ -47,20 +60,70 @@
 </table>
 
 <div class="panel">
-  <h2>{{ t(key="admin.media.storage_config_title") }}</h2>
-  <p>{{ t(key="admin.media.storage_config_body") }}</p>
-  <pre><code>[[media.storages]]
-id = "r2"
-type = "s3"
-endpoint = "https://&lt;account&gt;.r2.cloudflarestorage.com"
-region = "auto"
-bucket = "media"
-access_key_id = "…"
-secret_access_key = "…"
+  <h2>{% if editing %}{{ t(key="admin.media.storage_edit") }}{% else %}{{ t(key="admin.media.storage_add") }}{% endif %}</h2>
+  <p class="muted">{{ t(key="admin.media.storage_form_hint") }}</p>
+  <form method="post" action="/admin/media/storage/save" class="stack">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    {% if editing %}<input type="hidden" name="original_id" value="{{ editing.id }}">{% endif %}
+    <div>
+      <label for="f-sid">{{ t(key="admin.media.storage_id") }}</label>
+      <input id="f-sid" type="text" name="id" value="{% if editing %}{{ editing.id }}{% endif %}" required maxlength="64" pattern="[A-Za-z0-9_-]+">
+    </div>
+    <div>
+      <label for="f-type">{{ t(key="admin.media.storage_type") }}</label>
+      <select id="f-type" name="type">
+        <option value="local" {% if editing and editing.type == 'local' %}selected{% endif %}>{{ t(key="admin.media.storage_type_local") }}</option>
+        <option value="s3" {% if editing and editing.type != 'local' %}selected{% endif %}>{{ t(key="admin.media.storage_type_s3") }}</option>
+      </select>
+    </div>
+    <div>
+      <label for="f-dir">{{ t(key="admin.media.storage_dir") }} <span class="hint">{{ t(key="admin.media.storage_dir_hint") }}</span></label>
+      <input id="f-dir" type="text" name="dir" value="{% if editing %}{{ editing.dir }}{% endif %}" placeholder="data/media">
+    </div>
+    <h3>{{ t(key="admin.media.storage_s3_section") }}</h3>
+    <div>
+      <label for="f-endpoint">{{ t(key="admin.media.storage_endpoint") }}</label>
+      <input id="f-endpoint" type="url" name="endpoint" value="{% if editing %}{{ editing.endpoint }}{% endif %}" placeholder="https://&lt;account&gt;.r2.cloudflarestorage.com">
+    </div>
+    <div>
+      <label for="f-region">{{ t(key="admin.media.storage_region") }} <span class="hint">{{ t(key="admin.media.storage_region_hint") }}</span></label>
+      <input id="f-region" type="text" name="region" value="{% if editing %}{{ editing.region }}{% endif %}" placeholder="auto">
+    </div>
+    <div>
+      <label for="f-bucket">{{ t(key="admin.media.storage_bucket") }}</label>
+      <input id="f-bucket" type="text" name="bucket" value="{% if editing %}{{ editing.bucket }}{% endif %}">
+    </div>
+    <div>
+      <label for="f-akid">{{ t(key="admin.media.storage_akid") }}</label>
+      <input id="f-akid" type="text" name="access_key_id" value="{% if editing %}{{ editing.access_key_id }}{% endif %}" autocomplete="off">
+    </div>
+    <div>
+      <label for="f-secret">{{ t(key="admin.media.storage_secret") }} <span class="hint">{{ t(key="admin.media.storage_secret_hint") }}</span></label>
+      <input id="f-secret" type="password" name="secret_access_key" value="" autocomplete="new-password" placeholder="{% if editing %}••••••••{% endif %}">
+    </div>
+    <div>
+      <label for="f-public">{{ t(key="admin.media.storage_public_url") }} <span class="hint">{{ t(key="admin.media.storage_public_url_hint") }}</span></label>
+      <input id="f-public" type="url" name="public_base_url" value="{% if editing %}{{ editing.public_base_url }}{% endif %}">
+    </div>
 
-[media.storage]
-active = "r2"
-mirror = []</code></pre>
-  <p class="muted">{{ t(key="admin.media.storage_config_cli") }}</p>
+    <h3>{{ t(key="admin.media.storage_mirrors_section") }}</h3>
+    <p class="muted">{{ t(key="admin.media.storage_mirrors_hint") }}</p>
+    {% for s in storages %}
+    {% if not s.active %}
+    <label class="checkbox-row">
+      <input type="checkbox" name="mirror" value="{{ s.id }}" {% if s.id in mirrors %}checked{% endif %}>
+      <code>{{ s.id }}</code> <span class="muted">({{ s.kind }})</span>
+    </label>
+    {% endif %}
+    {% endfor %}
+
+    <div class="form-actions">
+      <button type="submit" class="btn">{{ t(key="admin.action.save") }}</button>
+      {% if editing %}
+      <a class="btn btn-secondary" href="/admin/media/storage">{{ t(key="admin.action.cancel") }}</a>
+      {% endif %}
+    </div>
+  </form>
+  <p class="muted">{{ t(key="admin.media.storage_restart_hint") }}</p>
 </div>
 {% endblock content %}

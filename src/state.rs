@@ -227,6 +227,11 @@ impl AppState {
                 media_cfg.storage.active = v.to_string();
             }
         }
+        // GUI-managed storages (list + mirror set, S3 secrets encrypted)
+        // override the file configuration the same way.
+        media_cfg
+            .storage
+            .apply_settings_overrides(|k| settings.get(k), &secret);
         // Runtime cache settings (Admin → Settings) override the file
         // configuration, applied on restart like every other setting.
         let mut cache_cfg = cfg.cache.clone();

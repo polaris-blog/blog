@@ -41,7 +41,9 @@ pub fn router(app: &App) -> Router<App> {
         .route("/admin/media/folder/create", post(folder_create))
         .route("/admin/media/folder/{id}/delete", post(folder_delete))
         .route("/admin/media/storage", get(storage_page))
+        .route("/admin/media/storage/save", post(storage_save))
         .route("/admin/media/storage/activate", post(storage_activate))
+        .route("/admin/media/storage/delete", post(storage_delete))
         .route("/admin/media/{id}", get(detail).post(save))
         .route("/admin/media/{id}/copy", post(copy))
         .route("/admin/media/{id}/delete", post(delete))
@@ -517,16 +519,36 @@ async fn folder_delete(
 }
 
 // ---------------------------------------------------------------------------
-// Storage topology (active storage + mirrors)
+// Storage topology: GUI-managed storages (active + mirrors)
 // ---------------------------------------------------------------------------
 
-/// Read-only view of the configured storages plus the switch to change the
-/// active one. Credentials stay in polaris.toml / the environment — this
-/// page shows topology and status, never secrets.
+const STORAGE_CONFIG_KEY: &str = "media.storage.config";
+const STORAGE_MIRROR_KEY: &str = "media.storage.mirror";
+
+/// GUI-configured storages straight from the settings table (S3 secrets
+/// still encrypted). The GUI owns everything written through this page;
+/// entries that exist only in polaris.toml are read-only here.
+fn gui_storages(app: &App) -> Vec<crate::config::StorageEntry> {
+    app.settings
+        .get(STORAGE_CONFIG_KEY)
+        .and_then(|raw| serde_json::from_str(&raw).ok())
+        .unwrap_or_default()
+}
+
+fn gui_mirror(app: &App) -> Vec<String> {
+    app.settings
+        .get(STORAGE_MIRROR_KEY)
+        .and_then(|raw| serde_json::from_str(&raw).ok())
+        .unwrap_or_default()
+}
+
+/// Full storage management page: topology table (activate / edit / delete),
+/// mirror selection and the add-or-edit form. Secrets are never echoed —
+/// the form shows a placeholder and an empty field keeps the stored one.
 async fn storage_page(
     State(app): State<App>,
     Extension(auth): Extension<AuthCtx>,
-    Query(q): Query<PageQuery>,
+    Query(q): Query<StoragePageQuery>,
 ) -> AppResult<Response> {
     if let Err(e) = require_role(&auth, crate::models::Role::Admin) {
         return Ok(redirect_err("/admin", &e.message()));
@@ -538,6 +560,8 @@ async fn storage_page(
         ));
     }
 
+    let gui_ids: Vec<String> = gui_storages(&app).iter().map(|e| e.id.clone()).collect();
+    let mirrors = gui_mirror(&app);
     let storages: Vec<_> = app
         .media
         .storage_infos()
@@ -549,15 +573,33 @@ async fn storage_page(
                 "summary": i.summary,
                 "active": i.active,
                 "mirror": i.mirror,
+                "editable": gui_ids.contains(&i.id),
             })
         })
         .collect();
 
-    let mut ctx = base_ctx(&app, &auth, "media", &q);
+    // Editing an existing GUI storage: prefill the form (secret masked).
+    let editing = q
+        .edit
+        .as_deref()
+        .and_then(|id| gui_storages(&app).into_iter().find(|e| e.id == id));
+
+    let mut ctx = base_ctx(&app, &auth, "media", &q.page);
     ctx.insert("storages", &storages);
     ctx.insert("active_id", &app.media.active_storage_id());
+    ctx.insert("mirrors", &mirrors);
+    ctx.insert("editing", &editing);
     let body = templates::render_admin("media_storage.html", &ctx)?;
     Ok(Html(body).into_response())
+}
+
+#[derive(Deserialize)]
+struct StoragePageQuery {
+    #[serde(flatten)]
+    page: PageQuery,
+    /// Prefill the form with this GUI storage id.
+    #[serde(default)]
+    edit: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -581,12 +623,13 @@ async fn storage_activate(
         return Ok(redirect_err("/admin", &e.message()));
     }
     let id = form.id.trim();
-    if !app
-        .media
-        .storage_infos()
-        .iter()
-        .any(|i| i.id == id && !i.active)
-    {
+    // Known through the file topology or the GUI-managed list (a storage
+    // added through this page only joins the running topology on restart,
+    // but it can be activated right away).
+    let gui_ids: Vec<String> = gui_storages(&app).iter().map(|e| e.id.clone()).collect();
+    let known =
+        app.media.storage_infos().iter().any(|i| i.id == id) || gui_ids.iter().any(|g| g == id);
+    if !known || app.media.active_storage_id() == id {
         return Ok(redirect_err(
             "/admin/media/storage",
             "Unknown or already-active storage.",
@@ -598,6 +641,205 @@ async fn storage_activate(
     Ok(redirect_ok(
         "/admin/media/storage",
         &format!("Active storage set to '{id}' — restart Polaris to apply."),
+    ))
+}
+
+#[derive(Deserialize)]
+struct StorageSaveForm {
+    csrf: String,
+    /// Existing id when editing; the id of a new storage otherwise.
+    id: String,
+    #[serde(default)]
+    original_id: String,
+    r#type: String,
+    #[serde(default)]
+    dir: String,
+    #[serde(default)]
+    endpoint: String,
+    #[serde(default)]
+    region: String,
+    #[serde(default)]
+    bucket: String,
+    #[serde(default)]
+    access_key_id: String,
+    /// Empty keeps the stored secret (never echoed back to the form).
+    #[serde(default)]
+    secret_access_key: String,
+    #[serde(default)]
+    public_base_url: String,
+    /// Mirror selections submitted with the form.
+    #[serde(default)]
+    mirror: Vec<String>,
+}
+
+/// Create or update a GUI-managed storage. S3 secrets are AES-256-GCM
+/// encrypted under the instance key before they reach the settings table.
+async fn storage_save(
+    State(app): State<App>,
+    Extension(auth): Extension<AuthCtx>,
+    Form(form): Form<StorageSaveForm>,
+) -> AppResult<Response> {
+    if let Err(e) = auth::ensure_csrf(&auth, &form.csrf) {
+        return Ok(e.into_response());
+    }
+    if let Err(e) = require_role(&auth, crate::models::Role::Admin) {
+        return Ok(redirect_err("/admin", &e.message()));
+    }
+
+    let id = form.id.trim().to_string();
+    if id.is_empty()
+        || !id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_'))
+        || id.len() > 64
+    {
+        return Ok(redirect_err(
+            "/admin/media/storage",
+            "Storage id must be 1-64 characters: letters, digits, '-' or '_'.",
+        ));
+    }
+
+    let kind = match form.r#type.trim().to_ascii_lowercase().as_str() {
+        "" | "local" => "local",
+        "s3" | "r2" | "minio" => "s3",
+        other => {
+            return Ok(redirect_err(
+                "/admin/media/storage",
+                &format!("Unknown storage type '{other}' (expected local or s3)."),
+            ));
+        }
+    };
+
+    let mut storages = gui_storages(&app);
+    let existing = storages.iter().find(|e| e.id == id).cloned();
+    // Editing under a new id: the old row is replaced, not duplicated.
+    let original = form.original_id.trim();
+    if !original.is_empty() && original != id {
+        storages.retain(|e| e.id != original);
+    }
+    if storages.iter().any(|e| e.id == id) && existing.is_none() {
+        return Ok(redirect_err(
+            "/admin/media/storage",
+            &format!("Storage '{id}' already exists — pick another id."),
+        ));
+    }
+
+    let instance_secret = &app.config.security.secret;
+    let mut entry = crate::config::StorageEntry {
+        id: id.clone(),
+        r#type: kind.to_string(),
+        dir: form.dir.trim().to_string(),
+        endpoint: form.endpoint.trim().trim_end_matches('/').to_string(),
+        region: form.region.trim().to_string(),
+        bucket: form.bucket.trim().to_string(),
+        access_key_id: form.access_key_id.trim().to_string(),
+        // An empty submission keeps the stored (encrypted) secret.
+        secret_access_key: form.secret_access_key.trim().to_string(),
+        public_base_url: form.public_base_url.trim().to_string(),
+    };
+    if entry.secret_access_key.is_empty() {
+        entry.secret_access_key = existing
+            .as_ref()
+            .map(|e| e.secret_access_key.clone())
+            .unwrap_or_default();
+    } else if entry.secret_access_key.starts_with("enc:") {
+        // Already-encrypted value submitted (defensive; the form never sends one).
+    } else {
+        entry.secret_access_key =
+            crate::config_store::encrypt_setting(instance_secret, &entry.secret_access_key)?;
+    }
+
+    // Validate exactly like a startup-time configuration would.
+    if let Err(e) = crate::media::storage::Storage::build_entry(&entry) {
+        return Ok(redirect_err("/admin/media/storage", &e.message()));
+    }
+
+    storages.retain(|e| e.id != id);
+    storages.push(entry);
+
+    // Mirror set: only ids that exist and are not the active storage.
+    let active_id = app.media.active_storage_id().to_string();
+    let mirror: Vec<String> = form
+        .mirror
+        .iter()
+        .map(|m| m.trim().to_string())
+        .filter(|m| storages.iter().any(|e| &e.id == m) && *m != active_id)
+        .collect();
+
+    let mut values = std::collections::HashMap::new();
+    values.insert(
+        STORAGE_CONFIG_KEY.to_string(),
+        serde_json::to_string(&storages)
+            .map_err(|e| AppError::Internal(anyhow::anyhow!("serialize storages: {e}")))?,
+    );
+    values.insert(
+        STORAGE_MIRROR_KEY.to_string(),
+        serde_json::to_string(&mirror)
+            .map_err(|e| AppError::Internal(anyhow::anyhow!("serialize mirrors: {e}")))?,
+    );
+    app.settings.set_many(&app.db, &values).await?;
+
+    Ok(redirect_ok(
+        "/admin/media/storage",
+        &format!("Storage '{id}' saved — restart Polaris to apply."),
+    ))
+}
+
+#[derive(Deserialize)]
+struct StorageDeleteForm {
+    csrf: String,
+    id: String,
+}
+
+/// Remove a GUI-managed storage. The active storage cannot be removed
+/// (activate another one first) and mirror references are dropped.
+async fn storage_delete(
+    State(app): State<App>,
+    Extension(auth): Extension<AuthCtx>,
+    Form(form): Form<StorageDeleteForm>,
+) -> AppResult<Response> {
+    if let Err(e) = auth::ensure_csrf(&auth, &form.csrf) {
+        return Ok(e.into_response());
+    }
+    if let Err(e) = require_role(&auth, crate::models::Role::Admin) {
+        return Ok(redirect_err("/admin", &e.message()));
+    }
+    let id = form.id.trim();
+    let mut storages = gui_storages(&app);
+    if !storages.iter().any(|e| e.id == id) {
+        return Ok(redirect_err(
+            "/admin/media/storage",
+            "Only GUI-configured storages can be removed here.",
+        ));
+    }
+    // The active selection may already point at a GUI storage that the
+    // running topology does not know yet (applied on restart).
+    let active = app
+        .settings
+        .get_str("media.storage.active", app.media.active_storage_id());
+    if active == id {
+        return Ok(redirect_err(
+            "/admin/media/storage",
+            "Activate another storage before removing the active one.",
+        ));
+    }
+    storages.retain(|e| e.id != id);
+    let mirror: Vec<String> = gui_mirror(&app).into_iter().filter(|m| m != id).collect();
+    let mut values = std::collections::HashMap::new();
+    values.insert(
+        STORAGE_CONFIG_KEY.to_string(),
+        serde_json::to_string(&storages)
+            .map_err(|e| AppError::Internal(anyhow::anyhow!("serialize storages: {e}")))?,
+    );
+    values.insert(
+        STORAGE_MIRROR_KEY.to_string(),
+        serde_json::to_string(&mirror)
+            .map_err(|e| AppError::Internal(anyhow::anyhow!("serialize mirrors: {e}")))?,
+    );
+    app.settings.set_many(&app.db, &values).await?;
+    Ok(redirect_ok(
+        "/admin/media/storage",
+        &format!("Storage '{id}' removed — restart Polaris to apply."),
     ))
 }
 

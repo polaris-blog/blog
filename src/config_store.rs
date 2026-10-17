@@ -180,6 +180,19 @@ fn encrypt_value(secret: &str, plain: &str) -> AppResult<String> {
     ))
 }
 
+/// Encrypt a settings-table secret with the instance key — the same
+/// AES-256-GCM scheme plugin/theme secrets use (see [`crate::config_store`]).
+/// Used by the media storage GUI for S3 credentials.
+pub fn encrypt_setting(secret: &str, plain: &str) -> AppResult<String> {
+    encrypt_value(secret, plain)
+}
+
+/// Decrypt a value written by [`encrypt_setting`]. Returns `None` when the
+/// ciphertext does not match the current instance key.
+pub fn decrypt_setting(secret: &str, stored: &str) -> Option<String> {
+    decrypt_value(secret, stored)
+}
+
 fn decrypt_value(secret: &str, stored: &str) -> Option<String> {
     let payload = stored.strip_prefix(ENC_PREFIX)?;
     if payload.len() < 24 {

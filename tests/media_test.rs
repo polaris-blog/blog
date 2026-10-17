@@ -579,6 +579,113 @@ async fn storage_page_lists_active_and_mirror() {
     assert!(html.contains(">backup<"), "mirror storage listed");
 }
 
+/// POST a urlencoded admin form with the session cookie.
+async fn storage_post(
+    router: &axum::Router,
+    session: &str,
+    csrf: &str,
+    uri: &str,
+    form: &str,
+) -> StatusCode {
+    let req = Request::builder()
+        .method("POST")
+        .uri(uri)
+        .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+        .header(header::COOKIE, format!("polaris_session={session}"))
+        .extension(local_addr(41030))
+        .body(Body::from(format!("csrf={csrf}&{form}")))
+        .unwrap();
+    send(router, req).await.status()
+}
+
+/// The storage GUI (Admin → Media → Storage) creates and edits storages
+/// without touching polaris.toml: entries persist in the settings table
+/// (S3 secrets encrypted), the active selection flows, and the whole
+/// topology — secrets decrypted — is rebuilt on the next startup.
+#[tokio::test]
+async fn storage_gui_crud_persists_and_applies_on_restart() {
+    let dir = tempfile::tempdir().unwrap();
+    // File configuration: a single local storage, nothing else.
+    let mut cfg = common::test_config(dir.path());
+    let primary = dir.path().join("primary");
+    let secondary = dir.path().join("secondary");
+    cfg.media.storage.storages = vec![polaris::config::StorageEntry {
+        id: "local".into(),
+        r#type: "local".into(),
+        dir: primary.to_string_lossy().into_owned(),
+        ..polaris::config::StorageEntry::default()
+    }];
+    let app = polaris::state::AppState::init(cfg).await.unwrap();
+    common::create_user(&app, "admin", "password123", Role::Admin).await;
+    let router = polaris::http::router(app.clone());
+    let (session, csrf) = login(&router, "admin", "password123").await;
+
+    // 1. Add a second local storage through the GUI.
+    let status = storage_post(
+        &router,
+        &session,
+        &csrf,
+        "/admin/media/storage/save",
+        &format!("id=secondary&type=local&dir={secondary:?}"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::SEE_OTHER, "save must redirect");
+    let stored = app.settings.get("media.storage.config").unwrap();
+    assert!(stored.contains("secondary"), "stored: {stored}");
+
+    // 2. Add an S3 storage — the secret is encrypted at rest.
+    let status = storage_post(
+        &router,
+        &session,
+        &csrf,
+        "/admin/media/storage/save",
+        "id=r2&type=s3&endpoint=https%3A%2F%2Fexample.r2.cloudflarestorage.com&region=auto&bucket=media&access_key_id=ak&secret_access_key=topsecret",
+    )
+    .await;
+    assert_eq!(status, StatusCode::SEE_OTHER);
+    let stored = app.settings.get("media.storage.config").unwrap();
+    assert!(
+        stored.contains("enc:"),
+        "secret must be encrypted: {stored}"
+    );
+    assert!(
+        !stored.contains("topsecret"),
+        "secret must not be plaintext"
+    );
+
+    // 3. Activate the GUI-created storage.
+    let status = storage_post(
+        &router,
+        &session,
+        &csrf,
+        "/admin/media/storage/activate",
+        "id=secondary",
+    )
+    .await;
+    assert_eq!(status, StatusCode::SEE_OTHER);
+    assert_eq!(
+        app.settings.get("media.storage.active").as_deref(),
+        Some("secondary"),
+        "activation must persist in settings"
+    );
+
+    // 4. "Restart": a fresh app on the same database — the file config
+    //    only knows `local`, yet the GUI topology (both storages + the
+    //    active selection) is rebuilt, with the S3 secret decrypted (a
+    //    failed build would have failed startup).
+    let cfg2 = common::test_config(dir.path());
+    let app2 = polaris::state::AppState::init(cfg2).await.unwrap();
+    let ids: Vec<&str> = app2
+        .media
+        .storage_infos()
+        .iter()
+        .map(|i| i.id.as_str())
+        .collect();
+    assert!(ids.contains(&"secondary"), "{ids:?}");
+    assert!(ids.contains(&"r2"), "{ids:?}");
+    assert_eq!(app2.media.active_storage_id(), "secondary");
+}
+
 // ---------------------------------------------------------------------------
 // Management REST API
 // ---------------------------------------------------------------------------
