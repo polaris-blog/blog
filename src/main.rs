@@ -264,6 +264,18 @@ enum MediaCommands {
         #[arg(long)]
         deep: bool,
     },
+    /// List configured storages (active + mirrors)
+    Storage,
+    /// Copy every object from one storage to another (migration/backfill)
+    Migrate {
+        /// Source storage id (must be configured)
+        from: String,
+        /// Destination storage id (must be configured)
+        to: String,
+        /// Only report what would be copied
+        #[arg(long)]
+        dry_run: bool,
+    },
 }
 
 fn main() {
@@ -909,6 +921,80 @@ async fn media_cmd(cfg_path: Option<PathBuf>, command: MediaCommands) -> anyhow:
                 );
             }
             anyhow::bail!("verification failed with {} issue(s)", issues.len());
+        }
+        MediaCommands::Storage => {
+            println!("Active storage: {}\n", app.media.active_storage_id());
+            for info in app.media.storage_infos() {
+                let role = if info.active {
+                    "active"
+                } else if info.mirror {
+                    "mirror"
+                } else {
+                    "standby"
+                };
+                println!(
+                    "  {:<12} {:<7} {:<8} {}",
+                    info.id, info.kind, role, info.summary
+                );
+            }
+        }
+        MediaCommands::Migrate { from, to, dry_run } => {
+            use polaris::config::StorageEntry;
+            use polaris::media::storage::{Storage, validate_key};
+
+            let normalized = app.media.config().storage.normalized();
+            let entry_of = |id: &str| -> anyhow::Result<StorageEntry> {
+                normalized
+                    .storages
+                    .iter()
+                    .find(|e| e.id == id)
+                    .cloned()
+                    .ok_or_else(|| anyhow::anyhow!("storage '{id}' is not configured"))
+            };
+            let src = Storage::build_entry(&entry_of(&from)?)?;
+            let dst = Storage::build_entry(&entry_of(&to)?)?;
+
+            let keys = src.list("").await?;
+            if keys.is_empty() {
+                println!("✦ storage '{from}' is empty — nothing to migrate");
+                return Ok(());
+            }
+            println!(
+                "Migrating {} object(s): '{from}' → '{to}'{}",
+                keys.len(),
+                if dry_run { " (dry run)" } else { "" }
+            );
+            let mut copied = 0usize;
+            let mut skipped = 0usize;
+            for key in &keys {
+                validate_key(key)?;
+                if dry_run {
+                    println!("  would copy {key}");
+                    continue;
+                }
+                let Some(bytes) = src.read(key).await? else {
+                    skipped += 1;
+                    continue;
+                };
+                dst.put(key, &bytes).await?;
+                copied += 1;
+                if copied.is_multiple_of(100) {
+                    println!("  … {copied}/{} copied", keys.len());
+                }
+            }
+            if dry_run {
+                println!(
+                    "\nDry run complete — {} object(s) would be copied, {} skipped.",
+                    keys.len(),
+                    skipped
+                );
+            } else {
+                println!(
+                    "\n✦ copied {copied} object(s) to '{to}' ({skipped} skipped). \
+                     Switch the active storage in polaris.toml ([media.storage] active) \
+                     or Settings, then restart."
+                );
+            }
         }
     }
     Ok(())

@@ -9,6 +9,8 @@
 //! POST /admin/media/batch               batch delete / move / tag
 //! POST /admin/media/folder/create       new virtual folder
 //! POST /admin/media/folder/{id}/delete  delete folder
+//! GET  /admin/media/storage             storage topology (active + mirrors)
+//! POST /admin/media/storage/activate    switch the active storage (restart to apply)
 //! GET  /admin/media/{id}                detail + metadata form
 //! POST /admin/media/{id}                save metadata
 //! POST /admin/media/{id}/copy           duplicate
@@ -22,7 +24,7 @@ use axum::routing::{get, post};
 use serde::Deserialize;
 use serde_json::json;
 
-use super::admin::{PageQuery, base_ctx, redirect_err, redirect_ok};
+use super::admin::{PageQuery, base_ctx, redirect_err, redirect_ok, require_role};
 use crate::auth::{self, AuthCtx};
 use crate::error::{AppError, AppResult};
 use crate::models::{Media, MediaKind};
@@ -38,6 +40,8 @@ pub fn router(app: &App) -> Router<App> {
         .route("/admin/media/batch", post(batch))
         .route("/admin/media/folder/create", post(folder_create))
         .route("/admin/media/folder/{id}/delete", post(folder_delete))
+        .route("/admin/media/storage", get(storage_page))
+        .route("/admin/media/storage/activate", post(storage_activate))
         .route("/admin/media/{id}", get(detail).post(save))
         .route("/admin/media/{id}/copy", post(copy))
         .route("/admin/media/{id}/delete", post(delete))
@@ -510,6 +514,91 @@ async fn folder_delete(
         )),
         Err(e) => Ok(redirect_err("/admin/media", &e.message())),
     }
+}
+
+// ---------------------------------------------------------------------------
+// Storage topology (active storage + mirrors)
+// ---------------------------------------------------------------------------
+
+/// Read-only view of the configured storages plus the switch to change the
+/// active one. Credentials stay in polaris.toml / the environment — this
+/// page shows topology and status, never secrets.
+async fn storage_page(
+    State(app): State<App>,
+    Extension(auth): Extension<AuthCtx>,
+    Query(q): Query<PageQuery>,
+) -> AppResult<Response> {
+    if let Err(e) = require_role(&auth, crate::models::Role::Admin) {
+        return Ok(redirect_err("/admin", &e.message()));
+    }
+    if !app.media.enabled() {
+        return Ok(redirect_err(
+            "/admin",
+            "Media is disabled in the configuration.",
+        ));
+    }
+
+    let storages: Vec<_> = app
+        .media
+        .storage_infos()
+        .iter()
+        .map(|i| {
+            json!({
+                "id": i.id,
+                "kind": i.kind,
+                "summary": i.summary,
+                "active": i.active,
+                "mirror": i.mirror,
+            })
+        })
+        .collect();
+
+    let mut ctx = base_ctx(&app, &auth, "media", &q);
+    ctx.insert("storages", &storages);
+    ctx.insert("active_id", &app.media.active_storage_id());
+    let body = templates::render_admin("media_storage.html", &ctx)?;
+    Ok(Html(body).into_response())
+}
+
+#[derive(Deserialize)]
+struct StorageActivateForm {
+    csrf: String,
+    id: String,
+}
+
+/// Switch the active storage. The choice is persisted in the settings
+/// table; like every other runtime setting it takes effect on restart
+/// (the storage topology is built once at startup).
+async fn storage_activate(
+    State(app): State<App>,
+    Extension(auth): Extension<AuthCtx>,
+    Form(form): Form<StorageActivateForm>,
+) -> AppResult<Response> {
+    if let Err(e) = auth::ensure_csrf(&auth, &form.csrf) {
+        return Ok(e.into_response());
+    }
+    if let Err(e) = require_role(&auth, crate::models::Role::Admin) {
+        return Ok(redirect_err("/admin", &e.message()));
+    }
+    let id = form.id.trim();
+    if !app
+        .media
+        .storage_infos()
+        .iter()
+        .any(|i| i.id == id && !i.active)
+    {
+        return Ok(redirect_err(
+            "/admin/media/storage",
+            "Unknown or already-active storage.",
+        ));
+    }
+    let values =
+        std::collections::HashMap::from([("media.storage.active".to_string(), id.to_string())]);
+    app.settings.set_many(&app.db, &values).await?;
+    Ok(redirect_ok(
+        "/admin/media/storage",
+        &format!("Active storage set to '{id}' — restart Polaris to apply."),
+    ))
 }
 
 // ---------------------------------------------------------------------------

@@ -105,8 +105,25 @@ enabled = true
 
 [media.storage]
 # "local" (default, zero dependencies) — files under data/media/YYYY/MM/
+# The legacy provider/dir pair still works and is folded into a single
+# local storage named "local".
 provider = "local"
 dir = "data/media"
+# Named storages can also be listed explicitly; `active` selects the one
+# that serves reads and receives writes, `mirror` ids receive a
+# write-through copy of every object (cloud backup / CDN warm-up).
+# [[media.storages]]
+# id = "r2"
+# type = "s3"                 # any S3-compatible service (R2, MinIO, …)
+# endpoint = "https://<account>.r2.cloudflarestorage.com"
+# region = "auto"
+# bucket = "media"
+# access_key_id = ""
+# secret_access_key = ""
+# public_base_url = ""        # optional CDN base for object URLs
+#
+# active = "local"
+# mirror = []
 
 [media.upload]
 # Global cap for a single upload; per-kind limits below

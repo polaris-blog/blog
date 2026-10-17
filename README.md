@@ -106,7 +106,7 @@ polaris extension verify | logs                        integrity check / install
 polaris search status | rebuild                        index health / full reindex
 polaris backup create|list|verify|restore|delete|cleanup|schedule
                                                        backup & restore (see Admin → Backups)
-polaris media orphan | cleanup [--apply] | verify [--deep]
+polaris media orphan | cleanup [--apply] | verify [--deep] | storage | migrate <from> <to>
                                                        library maintenance
 ```
 
@@ -204,8 +204,14 @@ The full template context and filter list is documented in `docs/DEVELOPMENT.md`
 and paste uploads with progress, folders, tags, batch delete/move/tag, metadata
 editing and reference checks before deletion.
 
-- **Storage is abstracted** behind a provider interface (local disk by default;
-  S3/R2/MinIO designed as optional build features). Files live in
+- **Storage is abstracted** behind a provider interface: local disk (default)
+  and any S3-compatible service (AWS S3, Cloudflare R2, MinIO — SigV4 is
+  implemented in-tree, so the static build stays dependency-free). Multiple
+  named storages can run side by side: one **active** storage serves reads and
+  receives writes, optional **mirrors** get a write-through copy of every
+  object; switching the active storage never rewrites database rows.
+  `polaris media storage` lists the topology and `polaris media migrate <from> <to>`
+  copies an existing tree between storages. Files live in
   `data/media/YYYY/MM/{uuid}.{ext}` — never under their original name.
 - **Metadata in the database, bytes in storage.** The database never stores
   binaries; `hash` is the SHA-256 of the stored bytes and drives dedup,

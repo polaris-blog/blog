@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ t(key="admin.page.media") }}{% endblock title %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ t(key="admin.media.storage") }}</h1>
+  <div class="head-actions">
+    <a class="btn btn-secondary" href="/admin/media">{{ t(key="admin.media.back_to_library") }}</a>
+  </div>
+</div>
+
+<p class="muted">{{ t(key="admin.media.storage_intro") }}</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>{{ t(key="admin.media.storage_id") }}</th>
+      <th>{{ t(key="admin.media.storage_type") }}</th>
+      <th>{{ t(key="admin.media.storage_role") }}</th>
+      <th>{{ t(key="admin.media.storage_target") }}</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for s in storages %}
+    <tr>
+      <td><code>{{ s.id }}</code></td>
+      <td>{{ s.kind }}</td>
+      <td>
+        {% if s.active %}<span class="badge badge-active">{{ t(key="admin.media.storage_active") }}</span>
+        {% elif s.mirror %}<span class="badge">{{ t(key="admin.media.storage_mirror") }}</span>
+        {% else %}<span class="badge badge-inactive">{{ t(key="admin.media.storage_standby") }}</span>
+        {% endif %}
+      </td>
+      <td class="muted">{{ s.summary }}</td>
+      <td class="actions">
+        {% if not s.active %}
+        <form method="post" action="/admin/media/storage/activate">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <input type="hidden" name="id" value="{{ s.id }}">
+          <button type="submit" class="btn btn-sm">{{ t(key="admin.media.storage_activate") }}</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div class="panel">
+  <h2>{{ t(key="admin.media.storage_config_title") }}</h2>
+  <p>{{ t(key="admin.media.storage_config_body") }}</p>
+  <pre><code>[[media.storages]]
+id = "r2"
+type = "s3"
+endpoint = "https://&lt;account&gt;.r2.cloudflarestorage.com"
+region = "auto"
+bucket = "media"
+access_key_id = "…"
+secret_access_key = "…"
+
+[media.storage]
+active = "r2"
+mirror = []</code></pre>
+  <p class="muted">{{ t(key="admin.media.storage_config_cli") }}</p>
+</div>
+{% endblock content %}

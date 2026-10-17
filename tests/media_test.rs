@@ -501,6 +501,85 @@ async fn hostile_media_paths_are_rejected() {
 }
 
 // ---------------------------------------------------------------------------
+// Multi-storage: active + write-through mirror
+// ---------------------------------------------------------------------------
+
+/// An app whose active storage is a local dir with a second local storage
+/// configured as a write-through mirror.
+async fn setup_mirrored() -> (App, tempfile::TempDir, i64) {
+    let dir = tempfile::tempdir().unwrap();
+    let mut cfg = common::test_config(dir.path());
+    let primary = dir.path().join("primary");
+    let mirror = dir.path().join("mirror");
+    let entry = |id: &str, root: &std::path::Path| polaris::config::StorageEntry {
+        id: id.into(),
+        r#type: "local".into(),
+        dir: root.to_string_lossy().into_owned(),
+        ..polaris::config::StorageEntry::default()
+    };
+    cfg.media.storage.active = "local".into();
+    cfg.media.storage.mirror = vec!["backup".into()];
+    cfg.media.storage.storages = vec![entry("local", &primary), entry("backup", &mirror)];
+    let app = polaris::state::AppState::init(cfg).await.unwrap();
+    let admin = common::create_user(&app, "admin", "password123", Role::Admin)
+        .await
+        .id;
+    (app, dir, admin)
+}
+
+#[tokio::test]
+async fn uploads_write_through_to_the_mirror_storage() {
+    let (app, _dir, admin) = setup_mirrored().await;
+    assert_eq!(app.media.active_storage_id(), "local");
+    assert_eq!(app.media.mirror_storages().len(), 1);
+
+    let out = upload(&app, admin, "cover.png", "image/png", &png_bytes(1200, 630))
+        .await
+        .unwrap();
+    let m = out.media;
+
+    // The original and every thumbnail exist on the active storage…
+    assert!(app.media.storage().exists(&m.storage_key).await.unwrap());
+
+    // …and on the mirror.
+    let mirror = &app.media.mirror_storages()[0];
+    assert!(mirror.exists(&m.storage_key).await.unwrap());
+    for size in &m.thumbnails {
+        let key = m.thumb_storage_key(size);
+        assert!(
+            mirror.exists(&key).await.unwrap(),
+            "mirror missing thumbnail {size}"
+        );
+        assert_eq!(
+            mirror.read(&key).await.unwrap().unwrap(),
+            app.media.storage().read(&key).await.unwrap().unwrap()
+        );
+    }
+
+    // Deletes propagate to the mirror as well.
+    media::delete(&app, &m, true).await.unwrap();
+    assert!(!mirror.exists(&m.storage_key).await.unwrap());
+}
+
+#[tokio::test]
+async fn storage_page_lists_active_and_mirror() {
+    let (app, _dir, _admin) = setup_mirrored().await;
+    let router = polaris::http::router(app.clone());
+    let (cookie, _csrf) = login(&router, "admin", "password123").await;
+    let req = Request::builder()
+        .uri("/admin/media/storage")
+        .header(header::COOKIE, format!("polaris_session={cookie}"))
+        .extension(local_addr(41010))
+        .body(Body::empty())
+        .unwrap();
+    let resp = send(&router, req).await;
+    assert_eq!(resp.status(), StatusCode::OK);
+    let html = String::from_utf8_lossy(&body(resp).await).into_owned();
+    assert!(html.contains(">local<"), "active storage listed");
+    assert!(html.contains(">backup<"), "mirror storage listed");
+}
+
+// ---------------------------------------------------------------------------
 // Management REST API
 // ---------------------------------------------------------------------------
 

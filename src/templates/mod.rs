@@ -112,6 +112,10 @@ static ADMIN_SOURCES: &[(&str, &str)] = &[
     ("profile.html", include_str!("admin/profile.html")),
     ("media.html", include_str!("admin/media.html")),
     ("media_detail.html", include_str!("admin/media_detail.html")),
+    (
+        "media_storage.html",
+        include_str!("admin/media_storage.html"),
+    ),
     ("backups.html", include_str!("admin/backups.html")),
     (
         "backup_restore.html",
