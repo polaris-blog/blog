@@ -358,6 +358,31 @@ Build the image locally with `docker build -t polaris .` — the multi-stage
 Dockerfile compiles a static musl binary inside a Rust/Alpine builder and ships
 it in a ~20 MB runtime image.
 
+## Deploy on Vercel
+
+Vercel detects a `Dockerfile.vercel` at the repository root and deploys it as a
+container — import the repository, and the platform builds the image, injects
+`PORT`, and serves the blog as a normal web server. No `vercel.json`, no
+serverless rewrite. Cold starts are milliseconds (Alpine + a static binary).
+
+Recommended environment variables (Project → Settings → Environment Variables):
+
+| Variable | Why |
+|---|---|
+| `POLARIS_SECURITY_SECRET` | **Set it.** Signs sessions and plugin tokens; without it every instance mints its own and sessions drop when the platform routes a visitor to another instance. |
+| `POLARIS_SITE_BASE_URL` | Your public `https://…` URL — canonical/RSS/sitemap URLs and the secure cookie flag depend on it. |
+| `POLARIS_DATABASE_URL` | Optional: an external MySQL/PostgreSQL (Vercel's Postgres marketplace works) for durable data. |
+
+Then open the deployment and finish the setup wizard at `/admin`.
+
+**Know before you rely on it:** the container root filesystem is read-only
+except `/tmp`, and Vercel keeps no volumes — SQLite, media uploads and plugin
+data live in `/tmp` and are lost when the instance goes cold or on redeploy.
+Treat a SQLite-on-Vercel setup as a demo; for anything durable set
+`POLARIS_DATABASE_URL` (media uploads remain instance-local either way).
+Rate-limit counters and IP-bound features see the platform edge address, since
+the runtime does not expose a fixed proxy range to trust.
+
 ## Documentation
 
 Developer docs live in the working tree and are not part of the public repository:

@@ -1,0 +1,52 @@
+# Polaris — Vercel container deployment.
+#
+# Vercel auto-detects a `Dockerfile.vercel` (or `Containerfile.vercel`) at the
+# repository root and deploys it as a container: no vercel.json, no serverless
+# rewrite — the blog runs as a normal web server. Two platform contracts shape
+# this image:
+#
+#   1. The platform injects `PORT`; the server must listen on 0.0.0.0:$PORT.
+#   2. The container root filesystem is read-only except `/tmp`, so the whole
+#      mutable state tree (SQLite, media, tmp staging, backups) is redirected
+#      there via the /app/data symlink below.
+#
+# Data on Vercel is therefore ephemeral: it survives while an instance stays
+# warm and is lost on cold start or redeploy. For anything beyond a demo, set
+# POLARIS_DATABASE_URL to an external MySQL/PostgreSQL and
+# POLARIS_SITE_BASE_URL to the public URL — see README → "Deploy on Vercel".
+#
+# Build:  docker build -f Dockerfile.vercel -t polaris-vercel .
+# Run:    PORT=3000 docker run -p 3000:3000 polaris-vercel
+
+FROM rust:1-alpine3.21 AS builder
+RUN apk add --no-cache musl-dev
+WORKDIR /app
+COPY Cargo.toml Cargo.lock ./
+COPY src ./src
+COPY migrations ./migrations
+RUN cargo build --locked --release --bin polaris
+
+FROM alpine:3.21
+LABEL org.opencontainers.image.title="Polaris (Vercel)" \
+      org.opencontainers.image.description="Fast, lightweight, secure and extensible blog engine — a single static binary, container build for Vercel." \
+      org.opencontainers.image.source="https://github.com/polaris-blog/blog" \
+      org.opencontainers.image.licenses="MIT OR Apache-2.0"
+RUN addgroup -S polaris && adduser -S polaris -G polaris
+WORKDIR /app
+COPY --from=builder /app/target/release/polaris /usr/local/bin/polaris
+# Usable out-of-the-box defaults; override with Vercel environment variables.
+COPY themes /app/themes
+COPY plugins /app/plugins
+COPY polaris.toml.example /app/polaris.toml
+# The root filesystem is read-only on Vercel: redirect the whole state tree
+# into /tmp. `data/` holds SQLite, media, tmp staging and backups.
+RUN ln -sfn /tmp/data /app/data
+USER polaris
+# Injected by the platform; 3000 keeps local runs identical.
+ENV PORT=3000
+EXPOSE 3000
+# mkdir: /tmp is wiped on cold start while the symlink survives — recreate the
+# target so SQLite (mode=rwc) and media writes have a home. The config is
+# copied to /tmp as well: the setup wizard writes it, and a read-only /app
+# copy would only fall back to the settings-table marker.
+ENTRYPOINT ["sh", "-c", "mkdir -p /tmp/data; if [ ! -f /tmp/polaris.toml ]; then cp /app/polaris.toml.example /tmp/polaris.toml; fi; exec polaris serve --config /tmp/polaris.toml --host 0.0.0.0 --port ${PORT:-3000}"]
