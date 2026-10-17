@@ -217,6 +217,16 @@ impl AppState {
         let settings = Settings::from_map(repositories::settings::all(&db).await?);
         // Site-wide UI language for theme/admin template rendering.
         crate::i18n::init(settings.get("site.locale").as_deref());
+        // Active storage selection made in the admin UI (Admin → Media →
+        // Storage) overrides the file configuration, applied on restart
+        // like every other runtime setting.
+        let mut media_cfg = cfg.media.clone();
+        if let Some(v) = settings.get("media.storage.active") {
+            let v = v.trim();
+            if !v.is_empty() {
+                media_cfg.storage.active = v.to_string();
+            }
+        }
         // Runtime cache settings (Admin → Settings) override the file
         // configuration, applied on restart like every other setting.
         let mut cache_cfg = cfg.cache.clone();
@@ -317,7 +327,7 @@ impl AppState {
             tracing::warn!(error = %e, "search index unavailable — run `polaris migrate` / `polaris search rebuild`");
         }
 
-        let media = crate::media::MediaService::build(&cfg.media)?;
+        let media = crate::media::MediaService::build(&media_cfg)?;
 
         let app = Arc::new(Self {
             db,

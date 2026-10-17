@@ -480,6 +480,9 @@ async fn apply_files(
 
     // ---- Phase 2 (async): commit staged files into place -------------------
     // Media: merge (add/overwrite, never delete) via atomic rename.
+    // Deliberately the *active* storage only — restoring after switching
+    // the active storage is the migration path, mirrors must not receive
+    // a copy of the restored tree.
     for m in &staged_media {
         let res = app.media.storage().put_staged(&m.key, &m.staged).await;
         let _ = tokio::fs::remove_file(&m.staged).await;

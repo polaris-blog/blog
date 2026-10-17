@@ -11,17 +11,20 @@ use sha2::{Digest, Sha256};
 
 const B64: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-/// SHA-256 digest of a UTF-8 string, hex-encoded.
-pub fn sha256_hex(data: &str) -> String {
+/// SHA-256 digest of raw bytes, hex-encoded.
+pub fn sha256_bytes(data: &[u8]) -> String {
     let mut h = Sha256::new();
-    h.update(data.as_bytes());
+    h.update(data);
     hex(&h.finalize())
 }
 
-/// HMAC-SHA256 (RFC 2104), hex-encoded — the standard webhook-signature
-/// scheme (`X-Signature: sha256=<hex>`). The key is raw bytes (the Rhai
-/// binding passes the UTF-8 bytes of the string argument).
-pub fn hmac_sha256_hex(key: &[u8], data: &str) -> String {
+/// SHA-256 digest of a UTF-8 string, hex-encoded.
+pub fn sha256_hex(data: &str) -> String {
+    sha256_bytes(data.as_bytes())
+}
+
+/// HMAC-SHA256 (RFC 2104) — raw 32-byte digest. The key is raw bytes.
+pub fn hmac_sha256(key: &[u8], data: &str) -> [u8; 32] {
     let mut key_material = [0u8; 64];
     if key.len() > 64 {
         let mut h = Sha256::new();
@@ -43,7 +46,14 @@ pub fn hmac_sha256_hex(key: &[u8], data: &str) -> String {
         outer.update([b ^ 0x5c]);
     }
     outer.update(inner_hash);
-    hex(&outer.finalize())
+    outer.finalize().into()
+}
+
+/// HMAC-SHA256 (RFC 2104), hex-encoded — the standard webhook-signature
+/// scheme (`X-Signature: sha256=<hex>`). The key is raw bytes (the Rhai
+/// binding passes the UTF-8 bytes of the string argument).
+pub fn hmac_sha256_hex(key: &[u8], data: &str) -> String {
+    hex(&hmac_sha256(key, data))
 }
 
 /// Base64 (RFC 4648, with padding) of a UTF-8 string.

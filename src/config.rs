@@ -476,14 +476,69 @@ pub fn parse_size(s: &str) -> Option<u64> {
     Some((num * mult as f64) as u64)
 }
 
+/// One named storage instance — `[[media.storages]]`.
+#[derive(Clone, Debug, Deserialize)]
+#[serde(default)]
+pub struct StorageEntry {
+    /// Referenced by `media.storage.active` / `mirror`.
+    pub id: String,
+    /// "local" | "s3" (r2/minio are accepted aliases for s3).
+    pub r#type: String,
+    /// Local root directory (type = "local").
+    pub dir: String,
+    // --- s3 fields ---
+    /// Service endpoint, e.g. `https://<id>.r2.cloudflarestorage.com`.
+    pub endpoint: String,
+    /// Region; "auto" for R2, "us-east-1" when empty.
+    pub region: String,
+    pub bucket: String,
+    pub access_key_id: String,
+    pub secret_access_key: String,
+    /// Optional public/CDN base URL for object URLs.
+    pub public_base_url: String,
+}
+
+impl Default for StorageEntry {
+    fn default() -> Self {
+        Self {
+            id: String::new(),
+            r#type: "local".into(),
+            dir: "data/media".into(),
+            endpoint: String::new(),
+            region: String::new(),
+            bucket: String::new(),
+            access_key_id: String::new(),
+            secret_access_key: String::new(),
+            public_base_url: String::new(),
+        }
+    }
+}
+
+impl StorageEntry {
+    /// Normalized provider kind (s3 aliases collapsed).
+    pub fn kind(&self) -> &'static str {
+        match self.r#type.trim().to_ascii_lowercase().as_str() {
+            "" | "local" => "local",
+            "s3" | "r2" | "minio" => "s3",
+            _ => "unknown",
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize)]
 #[serde(default)]
 pub struct MediaStorageConfig {
-    /// "local" (default, zero dependencies). S3-compatible providers
-    /// (s3/r2/minio) are planned as an optional build feature.
+    /// Legacy single-provider field ("local"). Honoured when `storages`
+    /// is empty; otherwise `[[media.storages]]` is authoritative.
     pub provider: String,
-    /// Root directory for local storage.
+    /// Legacy root directory for local storage.
     pub dir: String,
+    /// Id of the active storage (reads + writes).
+    pub active: String,
+    /// Ids receiving a write-through copy of every object.
+    pub mirror: Vec<String>,
+    /// Named storage instances.
+    pub storages: Vec<StorageEntry>,
 }
 
 impl Default for MediaStorageConfig {
@@ -491,8 +546,57 @@ impl Default for MediaStorageConfig {
         Self {
             provider: "local".into(),
             dir: "data/media".into(),
+            active: "local".into(),
+            mirror: Vec::new(),
+            storages: Vec::new(),
         }
     }
+}
+
+impl MediaStorageConfig {
+    /// Effective storage topology: legacy `[media.storage]` fields are
+    /// folded into a single `local` entry when no `[[media.storages]]`
+    /// are configured.
+    pub fn normalized(&self) -> NormalizedStorage {
+        if !self.storages.is_empty() {
+            return NormalizedStorage {
+                active: if self.active.is_empty() {
+                    "local".to_string()
+                } else {
+                    self.active.clone()
+                },
+                mirror: self.mirror.clone(),
+                storages: self.storages.clone(),
+            };
+        }
+        // Legacy shape: one local storage (or a fail-fast error for a
+        // provider this build cannot satisfy — reported by the caller).
+        NormalizedStorage {
+            active: self.active.clone(),
+            mirror: self.mirror.clone(),
+            storages: vec![StorageEntry {
+                id: "local".into(),
+                r#type: self.provider.clone(),
+                dir: self.dir.clone(),
+                ..StorageEntry::default()
+            }],
+        }
+    }
+
+    pub fn provider_normalized(&self) -> &str {
+        match self.provider.to_ascii_lowercase().as_str() {
+            "s3" | "r2" | "minio" => "s3",
+            _ => "local",
+        }
+    }
+}
+
+/// The result of folding legacy + new configuration together.
+#[derive(Clone, Debug)]
+pub struct NormalizedStorage {
+    pub active: String,
+    pub mirror: Vec<String>,
+    pub storages: Vec<StorageEntry>,
 }
 
 /// Per-kind upload limits. Enforced at the HTTP layer (request rejected as

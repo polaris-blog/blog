@@ -147,14 +147,14 @@ async fn upload_staged<R: AsyncRead + Unpin>(
     let storage_key = app.media.storage_key(&uuid, &storage_ext);
     match &processed {
         ProcessedUpload::Image { out } => {
-            app.media.storage().put(&storage_key, &out.bytes).await?;
+            app.media.put_object(&storage_key, &out.bytes).await?;
             for t in &out.thumbnails {
                 let key = thumbnail_key(&storage_key, &t.size_name);
-                app.media.storage().put(&key, &t.bytes).await?;
+                app.media.put_object(&key, &t.bytes).await?;
             }
         }
         ProcessedUpload::Passthrough => {
-            app.media.storage().put_staged(&storage_key, staged).await?;
+            app.media.put_staged_object(&storage_key, staged).await?;
         }
     }
     tokio::fs::remove_file(&staged).await.ok();
@@ -576,7 +576,7 @@ pub async fn delete(app: &App, media: &Media, force: bool) -> AppResult<()> {
         )));
     }
     for key in repo::all_storage_keys(media) {
-        app.media.storage().delete(&key).await?;
+        app.media.delete_object(&key).await?;
     }
     repo::delete(&app.db, media.id).await?;
     app.search.remove(&app.db, "media", media.id).await.ok();
@@ -889,7 +889,7 @@ pub async fn cleanup_orphans(app: &App, apply: bool) -> AppResult<Vec<String>> {
     let mut deleted = Vec::new();
     for f in &report.files {
         if apply {
-            app.media.storage().delete(&f.key).await?;
+            app.media.delete_object(&f.key).await?;
         }
         deleted.push(f.key.clone());
     }
